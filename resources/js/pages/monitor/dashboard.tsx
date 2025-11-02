@@ -13,7 +13,6 @@ import { useState } from 'react';
 import { useSettings } from '@/contexts/settings-context';
 import { useTranslation } from '@/contexts/i18n-context';
 import { router } from '@inertiajs/react';
-import { useBranch } from '@/contexts/branch-context';
 
 interface SystemStats {
     totalDevices: number;
@@ -25,19 +24,11 @@ interface SystemStats {
 export default function Dashboard() {
     const { settings } = useSettings();
     const { t } = useTranslation();
-    const { currentBranch } = useBranch();
-
-    // Calculate stats from current branch devices
-    const totalDevices = currentBranch.devices.length;
-    const onlineDevices = currentBranch.devices.filter(d => d.status === 'online').length;
-    const warningDevices = currentBranch.devices.filter(d => d.status === 'warning').length;
-    const offlineDevices = currentBranch.devices.filter(d => d.status === 'offline').length;
-
     const [stats] = useState<SystemStats>({
-        totalDevices,
-        onlineDevices,
-        warningDevices,
-        offlineDevices,
+        totalDevices: 0,
+        onlineDevices: 0,
+        warningDevices: 0,
+        offlineDevices: 0,
     });
 
     const [recentAlerts] = useState<any[]>([]);
@@ -95,7 +86,7 @@ export default function Dashboard() {
     return (
         <MonitorLayout title={t('dashboard.title')}>
             <div className="space-y-6">
-                {/* Header - remove ping indicator */}
+                {/* Header with last update */}
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-3xl font-bold text-transparent dark:from-white dark:to-slate-300">
@@ -105,40 +96,15 @@ export default function Dashboard() {
                             {t('dashboard.subtitle')}
                         </p>
                     </div>
+                    <div className="flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                        <Clock className="size-4" />
+                        <span>{lastUpdate.toLocaleTimeString()}</span>
+                    </div>
                 </div>
 
-                {/* Stats Grid - Update with real-time data */}
+                {/* Stats Grid */}
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                    {[
-                        {
-                            name: t('dashboard.totalDevices'),
-                            value: totalDevices,
-                            icon: Server,
-                            gradient: 'from-blue-500 to-indigo-600',
-                            bgGradient: 'from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50',
-                        },
-                        {
-                            name: t('dashboard.online'),
-                            value: onlineDevices,
-                            icon: CheckCircle2,
-                            gradient: 'from-emerald-500 to-green-600',
-                            bgGradient: 'from-emerald-50 to-green-50 dark:from-emerald-950/50 dark:to-green-950/50',
-                        },
-                        {
-                            name: t('dashboard.offline'),
-                            value: offlineDevices,
-                            icon: Wifi,
-                            gradient: 'from-rose-500 to-red-600',
-                            bgGradient: 'from-rose-50 to-red-50 dark:from-rose-950/50 dark:to-red-950/50',
-                        },
-                        {
-                            name: t('dashboard.warning'),
-                            value: warningDevices,
-                            icon: AlertTriangle,
-                            gradient: 'from-yellow-500 to-amber-500',
-                            bgGradient: 'from-yellow-50 to-amber-50 dark:from-yellow-950/50 dark:to-amber-950/50',
-                        },
-                    ].map((stat) => {
+                    {statCards.map((stat) => {
                         const Icon = stat.icon;
                         return (
                             <div

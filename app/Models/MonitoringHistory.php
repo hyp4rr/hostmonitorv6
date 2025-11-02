@@ -2,15 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MonitoringHistory extends Model
 {
-    use HasFactory;
-
     protected $table = 'monitoring_history';
-
+    
     protected $fillable = [
         'device_id',
         'status',
@@ -21,11 +19,9 @@ class MonitoringHistory extends Model
 
     protected $casts = [
         'checked_at' => 'datetime',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
     ];
 
-    public function device()
+    public function device(): BelongsTo
     {
         return $this->belongsTo(Device::class);
     }

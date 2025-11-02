@@ -10,26 +10,48 @@ use Inertia\Inertia;
 
 class MonitorController extends Controller
 {
-    public function dashboard()
+    private function getCurrentBranch()
     {
-        $currentBranch = Branch::with('devices')->first();
+        $branch = Branch::with('devices')->first();
         
-        if (!$currentBranch) {
-            return Inertia::render('monitor/dashboard', [
-                'stats' => [
-                    'totalDevices' => 0,
-                    'onlineDevices' => 0,
-                    'warningDevices' => 0,
-                    'offlineDevices' => 0,
-                ],
-                'recentAlerts' => [],
-                'recentActivity' => [],
-            ]);
+        if (!$branch) {
+            return [
+                'id' => 1,
+                'name' => 'Default Branch',
+                'code' => 'DEFAULT',
+                'description' => 'No branch configured',
+                'address' => '',
+                'latitude' => 0,
+                'longitude' => 0,
+                'is_active' => true,
+                'devices' => [],
+                'deviceCount' => 0,
+                'locations' => [],
+            ];
         }
 
-        $devices = $currentBranch->devices;
+        return [
+            'id' => $branch->id,
+            'name' => $branch->name,
+            'code' => $branch->code,
+            'description' => $branch->description,
+            'address' => $branch->address,
+            'latitude' => $branch->latitude,
+            'longitude' => $branch->longitude,
+            'is_active' => $branch->is_active,
+            'devices' => $branch->devices->toArray(),
+            'deviceCount' => $branch->devices->count(),
+            'locations' => $branch->devices->pluck('location')->unique()->values()->toArray(),
+        ];
+    }
+
+    public function dashboard()
+    {
+        $currentBranch = $this->getCurrentBranch();
+        $devices = collect($currentBranch['devices']);
         
         return Inertia::render('monitor/dashboard', [
+            'currentBranch' => $currentBranch,
             'stats' => [
                 'totalDevices' => $devices->count(),
                 'onlineDevices' => $devices->where('status', 'online')->count(),
@@ -51,7 +73,9 @@ class MonitorController extends Controller
 
     public function devices()
     {
-        return Inertia::render('monitor/devices');
+        return Inertia::render('monitor/devices', [
+            'currentBranch' => $this->getCurrentBranch(),
+        ]);
     }
 
     public function alerts()
@@ -59,27 +83,36 @@ class MonitorController extends Controller
         $alerts = Alert::with('device')->latest('triggered_at')->get();
         
         return Inertia::render('monitor/alerts', [
+            'currentBranch' => $this->getCurrentBranch(),
             'alerts' => $alerts,
         ]);
     }
 
     public function maps()
     {
-        return Inertia::render('monitor/maps');
+        return Inertia::render('monitor/maps', [
+            'currentBranch' => $this->getCurrentBranch(),
+        ]);
     }
 
     public function reports()
     {
-        return Inertia::render('monitor/reports');
+        return Inertia::render('monitor/reports', [
+            'currentBranch' => $this->getCurrentBranch(),
+        ]);
     }
 
     public function settings()
     {
-        return Inertia::render('monitor/settings');
+        return Inertia::render('monitor/settings', [
+            'currentBranch' => $this->getCurrentBranch(),
+        ]);
     }
 
     public function configuration()
     {
-        return Inertia::render('monitor/configuration');
+        return Inertia::render('monitor/configuration', [
+            'currentBranch' => $this->getCurrentBranch(),
+        ]);
     }
 }

@@ -1,6 +1,8 @@
-import { defineConfig } from 'vite';
-import laravel from 'laravel-vite-plugin';
+import { wayfinder } from '@laravel/vite-plugin-wayfinder';
+import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
+import laravel from 'laravel-vite-plugin';
+import { defineConfig } from 'vite';
 
 export default defineConfig({
     plugins: [
@@ -8,14 +10,24 @@ export default defineConfig({
             input: ['resources/css/app.css', 'resources/js/app.tsx'],
             refresh: true,
         }),
-        react(),
+        react({
+            babel: {
+                plugins: ['babel-plugin-react-compiler'],
+            },
+        }),
+        tailwindcss(),
+        wayfinder({
+            formVariants: true,
+        }),
     ],
-    resolve: {
-        alias: {
-            '@': '/resources/js',
+    server: {
+        host: '0.0.0.0',
+        port: 3000, // Changed from 5174 to 3000
+        hmr: {
+            host: 'localhost',
         },
     },
-    optimizeDeps: {
-        exclude: ['@tailwindcss/node'],
+    esbuild: {
+        jsx: 'automatic',
     },
 });

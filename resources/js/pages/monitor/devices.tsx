@@ -1,7 +1,6 @@
 import MonitorLayout from '@/layouts/monitor-layout';
 import {
     AlertCircle,
-    ArrowUpDown,
     Building2,
     Camera,
     CheckCircle2,
@@ -27,15 +26,15 @@ import { useTranslation } from '@/contexts/i18n-context';
 import { useBranch } from '@/contexts/branch-context';
 import { router } from '@inertiajs/react';
 
-type DeviceCategory = 'all' | 'switch' | 'server' | 'router' | 'firewall' | 'access_point' | 'other';
-type DeviceStatus = 'up' | 'down' | 'warning' | 'unknown' | 'maintenance' | 'disabled' | 'online' | 'offline' | 'offline_ack';
+type DeviceCategory = 'all' | 'switches' | 'servers' | 'wifi' | 'tas' | 'cctv';
+type DeviceStatus = 'online' | 'offline' | 'warning' | 'unknown' | 'offline_ack';
 
 interface Device {
     id: number;
     name: string;
     ip_address: string;
     type: string;
-    category: string;
+    category: DeviceCategory;
     status: DeviceStatus;
     location: string;
     building: string;
@@ -67,38 +66,15 @@ const categories = [
     { id: 'cctv' as DeviceCategory, name: 'CCTV', icon: Camera, count: 0, description: 'Pemantauan CCTV' },
 ];
 
-const locations = [
-    'MC Blok ABC',
-    'MC Blok DEFG', 
-    'MC FKAAB',
-    'MC FKEE QA.QB',
-    'MC FPTP',
-    'MC FPTV',
-    'MC FSKTM',
-    'MC HEPA.Cafe.OriccF6',
-    'MC Kabin Uniform',
-    'MC Kampus Bandar',
-    'MC KK Perwira',
-    'MC KK TSN.TDI.TF',
-    'MC Perpustakaan.Masjid.DSI.PPP',
-    'MC Rack Server A5',
-    'MC Rack Server C2',
-    'MC RF Bridging',
-    'PUMAS',
-    'NDC'
-];
-
 // Status helper functions for display
 const getStatusColor = (status: DeviceStatus) => {
     switch (status) {
-        case 'up':
         case 'online':
             return 'text-green-600 dark:text-green-400';
-        case 'down':
         case 'offline':
             return 'text-red-600 dark:text-red-400';
         case 'offline_ack':
-            return 'text-blue-600 dark:text-blue-400'; // Changed to blue
+            return 'text-blue-600 dark:text-blue-400';
         case 'warning':
             return 'text-yellow-600 dark:text-yellow-400';
         default:
@@ -108,14 +84,12 @@ const getStatusColor = (status: DeviceStatus) => {
 
 const getStatusBg = (status: DeviceStatus) => {
     switch (status) {
-        case 'up':
         case 'online':
             return 'bg-green-100 dark:bg-green-900/20';
-        case 'down':
         case 'offline':
             return 'bg-red-100 dark:bg-red-900/20';
         case 'offline_ack':
-            return 'bg-blue-100 dark:bg-blue-900/20'; // Changed to blue
+            return 'bg-blue-100 dark:bg-blue-900/20';
         case 'warning':
             return 'bg-yellow-100 dark:bg-yellow-900/20';
         default:
@@ -125,10 +99,8 @@ const getStatusBg = (status: DeviceStatus) => {
 
 const getStatusIcon = (status: DeviceStatus) => {
     switch (status) {
-        case 'up':
         case 'online':
             return <CheckCircle2 className="size-4" />;
-        case 'down':
         case 'offline':
             return <WifiOff className="size-4" />;
         case 'offline_ack':
@@ -144,6 +116,14 @@ const getStatusLabel = (status: DeviceStatus) => {
     switch (status) {
         case 'offline_ack':
             return 'OFFLINE (ACK)';
+        case 'online':
+            return 'ONLINE';
+        case 'offline':
+            return 'OFFLINE';
+        case 'warning':
+            return 'WARNING';
+        case 'unknown':
+            return 'UNKNOWN';
         default:
             return status.toUpperCase();
     }
@@ -166,10 +146,12 @@ export default function Devices() {
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
     const [sortField, setSortField] = useState<SortField>('name');
     const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+    const [isPinging, setIsPinging] = useState(false);
+    const [lastPingTime, setLastPingTime] = useState<Date | null>(null);
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
     
     // Get devices from current branch
-    const allDevices = currentBranch.devices;
+    const allDevices = currentBranch?.devices || [];
 
     // Update category counts
     const updatedCategories = categories.map(cat => ({
@@ -191,7 +173,16 @@ export default function Devices() {
         };
     }, [selectedDevice]);
 
-    // Apply filters to allDevices directly
+    // Ping button handler - no actual API call
+    const handlePingAll = async () => {
+        setIsPinging(true);
+        // Simulate ping delay
+        setTimeout(() => {
+            setIsPinging(false);
+            setLastPingTime(new Date());
+        }, 1000);
+    };
+
     let filteredDevices = selectedCategory === 'all' 
         ? allDevices 
         : allDevices.filter(d => d.category === selectedCategory);
@@ -210,7 +201,7 @@ export default function Devices() {
     }
 
     // Get unique locations from current branch
-    const uniqueLocations = currentBranch.locations;
+    const uniqueLocations = currentBranch?.locations || [];
 
     // Get unique manufacturers and models for filters
     const uniqueManufacturers = Array.from(new Set(allDevices.map(d => d.manufacturer))).filter(Boolean);
@@ -243,13 +234,16 @@ export default function Devices() {
 
     // Apply sorting
     const sortedDevices = [...filteredDevices].sort((a, b) => {
-        let aValue: string | number = a[sortField];
-        let bValue: string | number = b[sortField];
+        let aValue: string | number = '';
+        let bValue: string | number = '';
 
-        // Handle uptime_percentage sorting
+        // Safely access the field
         if (sortField === 'uptime_percentage') {
             aValue = a.uptime_percentage || 0;
             bValue = b.uptime_percentage || 0;
+        } else {
+            aValue = a[sortField] || '';
+            bValue = b[sortField] || '';
         }
 
         if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
@@ -287,10 +281,10 @@ export default function Devices() {
                         </div>
                         <div>
                             <h2 className="text-lg font-bold text-blue-900 dark:text-blue-100">
-                                {currentBranch.name}
+                                {currentBranch?.name || 'No Branch Selected'}
                             </h2>
                             <p className="text-sm text-blue-700 dark:text-blue-300">
-                                {currentBranch.description} • {currentBranch.deviceCount} devices
+                                {currentBranch?.description || 'Please select a branch'} • {currentBranch?.deviceCount || 0} devices
                             </p>
                         </div>
                     </div>
@@ -323,6 +317,29 @@ export default function Devices() {
                         </div>
 
                         <div className="flex flex-wrap gap-2">
+                            {/* Ping All Button */}
+                            <button
+                                onClick={handlePingAll}
+                                disabled={isPinging}
+                                className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+                                    isPinging
+                                        ? 'bg-slate-300 text-slate-500 cursor-not-allowed dark:bg-slate-700 dark:text-slate-400'
+                                        : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg hover:shadow-xl hover:scale-105'
+                                }`}
+                                title="Ping all devices"
+                            >
+                                <RefreshCw className={`size-4 ${isPinging ? 'animate-spin' : ''}`} />
+                                {isPinging ? t('devices.pinging') : t('devices.pingAll')}
+                            </button>
+
+                            {/* Last Ping Time */}
+                            {lastPingTime && (
+                                <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
+                                    <Clock className="size-3" />
+                                    {t('devices.lastPing')}: {lastPingTime.toLocaleTimeString()}
+                                </div>
+                            )}
+
                             {/* View Toggle */}
                             <div className="flex gap-1 rounded-lg border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-800">
                                 <button

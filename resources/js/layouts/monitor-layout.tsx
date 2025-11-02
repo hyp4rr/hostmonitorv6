@@ -21,7 +21,7 @@ import {
     X,
 } from 'lucide-react';
 import { type ReactNode, useEffect, useState } from 'react';
-import { useBranch } from '@/contexts/branch-context';
+import { BranchProvider, useBranch } from '@/contexts/branch-context';
 
 interface MonitorLayoutProps {
     children: ReactNode;
@@ -55,14 +55,15 @@ const navigation: NavItem[] = [
     { name: 'Settings', href: '/monitor/settings', icon: Settings },
 ];
 
-export default function MonitorLayout({ children, title }: MonitorLayoutProps) {
+// Create inner component that uses the branch context
+function MonitorLayoutContent({ children, title }: MonitorLayoutProps) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [darkMode, setDarkMode] = useState(false);
     const [showAlertPanel, setShowAlertPanel] = useState(false);
     const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
     const [acknowledgeReason, setAcknowledgeReason] = useState('');
-    const { currentBranch, setCurrentBranch, branches } = useBranch();
+    const { currentBranch, branches, switchBranch } = useBranch();
     const [showBranchMenu, setShowBranchMenu] = useState(false);
     
     // Mock alerts - in production, this would come from your backend
@@ -275,7 +276,7 @@ export default function MonitorLayout({ children, title }: MonitorLayoutProps) {
                                                         <button
                                                             key={branch.id}
                                                             onClick={() => {
-                                                                setCurrentBranch(branch);
+                                                                switchBranch(branch.id);
                                                                 setShowBranchMenu(false);
                                                             }}
                                                             className={`w-full p-4 text-left transition-all hover:bg-slate-50 dark:hover:bg-slate-700/50 ${
@@ -532,5 +533,14 @@ export default function MonitorLayout({ children, title }: MonitorLayoutProps) {
                 </>
             )}
         </>
+    );
+}
+
+// Main export wraps content with BranchProvider
+export default function MonitorLayout(props: MonitorLayoutProps) {
+    return (
+        <BranchProvider>
+            <MonitorLayoutContent {...props} />
+        </BranchProvider>
     );
 }

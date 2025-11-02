@@ -28,6 +28,33 @@ class BranchSeeder extends Seeder
                 'longitude' => 102.7608,
                 'is_active' => true,
             ],
+            [
+                'name' => 'UTHM Kampus Bandar',
+                'code' => 'BANDAR',
+                'description' => 'City campus network infrastructure',
+                'address' => 'Batu Pahat, Johor',
+                'latitude' => 1.8553,
+                'longitude' => 102.9325,
+                'is_active' => true,
+            ],
+            [
+                'name' => 'UTHM Kolej Kediaman Perwira',
+                'code' => 'PERWIRA',
+                'description' => 'Perwira residential college network',
+                'address' => 'Parit Raja, Batu Pahat, Johor',
+                'latitude' => 1.8565,
+                'longitude' => 103.0852,
+                'is_active' => true,
+            ],
+            [
+                'name' => 'UTHM PUMAS',
+                'code' => 'PUMAS',
+                'description' => 'PUMAS sports complex network infrastructure',
+                'address' => 'Parit Raja, Batu Pahat, Johor',
+                'latitude' => 1.8522,
+                'longitude' => 103.0815,
+                'is_active' => true,
+            ],
         ];
 
         foreach ($branches as $branch) {

@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('monitoring_history', function (Blueprint $table) {
             $table->id();
             $table->foreignId('device_id')->constrained()->onDelete('cascade');
-            $table->enum('status', ['online', 'offline', 'warning']);
+            $table->string('status');
             $table->integer('response_time')->nullable();
             $table->timestamp('checked_at');
             $table->text('error_message')->nullable();
