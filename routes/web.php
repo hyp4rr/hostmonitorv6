@@ -54,6 +54,12 @@ Route::post('/api/config/login', [ConfigurationController::class, 'login'])->nam
 Route::middleware(['web', 'auth'])->prefix('api/config')->group(function () {
     Route::post('/logout', [ConfigurationController::class, 'logout']);
     
+    // Branches
+    Route::get('/branches', [ConfigurationController::class, 'getBranches']);
+    Route::post('/branches', [ConfigurationController::class, 'createBranch']);
+    Route::put('/branches/{id}', [ConfigurationController::class, 'updateBranch']);
+    Route::delete('/branches/{id}', [ConfigurationController::class, 'deleteBranch']);
+    
     // Devices
     Route::get('/devices', [ConfigurationController::class, 'getDevices']);
     Route::post('/devices', [ConfigurationController::class, 'createDevice']);
@@ -64,6 +70,18 @@ Route::middleware(['web', 'auth'])->prefix('api/config')->group(function () {
     Route::get('/alerts', [ConfigurationController::class, 'getAlerts']);
     Route::put('/alerts/{id}', [ConfigurationController::class, 'updateAlert']);
     Route::delete('/alerts/{id}', [ConfigurationController::class, 'deleteAlert']);
+    
+    // Locations
+    Route::get('/locations', [ConfigurationController::class, 'getLocations']);
+    Route::post('/locations', [ConfigurationController::class, 'createLocation']);
+    Route::put('/locations/{id}', [ConfigurationController::class, 'updateLocation']);
+    Route::delete('/locations/{id}', [ConfigurationController::class, 'deleteLocation']);
+    
+    // Users
+    Route::get('/users', [ConfigurationController::class, 'getUsers']);
+    Route::post('/users', [ConfigurationController::class, 'createUser']);
+    Route::put('/users/{id}', [ConfigurationController::class, 'updateUser']);
+    Route::delete('/users/{id}', [ConfigurationController::class, 'deleteUser']);
 });
 
 // Legacy host-monitor route (redirect to new dashboard)

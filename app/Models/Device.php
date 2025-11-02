@@ -10,6 +10,8 @@ class Device extends Model
 {
     protected $fillable = [
         'branch_id',
+        'location_id',
+        'hardware_detail_id',
         'name',
         'ip_address',
         'mac_address',
@@ -17,31 +19,22 @@ class Device extends Model
         'type',
         'category',
         'status',
-        'location',
         'building',
-        'manufacturer',
-        'model',
-        'priority',
         'uptime_percentage',
-        'response_time',
-        'is_monitored',
         'is_active',
+        'response_time',
         'last_check',
         'offline_reason',
-        'offline_acknowledged_by',
-        'offline_acknowledged_at',
         'latitude',
         'longitude',
     ];
 
     protected $casts = [
-        'is_monitored' => 'boolean',
         'is_active' => 'boolean',
         'uptime_percentage' => 'decimal:2',
-        'last_check' => 'datetime',
+        'response_time' => 'integer',
+        'last_ping' => 'datetime',
         'offline_acknowledged_at' => 'datetime',
-        'latitude' => 'decimal:8',
-        'longitude' => 'decimal:8',
     ];
 
     public function branch(): BelongsTo
@@ -49,8 +42,23 @@ class Device extends Model
         return $this->belongsTo(Branch::class);
     }
 
+    public function location(): BelongsTo
+    {
+        return $this->belongsTo(Location::class);
+    }
+
+    public function hardwareDetail(): BelongsTo
+    {
+        return $this->belongsTo(HardwareDetail::class);
+    }
+
     public function alerts(): HasMany
     {
         return $this->hasMany(Alert::class);
+    }
+
+    public function monitoringHistory(): HasMany
+    {
+        return $this->hasMany(MonitoringHistory::class);
     }
 }

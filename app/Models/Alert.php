@@ -9,20 +9,28 @@ class Alert extends Model
 {
     protected $fillable = [
         'device_id',
+        'type',
         'severity',
         'category',
-        'triggered_at',
+        'title',
+        'message',
+        'status',
         'acknowledged',
+        'triggered_at',
+        'acknowledged_at',
         'acknowledged_by',
         'reason',
-        'acknowledged_at',
         'downtime',
+        'resolved',
+        'resolved_at',
     ];
 
     protected $casts = [
         'acknowledged' => 'boolean',
+        'resolved' => 'boolean',
         'triggered_at' => 'datetime',
         'acknowledged_at' => 'datetime',
+        'resolved_at' => 'datetime',
     ];
 
     public function device(): BelongsTo

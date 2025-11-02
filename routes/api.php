@@ -37,3 +37,44 @@ Route::middleware(['auth:sanctum'])->prefix('config')->group(function () {
     Route::put('/alerts/{id}', [ConfigurationController::class, 'updateAlert']);
     Route::delete('/alerts/{id}', [ConfigurationController::class, 'deleteAlert']);
 });
+
+// Configuration panel routes
+Route::post('/config/login', [App\Http\Controllers\Api\ConfigController::class, 'login']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/config/logout', [App\Http\Controllers\Api\ConfigController::class, 'logout']);
+    
+    // Branches
+    Route::get('/config/branches', [App\Http\Controllers\Api\BranchController::class, 'index']);
+    Route::post('/config/branches', [App\Http\Controllers\Api\BranchController::class, 'store']);
+    Route::put('/config/branches/{id}', [App\Http\Controllers\Api\BranchController::class, 'update']);
+    Route::delete('/config/branches/{id}', [App\Http\Controllers\Api\BranchController::class, 'destroy']);
+    
+    // Devices
+    Route::get('/config/devices', [App\Http\Controllers\Api\DeviceController::class, 'index']);
+    Route::post('/config/devices', [App\Http\Controllers\Api\DeviceController::class, 'store']);
+    Route::put('/config/devices/{id}', [App\Http\Controllers\Api\DeviceController::class, 'update']);
+    Route::delete('/config/devices/{id}', [App\Http\Controllers\Api\DeviceController::class, 'destroy']);
+    
+    // Alerts
+    Route::get('/config/alerts', [App\Http\Controllers\Api\AlertController::class, 'index']);
+    Route::post('/config/alerts', [App\Http\Controllers\Api\AlertController::class, 'store']);
+    Route::put('/config/alerts/{id}', [App\Http\Controllers\Api\AlertController::class, 'update']);
+    Route::delete('/config/alerts/{id}', [App\Http\Controllers\Api\AlertController::class, 'destroy']);
+    
+    // Locations
+    Route::get('/config/locations', [App\Http\Controllers\Api\LocationController::class, 'index']);
+    Route::post('/config/locations', [App\Http\Controllers\Api\LocationController::class, 'store']);
+    Route::put('/config/locations/{id}', [App\Http\Controllers\Api\LocationController::class, 'update']);
+    Route::delete('/config/locations/{id}', [App\Http\Controllers\Api\LocationController::class, 'destroy']);
+    
+    // Users
+    Route::get('/config/users', [App\Http\Controllers\Api\UserController::class, 'index']);
+    Route::post('/config/users', [App\Http\Controllers\Api\UserController::class, 'store']);
+    Route::put('/config/users/{id}', [App\Http\Controllers\Api\UserController::class, 'update']);
+    Route::delete('/config/users/{id}', [App\Http\Controllers\Api\UserController::class, 'destroy']);
+    
+    // Hardware details
+    Route::get('/config/hardware/manufacturers', [App\Http\Controllers\Api\HardwareDetailController::class, 'manufacturers']);
+    Route::get('/config/hardware/models', [App\Http\Controllers\Api\HardwareDetailController::class, 'models']);
+});
