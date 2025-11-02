@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
 {
@@ -89,7 +90,7 @@ class DashboardController extends Controller
                 'recent_activity' => $recentActivity,
             ]);
         } catch (\Exception $e) {
-            \Log::error('Dashboard stats error: ' . $e->getMessage());
+            Log::error('Dashboard stats error: ' . $e->getMessage());
             
             return response()->json([
                 'stats' => [
