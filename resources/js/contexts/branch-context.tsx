@@ -62,19 +62,37 @@ const defaultBranch: Branch = {
     locations: [],
 };
 
+// Hook that works with or without provider
+export function useBranch() {
+    const context = useContext(BranchContext);
+    
+    // If there's a provider context, use it
+    if (context !== undefined) {
+        return context;
+    }
+    
+    // Otherwise, get directly from page props
+    const { props } = usePage();
+    const currentBranch = (props.currentBranch as Branch) || defaultBranch;
+    
+    return {
+        currentBranch,
+        branches: [currentBranch],
+        switchBranch: (branchId: number) => {
+            console.log('Switching to branch:', branchId);
+        },
+    };
+}
+
+// Optional provider - only use in specific pages that need stateful branch switching
 export function BranchProvider({ children }: { children: ReactNode }) {
-    // This will now work because BranchProvider is used inside Inertia pages
-    const page = usePage();
-    
-    // Try to get branch from page props, fallback to default
-    const currentBranch = (page.props.currentBranch as Branch) || defaultBranch;
-    
-    // For now, just use current branch as the only branch
+    const { props } = usePage();
+    const currentBranch = (props.currentBranch as Branch) || defaultBranch;
     const branches = [currentBranch];
 
     const switchBranch = (branchId: number) => {
-        // In production, this would navigate or update the current branch
         console.log('Switching to branch:', branchId);
+        // In production, navigate or update state
     };
 
     return (
@@ -82,12 +100,4 @@ export function BranchProvider({ children }: { children: ReactNode }) {
             {children}
         </BranchContext.Provider>
     );
-}
-
-export function useBranch() {
-    const context = useContext(BranchContext);
-    if (context === undefined) {
-        throw new Error('useBranch must be used within a BranchProvider');
-    }
-    return context;
 }

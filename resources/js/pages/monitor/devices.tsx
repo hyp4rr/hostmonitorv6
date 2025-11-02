@@ -1,6 +1,8 @@
+import { Head } from '@inertiajs/react';
 import MonitorLayout from '@/layouts/monitor-layout';
 import {
     AlertCircle,
+    ArrowUpDown,
     Building2,
     Camera,
     CheckCircle2,
@@ -43,11 +45,11 @@ interface Device {
     priority: number;
     uptime_percentage: number;
     response_time: number | null;
-    is_monitored: boolean;
-    is_active: boolean;
+    is_monitored?: boolean;
+    is_active?: boolean;
     last_check: string | null;
-    created_at: string;
-    updated_at: string;
+    created_at?: string;
+    updated_at?: string;
     offline_reason?: string;
     offline_acknowledged_by?: string;
     offline_acknowledged_at?: string;
@@ -125,7 +127,7 @@ const getStatusLabel = (status: DeviceStatus) => {
         case 'unknown':
             return 'UNKNOWN';
         default:
-            return status.toUpperCase();
+            return 'UNKNOWN';
     }
 };
 
@@ -613,14 +615,14 @@ export default function Devices() {
                                 <div
                                     key={device.id}
                                     className="group cursor-pointer rounded-xl border border-slate-200/50 bg-white p-3 shadow transition-all hover:scale-105 hover:shadow-lg dark:border-slate-700/50 dark:bg-slate-800"
-                                    onClick={() => setSelectedDevice(device)}
+                                    onClick={() => setSelectedDevice(device as Device)}
                                 >
                                     <div className="flex flex-col items-center text-center">
                                         <div
-                                            className={`mb-2 rounded-lg border p-2 transition-transform group-hover:scale-110 ${getStatusBg(device.status)}`}
+                                            className={`mb-2 rounded-lg border p-2 transition-transform group-hover:scale-110 ${getStatusBg(device.status as DeviceStatus)}`}
                                         >
                                             <Server
-                                                className={`size-6 ${getStatusColor(device.status)}`}
+                                                className={`size-6 ${getStatusColor(device.status as DeviceStatus)}`}
                                             />
                                         </div>
                                         <h3 className="mb-1 text-sm font-semibold text-slate-900 dark:text-white line-clamp-1">
@@ -634,10 +636,10 @@ export default function Devices() {
                                             <span>{device.uptime_percentage}%</span>
                                         </div>
                                         <span
-                                            className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${getStatusBg(device.status)} ${getStatusColor(device.status)}`}
+                                            className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${getStatusBg(device.status as DeviceStatus)} ${getStatusColor(device.status as DeviceStatus)}`}
                                         >
-                                            {getStatusIcon(device.status)}
-                                            {getStatusLabel(device.status)}
+                                            {getStatusIcon(device.status as DeviceStatus)}
+                                            {getStatusLabel(device.status as DeviceStatus)}
                                         </span>
                                     </div>
                                 </div>
@@ -740,12 +742,12 @@ export default function Devices() {
                                         <tr
                                             key={device.id}
                                             className="cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50"
-                                            onClick={() => setSelectedDevice(device)}
+                                            onClick={() => setSelectedDevice(device as Device)}
                                         >
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="flex items-center gap-3">
-                                                    <div className={`rounded-lg border p-2 ${getStatusBg(device.status)}`}>
-                                                        <Server className={`size-4 ${getStatusColor(device.status)}`} />
+                                                    <div className={`rounded-lg border p-2 ${getStatusBg(device.status as DeviceStatus)}`}>
+                                                        <Server className={`size-4 ${getStatusColor(device.status as DeviceStatus)}`} />
                                                     </div>
                                                     <span className="text-sm font-medium text-slate-900 dark:text-white">
                                                         {device.name}
@@ -764,9 +766,9 @@ export default function Devices() {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${getStatusBg(device.status)} ${getStatusColor(device.status)}`}>
-                                                    {getStatusIcon(device.status)}
-                                                    {getStatusLabel(device.status)}
+                                                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${getStatusBg(device.status as DeviceStatus)} ${getStatusColor(device.status as DeviceStatus)}`}>
+                                                    {getStatusIcon(device.status as DeviceStatus)}
+                                                    {getStatusLabel(device.status as DeviceStatus)}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">

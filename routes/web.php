@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\SwitchController;
 use App\Http\Controllers\Api\AlertController;
 use App\Http\Controllers\Api\DeviceController;
 use App\Http\Controllers\MonitorController;
+use App\Http\Controllers\ConfigurationController;
 use App\Models\Device;
 use App\Models\Alert;
 
@@ -44,6 +45,25 @@ Route::prefix('api')->group(function () {
     Route::get('/alerts/stats', [AlertController::class, 'stats']);
     Route::post('/alerts/{id}/read', [AlertController::class, 'markAsRead']);
     Route::post('/alerts/{id}/resolve', [AlertController::class, 'resolve']);
+});
+
+// Configuration routes - login without auth
+Route::post('/api/config/login', [ConfigurationController::class, 'login'])->name('config.login');
+
+// Protected configuration routes
+Route::middleware(['web', 'auth'])->prefix('api/config')->group(function () {
+    Route::post('/logout', [ConfigurationController::class, 'logout']);
+    
+    // Devices
+    Route::get('/devices', [ConfigurationController::class, 'getDevices']);
+    Route::post('/devices', [ConfigurationController::class, 'createDevice']);
+    Route::put('/devices/{id}', [ConfigurationController::class, 'updateDevice']);
+    Route::delete('/devices/{id}', [ConfigurationController::class, 'deleteDevice']);
+    
+    // Alerts
+    Route::get('/alerts', [ConfigurationController::class, 'getAlerts']);
+    Route::put('/alerts/{id}', [ConfigurationController::class, 'updateAlert']);
+    Route::delete('/alerts/{id}', [ConfigurationController::class, 'deleteAlert']);
 });
 
 // Legacy host-monitor route (redirect to new dashboard)

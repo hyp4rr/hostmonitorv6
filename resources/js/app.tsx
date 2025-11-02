@@ -6,7 +6,6 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import { SettingsProvider } from '@/contexts/settings-context';
 import { I18nProvider } from '@/contexts/i18n-context';
-import { BranchProvider } from './contexts/branch-context';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -23,9 +22,7 @@ createInertiaApp({
         root.render(
             <SettingsProvider>
                 <I18nProvider>
-                    <BranchProvider>
-                        <App {...props} />
-                    </BranchProvider>
+                    <App {...props} />
                 </I18nProvider>
             </SettingsProvider>
         );

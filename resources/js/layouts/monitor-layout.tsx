@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import {
     Activity,
     AlertTriangle,
@@ -21,7 +21,6 @@ import {
     X,
 } from 'lucide-react';
 import { type ReactNode, useEffect, useState } from 'react';
-import { BranchProvider, useBranch } from '@/contexts/branch-context';
 
 interface MonitorLayoutProps {
     children: ReactNode;
@@ -55,16 +54,55 @@ const navigation: NavItem[] = [
     { name: 'Settings', href: '/monitor/settings', icon: Settings },
 ];
 
-// Create inner component that uses the branch context
-function MonitorLayoutContent({ children, title }: MonitorLayoutProps) {
+// Remove BranchProvider import and usage, get data from page props instead
+interface PageProps {
+    currentBranch?: {
+        id: number;
+        name: string;
+        code: string;
+        description: string;
+        address: string;
+        latitude: number;
+        longitude: number;
+        is_active: boolean;
+        devices: any[];
+        deviceCount: number;
+        locations: string[];
+    };
+}
+
+export default function MonitorLayout({ children, title }: MonitorLayoutProps) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [darkMode, setDarkMode] = useState(false);
     const [showAlertPanel, setShowAlertPanel] = useState(false);
     const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
     const [acknowledgeReason, setAcknowledgeReason] = useState('');
-    const { currentBranch, branches, switchBranch } = useBranch();
     const [showBranchMenu, setShowBranchMenu] = useState(false);
+    
+    // Get branch data directly from Inertia page props
+    const { props } = usePage<PageProps>();
+    const currentBranch = props.currentBranch || {
+        id: 1,
+        name: 'Default Branch',
+        code: 'DEFAULT',
+        description: 'No branch configured',
+        address: '',
+        latitude: 0,
+        longitude: 0,
+        is_active: true,
+        devices: [],
+        deviceCount: 0,
+        locations: [],
+    };
+    
+    // For now, branches is just an array with current branch
+    const branches = [currentBranch];
+    
+    const handleBranchSwitch = (branchId: number) => {
+        console.log('Switching to branch:', branchId);
+        // In production, this would navigate to a different branch
+    };
     
     // Mock alerts - in production, this would come from your backend
     const [alerts, setAlerts] = useState<Alert[]>(() => [
@@ -276,7 +314,7 @@ function MonitorLayoutContent({ children, title }: MonitorLayoutProps) {
                                                         <button
                                                             key={branch.id}
                                                             onClick={() => {
-                                                                switchBranch(branch.id);
+                                                                handleBranchSwitch(branch.id);
                                                                 setShowBranchMenu(false);
                                                             }}
                                                             className={`w-full p-4 text-left transition-all hover:bg-slate-50 dark:hover:bg-slate-700/50 ${
@@ -533,14 +571,5 @@ function MonitorLayoutContent({ children, title }: MonitorLayoutProps) {
                 </>
             )}
         </>
-    );
-}
-
-// Main export wraps content with BranchProvider
-export default function MonitorLayout(props: MonitorLayoutProps) {
-    return (
-        <BranchProvider>
-            <MonitorLayoutContent {...props} />
-        </BranchProvider>
     );
 }

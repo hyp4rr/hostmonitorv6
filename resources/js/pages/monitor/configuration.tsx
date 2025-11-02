@@ -13,7 +13,7 @@ import {
     User,
     X,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSettings } from '@/contexts/settings-context';
 import { useTranslation } from '@/contexts/i18n-context';
 
@@ -55,6 +55,7 @@ export default function Configuration() {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [loginError, setLoginError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
     // CRUD state
     const [selectedEntity, setSelectedEntity] = useState<CRUDEntity>('devices');
@@ -62,28 +63,127 @@ export default function Configuration() {
     const [modalMode, setModalMode] = useState<'create' | 'edit' | 'delete'>('create');
     const [selectedItem, setSelectedItem] = useState<any>(null);
 
-    // Mock data - replace with actual API calls
+    // Data state
     const [devices, setDevices] = useState<Device[]>([]);
     const [alerts, setAlerts] = useState<Alert[]>([]);
 
+    // Fetch data when authenticated
+    useEffect(() => {
+        if (isAuthenticated) {
+            fetchData();
+        }
+    }, [isAuthenticated, selectedEntity]);
+
+    const fetchData = async () => {
+        setIsLoading(true);
+        try {
+            if (selectedEntity === 'devices') {
+                const response = await fetch('/api/config/devices', {
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    setDevices(data);
+                } else if (response.status === 401) {
+                    setIsAuthenticated(false);
+                }
+            } else if (selectedEntity === 'alerts') {
+                const response = await fetch('/api/config/alerts', {
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    setAlerts(data);
+                } else if (response.status === 401) {
+                    setIsAuthenticated(false);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching data:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Helper function to get CSRF token
+    const getCsrfToken = () => {
+        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (!token) {
+            console.error('CSRF token not found');
+        }
+        return token || '';
+    };
+
     // Handle login
-    const handleLogin = (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
+        setIsLoading(true);
+        setLoginError('');
         
-        // Simple authentication - replace with actual API call
-        if (username === 'admin' && password === 'admin') {
-            setIsAuthenticated(true);
-            setLoginError('');
-        } else {
-            setLoginError('Invalid username or password');
+        try {
+            const csrfToken = getCsrfToken();
+            
+            const response = await fetch('/api/config/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({ username, password }),
+            });
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({ message: 'Invalid credentials' }));
+                setLoginError(data.message || 'Invalid username or password');
+                return;
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                setIsAuthenticated(true);
+                setLoginError('');
+            } else {
+                setLoginError(data.message || 'Invalid username or password');
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            setLoginError('Connection error. Please check your network and try again.');
+        } finally {
+            setIsLoading(false);
         }
     };
 
     // Handle logout
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        try {
+            const csrfToken = getCsrfToken();
+            
+            await fetch('/api/config/logout', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                credentials: 'same-origin',
+            });
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
+        
         setIsAuthenticated(false);
         setUsername('');
         setPassword('');
+        setDevices([]);
+        setAlerts([]);
     };
 
     // CRUD operations
@@ -105,16 +205,75 @@ export default function Configuration() {
         setShowModal(true);
     };
 
-    const handleSave = () => {
-        // Implement save logic here
-        console.log('Saving:', modalMode, selectedItem);
-        setShowModal(false);
+    const handleSave = async () => {
+        setIsLoading(true);
+        try {
+            if (selectedEntity === 'devices') {
+                const url = modalMode === 'create' 
+                    ? '/api/config/devices' 
+                    : `/api/config/devices/${selectedItem?.id}`;
+                
+                const method = modalMode === 'create' ? 'POST' : 'PUT';
+                
+                const formData = new FormData(document.querySelector('form') as HTMLFormElement);
+                const data = Object.fromEntries(formData.entries());
+                
+                const csrfToken = getCsrfToken();
+
+                const response = await fetch(url, {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify(data),
+                });
+
+                if (response.ok) {
+                    await fetchData();
+                    setShowModal(false);
+                } else if (response.status === 401) {
+                    setIsAuthenticated(false);
+                }
+            }
+        } catch (error) {
+            console.error('Error saving:', error);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    const handleConfirmDelete = () => {
-        // Implement delete logic here
-        console.log('Deleting:', selectedItem);
-        setShowModal(false);
+    const handleConfirmDelete = async () => {
+        setIsLoading(true);
+        try {
+            const url = selectedEntity === 'devices'
+                ? `/api/config/devices/${selectedItem?.id}`
+                : `/api/config/alerts/${selectedItem?.id}`;
+            
+            const csrfToken = getCsrfToken();
+
+            const response = await fetch(url, {
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                credentials: 'same-origin',
+            });
+
+            if (response.ok) {
+                await fetchData();
+                setShowModal(false);
+            } else if (response.status === 401) {
+                setIsAuthenticated(false);
+            }
+        } catch (error) {
+            console.error('Error deleting:', error);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     // Login screen
@@ -187,13 +346,14 @@ export default function Configuration() {
 
                                 <button
                                     type="submit"
-                                    className="w-full rounded-lg bg-blue-600 py-2.5 font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                    disabled={isLoading}
+                                    className="w-full rounded-lg bg-blue-600 py-2.5 font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50 disabled:opacity-50"
                                 >
-                                    {t('config.login')}
+                                    {isLoading ? 'Logging in...' : t('config.login')}
                                 </button>
 
                                 <p className="text-center text-xs text-slate-500 dark:text-slate-400">
-                                    Default credentials: admin / admin
+                                    Use your admin credentials
                                 </p>
                             </form>
                         </div>
@@ -270,29 +430,38 @@ export default function Configuration() {
 
                     {/* Table */}
                     <div className="overflow-x-auto">
-                        {selectedEntity === 'devices' && (
-                            <DevicesTable
-                                devices={devices}
-                                onEdit={handleEdit}
-                                onDelete={handleDelete}
-                            />
-                        )}
-                        {selectedEntity === 'alerts' && (
-                            <AlertsTable
-                                alerts={alerts}
-                                onEdit={handleEdit}
-                                onDelete={handleDelete}
-                            />
-                        )}
-                        {selectedEntity === 'users' && (
-                            <div className="p-8 text-center text-slate-600 dark:text-slate-400">
-                                User management coming soon
+                        {isLoading ? (
+                            <div className="p-12 text-center">
+                                <div className="mx-auto mb-4 size-12 animate-spin rounded-full border-4 border-slate-300 border-t-blue-600"></div>
+                                <p className="text-slate-600 dark:text-slate-400">Loading...</p>
                             </div>
-                        )}
-                        {selectedEntity === 'settings' && (
-                            <div className="p-8 text-center text-slate-600 dark:text-slate-400">
-                                System settings coming soon
-                            </div>
+                        ) : (
+                            <>
+                                {selectedEntity === 'devices' && (
+                                    <DevicesTable
+                                        devices={devices}
+                                        onEdit={handleEdit}
+                                        onDelete={handleDelete}
+                                    />
+                                )}
+                                {selectedEntity === 'alerts' && (
+                                    <AlertsTable
+                                        alerts={alerts}
+                                        onEdit={handleEdit}
+                                        onDelete={handleDelete}
+                                    />
+                                )}
+                                {selectedEntity === 'users' && (
+                                    <div className="p-8 text-center text-slate-600 dark:text-slate-400">
+                                        User management coming soon
+                                    </div>
+                                )}
+                                {selectedEntity === 'settings' && (
+                                    <div className="p-8 text-center text-slate-600 dark:text-slate-400">
+                                        System settings coming soon
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
                 </div>
@@ -348,25 +517,28 @@ export default function Configuration() {
                         <div className="flex justify-end gap-3 border-t border-slate-200 p-6 dark:border-slate-700">
                             <button
                                 onClick={() => setShowModal(false)}
-                                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                                disabled={isLoading}
+                                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700 disabled:opacity-50"
                             >
                                 Cancel
                             </button>
                             {modalMode === 'delete' ? (
                                 <button
                                     onClick={handleConfirmDelete}
-                                    className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
+                                    disabled={isLoading}
+                                    className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
                                 >
                                     <Trash2 className="size-4" />
-                                    Delete
+                                    {isLoading ? 'Deleting...' : 'Delete'}
                                 </button>
                             ) : (
                                 <button
                                     onClick={handleSave}
-                                    className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                                    disabled={isLoading}
+                                    className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
                                 >
                                     <Save className="size-4" />
-                                    Save
+                                    {isLoading ? 'Saving...' : 'Save'}
                                 </button>
                             )}
                         </div>
@@ -574,7 +746,7 @@ function EntityForm({
 }) {
     if (entity === 'devices') {
         return (
-            <div className="space-y-4">
+            <form className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2">
                     <div>
                         <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -582,9 +754,11 @@ function EntityForm({
                         </label>
                         <input
                             type="text"
+                            name="name"
                             defaultValue={data?.name}
                             className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
                             placeholder="Enter device name"
+                            required
                         />
                     </div>
                     <div>
@@ -593,9 +767,11 @@ function EntityForm({
                         </label>
                         <input
                             type="text"
+                            name="ip_address"
                             defaultValue={data?.ip_address}
                             className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
                             placeholder="192.168.1.1"
+                            required
                         />
                     </div>
                     <div>
@@ -603,8 +779,10 @@ function EntityForm({
                             Type
                         </label>
                         <select
+                            name="type"
                             defaultValue={data?.type}
                             className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                            required
                         >
                             <option value="switch">Switch</option>
                             <option value="router">Router</option>
@@ -619,6 +797,7 @@ function EntityForm({
                         </label>
                         <input
                             type="text"
+                            name="location"
                             defaultValue={data?.location}
                             className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
                             placeholder="Enter location"
@@ -630,6 +809,7 @@ function EntityForm({
                         </label>
                         <input
                             type="text"
+                            name="manufacturer"
                             defaultValue={data?.manufacturer}
                             className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
                             placeholder="Enter manufacturer"
@@ -641,13 +821,14 @@ function EntityForm({
                         </label>
                         <input
                             type="text"
+                            name="model"
                             defaultValue={data?.model}
                             className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
                             placeholder="Enter model"
                         />
                     </div>
                 </div>
-            </div>
+            </form>
         );
     }
 
