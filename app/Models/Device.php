@@ -2,17 +2,18 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Device extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
+        'branch_id',
         'name',
         'ip_address',
+        'mac_address',
+        'barcode',
         'type',
         'category',
         'status',
@@ -26,6 +27,11 @@ class Device extends Model
         'is_monitored',
         'is_active',
         'last_check',
+        'offline_reason',
+        'offline_acknowledged_by',
+        'offline_acknowledged_at',
+        'latitude',
+        'longitude',
     ];
 
     protected $casts = [
@@ -33,22 +39,18 @@ class Device extends Model
         'is_active' => 'boolean',
         'uptime_percentage' => 'decimal:2',
         'last_check' => 'datetime',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
+        'offline_acknowledged_at' => 'datetime',
+        'latitude' => 'decimal:8',
+        'longitude' => 'decimal:8',
     ];
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
+    }
 
     public function alerts(): HasMany
     {
         return $this->hasMany(Alert::class);
-    }
-
-    public function monitoringHistory(): HasMany
-    {
-        return $this->hasMany(MonitoringHistory::class);
-    }
-
-    public function latestHistory()
-    {
-        return $this->hasOne(MonitoringHistory::class)->latestOfMany('checked_at');
     }
 }

@@ -10,6 +10,7 @@ return new class extends Migration
     {
         Schema::create('devices', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('branch_id')->default(1)->constrained()->onDelete('cascade');
             $table->string('name');
             $table->string('ip_address')->unique();
             $table->string('type'); // switch, server, router, firewall, wifi, access_point

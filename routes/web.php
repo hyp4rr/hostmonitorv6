@@ -123,4 +123,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('dashboard');
 });
 
+use App\Http\Controllers\MonitorController;
+
+Route::prefix('monitor')->group(function () {
+    Route::get('/dashboard', [MonitorController::class, 'dashboard'])->name('monitor.dashboard');
+    Route::get('/devices', [MonitorController::class, 'devices'])->name('monitor.devices');
+    Route::get('/alerts', [MonitorController::class, 'alerts'])->name('monitor.alerts');
+    Route::get('/maps', [MonitorController::class, 'maps'])->name('monitor.maps');
+    Route::get('/reports', [MonitorController::class, 'reports'])->name('monitor.reports');
+    Route::get('/settings', [MonitorController::class, 'settings'])->name('monitor.settings');
+    Route::get('/configuration', [MonitorController::class, 'configuration'])->name('monitor.configuration');
+});
+
 require __DIR__.'/settings.php';
