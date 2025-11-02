@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class DeviceController extends Controller
 {
@@ -21,7 +22,7 @@ class DeviceController extends Controller
 
             return response()->json($devices);
         } catch (\Exception $e) {
-            \Log::error('Device index error: ' . $e->getMessage());
+            Log::error('Device index error: ' . $e->getMessage());
             return response()->json([], 200);
         }
     }
@@ -41,7 +42,7 @@ class DeviceController extends Controller
 
             return response()->json($device);
         } catch (\Exception $e) {
-            \Log::error('Device show error: ' . $e->getMessage());
+            Log::error('Device show error: ' . $e->getMessage());
             return response()->json(['error' => 'Device not found'], 404);
         }
     }
@@ -67,7 +68,7 @@ class DeviceController extends Controller
 
             return response()->json($stats);
         } catch (\Exception $e) {
-            \Log::error('Device stats error: ' . $e->getMessage());
+            Log::error('Device stats error: ' . $e->getMessage());
             return response()->json([
                 'total' => 0,
                 'online' => 0,
@@ -85,7 +86,7 @@ class DeviceController extends Controller
                 'message' => 'Ping initiated for all devices',
             ]);
         } catch (\Exception $e) {
-            \Log::error('Ping all error: ' . $e->getMessage());
+            Log::error('Ping all error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
