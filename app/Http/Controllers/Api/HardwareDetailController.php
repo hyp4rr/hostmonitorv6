@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\HardwareDetail;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class HardwareDetailController extends Controller
@@ -12,13 +13,15 @@ class HardwareDetailController extends Controller
     {
         try {
             $manufacturers = HardwareDetail::distinct()
-                ->orderBy('manufacturer')
-                ->pluck('manufacturer');
-            
+                ->whereNotNull('manufacturer')
+                ->pluck('manufacturer')
+                ->sort()
+                ->values();
+
             return response()->json($manufacturers);
         } catch (\Exception $e) {
             Log::error('Error fetching manufacturers: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to fetch manufacturers'], 500);
+            return response()->json([], 500);
         }
     }
 
@@ -26,13 +29,15 @@ class HardwareDetailController extends Controller
     {
         try {
             $models = HardwareDetail::distinct()
-                ->orderBy('model')
-                ->pluck('model');
-            
+                ->whereNotNull('model')
+                ->pluck('model')
+                ->sort()
+                ->values();
+
             return response()->json($models);
         } catch (\Exception $e) {
             Log::error('Error fetching models: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to fetch models'], 500);
+            return response()->json([], 500);
         }
     }
 }

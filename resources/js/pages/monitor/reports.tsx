@@ -3,7 +3,9 @@ import { AlertTriangle, CheckCircle2, Clock, FileText, Printer, TrendingDown, Tr
 import { useState, useEffect } from 'react';
 import { useSettings } from '@/contexts/settings-context';
 import { useTranslation } from '@/contexts/i18n-context';
-import { useBranch } from '@/contexts/branch-context';
+import { usePage } from '@inertiajs/react';
+import { PageProps } from '@/types';
+import type { CurrentBranch } from '@/types/branch';
 
 interface DeviceEvent {
     id: string;
@@ -24,15 +26,21 @@ interface UptimeStat {
     lastIncident?: string;
 }
 
+interface ReportsPageProps extends PageProps {
+    currentBranch: CurrentBranch;
+}
+
 export default function Reports() {
     const { settings } = useSettings();
     const { t } = useTranslation();
-    const { currentBranch } = useBranch();
+    const { props } = usePage<ReportsPageProps>();
+    const { currentBranch } = props;
+    
     const [dateRange, setDateRange] = useState('7days');
     const [selectedCategory, setSelectedCategory] = useState('all');
 
-    // Use real device data from branch context
-    const allDevices = currentBranch.devices;
+    // Use real device data from branch
+    const allDevices = currentBranch?.devices || [];
 
     // Calculate uptime statistics from real devices
     const uptimeStats: UptimeStat[] = allDevices.map(device => {

@@ -220,8 +220,6 @@ export default function Configuration() {
                 ? baseUrl 
                 : `${baseUrl}/${selectedItem?.id}`;
             
-            const method = modalMode === 'create' ? 'POST' : 'PUT';
-            
             const formData = new FormData(document.querySelector('form') as HTMLFormElement);
             const data = Object.fromEntries(formData.entries());
             
@@ -236,15 +234,21 @@ export default function Configuration() {
             
             const csrfToken = await getCsrfToken();
 
+            // For updates, use POST with _method override (Laravel standard)
+            const method = modalMode === 'create' ? 'POST' : 'POST';
+            const requestData = modalMode === 'create' 
+                ? data 
+                : { ...data, _method: 'PUT' };
+
             const response = await fetch(url, {
-                method,
+                method: method,
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
                     'X-CSRF-TOKEN': csrfToken,
                 },
                 credentials: 'same-origin',
-                body: JSON.stringify(data),
+                body: JSON.stringify(requestData),
             });
 
             if (response.ok) {
@@ -442,7 +446,11 @@ export default function Configuration() {
                                     {selectedItem && (
                                         <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
                                             <p className="text-sm font-medium text-slate-900 dark:text-white">
-                                                {selectedItem.name || selectedItem.title || `ID: ${selectedItem.id}`}
+                                                {'title' in selectedItem 
+                                                    ? selectedItem.title 
+                                                    : 'name' in selectedItem 
+                                                    ? selectedItem.name 
+                                                    : `ID: ${(selectedItem as { id: number }).id}`}
                                             </p>
                                         </div>
                                     )}

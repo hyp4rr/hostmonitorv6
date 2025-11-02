@@ -3,7 +3,8 @@ import { AlertTriangle, Bell, CheckCircle2, X, Clock, User, TrendingDown, Activi
 import { useState } from 'react';
 import { useSettings } from '@/contexts/settings-context';
 import { useTranslation } from '@/contexts/i18n-context';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
+import type { CurrentBranch } from '@/types/branch';
 
 interface Alert {
     id: string;
@@ -18,9 +19,14 @@ interface Alert {
     category: string;
 }
 
+interface AlertsPageProps {
+    currentBranch: CurrentBranch;
+}
+
 export default function Alerts() {
     const { settings } = useSettings();
     const { t } = useTranslation();
+    const { currentBranch } = usePage<AlertsPageProps>().props;
     const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
     const [acknowledgeNote, setAcknowledgeNote] = useState('');
     const [filterSeverity, setFilterSeverity] = useState<string>('all');

@@ -8,6 +8,7 @@ use App\Models\HardwareDetail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Validator;
 
 class DeviceController extends Controller
 {
@@ -103,48 +104,68 @@ class DeviceController extends Controller
         try {
             $device = Device::findOrFail($id);
 
-            $validated = $request->validate([
-                'branch_id' => 'required|exists:branches,id',
-                'location_id' => 'nullable|exists:locations,id',
+            $validator = Validator::make($request->all(), [
                 'name' => 'required|string|max:255',
                 'ip_address' => 'required|ip|unique:devices,ip_address,' . $id,
                 'mac_address' => 'nullable|string|max:17',
                 'barcode' => 'required|string|max:255|unique:devices,barcode,' . $id,
-                'type' => 'nullable|string|max:50',
-                'category' => 'required|string|max:50',
-                'status' => 'required|in:online,offline,warning,maintenance',
+                'category' => 'required|in:switches,servers,wifi,tas,cctv',
+                'status' => 'required|in:online,offline,warning,maintenance,offline_ack',
+                'branch_id' => 'required|exists:branches,id',
+                'location_id' => 'nullable|exists:locations,id',
                 'building' => 'nullable|string|max:255',
-                'manufacturer' => 'nullable|string|max:100',
-                'model' => 'nullable|string|max:100',
+                'manufacturer' => 'nullable|string|max:255',
+                'model' => 'nullable|string|max:255',
                 'is_active' => 'boolean',
-                'response_time' => 'nullable|integer|min:0',
-                'latitude' => 'nullable|numeric|between:-90,90',
-                'longitude' => 'nullable|numeric|between:-180,180',
             ]);
 
-            // Handle hardware details
-            $hardwareDetailId = null;
-            if (!empty($validated['manufacturer']) && !empty($validated['model'])) {
-                $hardwareDetail = HardwareDetail::firstOrCreate([
-                    'manufacturer' => $validated['manufacturer'],
-                    'model' => $validated['model'],
-                ]);
-                $hardwareDetailId = $hardwareDetail->id;
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()
+                ], 422);
             }
 
-            // Remove manufacturer and model from validated data
-            unset($validated['manufacturer'], $validated['model']);
+            $data = $request->all();
             
-            $validated['hardware_detail_id'] = $hardwareDetailId;
-            $validated['is_active'] = $request->boolean('is_active', true);
-            $validated['type'] = $validated['type'] ?? $validated['category'];
+            // Handle boolean conversion
+            if (isset($data['is_active'])) {
+                $data['is_active'] = filter_var($data['is_active'], FILTER_VALIDATE_BOOLEAN);
+            }
 
-            $device->update($validated);
+            // Handle hardware details
+            $manufacturer = $data['manufacturer'] ?? null;
+            $model = $data['model'] ?? null;
+            unset($data['manufacturer'], $data['model']);
 
-            return response()->json($device->load(['branch', 'hardwareDetail']));
+            // Update device
+            $device->update($data);
+
+            // Handle hardware detail
+            if ($manufacturer || $model) {
+                $hardwareDetail = HardwareDetail::firstOrCreate(
+                    [
+                        'manufacturer' => $manufacturer,
+                        'model' => $model,
+                    ]
+                );
+                $device->hardware_detail_id = $hardwareDetail->id;
+                $device->save();
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Device updated successfully',
+                'data' => $device->load(['branch', 'location', 'hardware_detail'])
+            ]);
+
         } catch (\Exception $e) {
             Log::error('Error updating device: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to update device', 'message' => $e->getMessage()], 500);
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update device: ' . $e->getMessage()
+            ], 500);
         }
     }
 

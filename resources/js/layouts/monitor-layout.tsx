@@ -1,4 +1,4 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, usePage, router } from '@inertiajs/react';
 import {
     Activity,
     AlertTriangle,
@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { type ReactNode, useEffect, useState } from 'react';
 import { useConfigAuth } from '@/contexts/config-auth-context';
+import type { CurrentBranch } from '@/types/branch';
 
 interface MonitorLayoutProps {
     children: ReactNode;
@@ -57,19 +58,7 @@ const navigation: NavItem[] = [
 
 // Remove BranchProvider import and usage, get data from page props instead
 interface PageProps {
-    currentBranch?: {
-        id: number;
-        name: string;
-        code: string;
-        description: string;
-        address: string;
-        latitude: number;
-        longitude: number;
-        is_active: boolean;
-        devices: any[];
-        deviceCount: number;
-        locations: string[];
-    };
+    currentBranch: CurrentBranch;
 }
 
 export default function MonitorLayout({ children, title }: MonitorLayoutProps) {
@@ -81,28 +70,27 @@ export default function MonitorLayout({ children, title }: MonitorLayoutProps) {
     const [acknowledgeReason, setAcknowledgeReason] = useState('');
     const [showBranchMenu, setShowBranchMenu] = useState(false);
     
-    // Get branch data directly from Inertia page props
-    const { props } = usePage<PageProps>();
-    const currentBranch = props.currentBranch || {
-        id: 1,
-        name: 'Default Branch',
-        code: 'DEFAULT',
-        description: 'No branch configured',
-        address: '',
-        latitude: 0,
-        longitude: 0,
-        is_active: true,
-        devices: [],
-        deviceCount: 0,
-        locations: [],
-    };
+    // Get branch data from Inertia page props
+    const { currentBranch } = usePage<PageProps>().props;
     
-    // For now, branches is just an array with current branch
-    const branches = [currentBranch];
+    // Safely access branches array
+    const branches = currentBranch?.branches || [];
+    const hasBranches = branches.length > 0;
     
     const handleBranchSwitch = (branchId: number) => {
-        console.log('Switching to branch:', branchId);
-        // In production, this would navigate to a different branch
+        if (!branchId || branchId === currentBranch?.id) {
+            setShowBranchMenu(false);
+            return;
+        }
+
+        // Navigate to current page with new branch_id
+        router.visit(window.location.pathname, {
+            data: { branch_id: branchId },
+            preserveState: false,
+            preserveScroll: false,
+        });
+        
+        setShowBranchMenu(false);
     };
     
     // Mock alerts - in production, this would come from your backend
@@ -287,102 +275,98 @@ export default function MonitorLayout({ children, title }: MonitorLayoutProps) {
                             </div>
                             <div className="flex items-center gap-x-4 lg:gap-x-6">
                                 {/* Branch Selector */}
-                                <div className="relative">
-                                    <button
-                                        onClick={() => setShowBranchMenu(!showBranchMenu)}
-                                        className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-                                    >
-                                        <Building2 className="size-4" />
-                                        <span className="hidden sm:inline">{currentBranch.name}</span>
-                                        <span className="sm:hidden">{currentBranch.code}</span>
-                                        <ChevronDown className="size-4" />
-                                    </button>
+                                {hasBranches && currentBranch?.id && (
+                                    <div className="relative">
+                                        <button
+                                            onClick={() => setShowBranchMenu(!showBranchMenu)}
+                                            className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                                            aria-label="Select branch"
+                                        >
+                                            <Building2 className="size-4" />
+                                            <span className="hidden sm:inline">{currentBranch.name}</span>
+                                            <span className="sm:hidden">{currentBranch.code}</span>
+                                            <ChevronDown className="size-4" />
+                                        </button>
 
-                                    {showBranchMenu && (
-                                        <>
-                                            {/* Transparent overlay */}
-                                            <div
-                                                className="fixed inset-0 z-40 bg-transparent"
-                                                onClick={() => setShowBranchMenu(false)}
-                                            />
-                                            {/* Dropdown menu */}
-                                            <div className="absolute right-0 top-full z-50 mt-2 w-72 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-800">
-                                                <div className="border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-3 dark:border-slate-700 dark:from-blue-950/30 dark:to-indigo-950/30">
-                                                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-                                                        Select Branch
-                                                    </p>
-                                                </div>
-                                                <div className="max-h-96 overflow-y-auto">
-                                                    {branches.map((branch) => (
-                                                        <button
-                                                            key={branch.id}
-                                                            onClick={() => {
-                                                                handleBranchSwitch(branch.id);
-                                                                setShowBranchMenu(false);
-                                                            }}
-                                                            className={`w-full p-4 text-left transition-all hover:bg-slate-50 dark:hover:bg-slate-700/50 ${
-                                                                currentBranch.id === branch.id
-                                                                    ? 'bg-blue-50 dark:bg-blue-950/20'
-                                                                    : ''
-                                                            }`}
-                                                        >
-                                                            <div className="flex items-start gap-3">
-                                                                <div className={`mt-1 rounded-lg p-2 ${
-                                                                    currentBranch.id === branch.id
-                                                                        ? 'bg-gradient-to-br from-blue-500 to-indigo-600'
-                                                                        : 'bg-slate-100 dark:bg-slate-700'
-                                                                }`}>
-                                                                    <Building2 className={`size-4 ${
-                                                                        currentBranch.id === branch.id
-                                                                            ? 'text-white'
-                                                                            : 'text-slate-600 dark:text-slate-400'
-                                                                    }`} />
-                                                                </div>
-                                                                <div className="flex-1 min-w-0">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <h4 className={`text-sm font-bold ${
-                                                                            currentBranch.id === branch.id
-                                                                                ? 'text-blue-900 dark:text-blue-100'
-                                                                                : 'text-slate-900 dark:text-white'
+                                        {showBranchMenu && (
+                                            <>
+                                                {/* Click outside to close */}
+                                                <div
+                                                    className="fixed inset-0 z-40"
+                                                    onClick={() => setShowBranchMenu(false)}
+                                                    aria-hidden="true"
+                                                />
+                                                
+                                                {/* Dropdown menu */}
+                                                <div className="absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-800">
+                                                    <div className="border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-3 dark:border-slate-700 dark:from-blue-950/30 dark:to-indigo-950/30">
+                                                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                                                            Select Branch ({branches.length} available)
+                                                        </p>
+                                                    </div>
+                                                    <div className="max-h-96 overflow-y-auto">
+                                                        {branches.map((branch) => {
+                                                            const isSelected = currentBranch.id === branch.id;
+                                                            
+                                                            return (
+                                                                <button
+                                                                    key={branch.id}
+                                                                    onClick={() => handleBranchSwitch(branch.id)}
+                                                                    className={`w-full p-4 text-left transition-all hover:bg-slate-50 dark:hover:bg-slate-700/50 ${
+                                                                        isSelected ? 'bg-blue-50 dark:bg-blue-950/20' : ''
+                                                                    }`}
+                                                                    aria-current={isSelected ? 'true' : undefined}
+                                                                >
+                                                                    <div className="flex items-start gap-3">
+                                                                        <div className={`mt-1 rounded-lg p-2 ${
+                                                                            isSelected
+                                                                                ? 'bg-gradient-to-br from-blue-500 to-indigo-600'
+                                                                                : 'bg-slate-100 dark:bg-slate-700'
                                                                         }`}>
-                                                                            {branch.name}
-                                                                        </h4>
-                                                                        <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${
-                                                                            currentBranch.id === branch.id
-                                                                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
-                                                                                : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
-                                                                        }`}>
-                                                                            {branch.code}
-                                                                        </span>
-                                                                    </div>
-                                                                    <p className="mt-1 text-xs text-slate-600 dark:text-slate-400 truncate">
-                                                                        {branch.description}
-                                                                    </p>
-                                                                    <div className="mt-2 flex items-center gap-3 text-xs">
-                                                                        <span className="text-slate-500 dark:text-slate-500">
-                                                                            {branch.locations.length} locations
-                                                                        </span>
-                                                                        <span className="text-slate-500 dark:text-slate-500">•</span>
-                                                                        <span className="text-slate-500 dark:text-slate-500">
-                                                                            {branch.deviceCount} devices
-                                                                        </span>
-                                                                    </div>
-                                                                </div>
-                                                                {currentBranch.id === branch.id && (
-                                                                    <div className="mt-1">
-                                                                        <div className="rounded-full bg-blue-500 p-1">
-                                                                            <CheckCircle2 className="size-3 text-white" />
+                                                                            <Building2 className={`size-4 ${
+                                                                                isSelected
+                                                                                    ? 'text-white'
+                                                                                    : 'text-slate-600 dark:text-slate-400'
+                                                                            }`} />
                                                                         </div>
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <h4 className={`text-sm font-bold truncate ${
+                                                                                    isSelected
+                                                                                        ? 'text-blue-900 dark:text-blue-100'
+                                                                                        : 'text-slate-900 dark:text-white'
+                                                                                }`}>
+                                                                                    {branch.name}
+                                                                                </h4>
+                                                                                <span className={`rounded-full px-2 py-0.5 text-xs font-bold shrink-0 ${
+                                                                                    isSelected
+                                                                                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
+                                                                                        : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
+                                                                                }`}>
+                                                                                    {branch.code}
+                                                                                </span>
+                                                                            </div>
+                                                                            <p className="mt-1 text-xs text-slate-600 dark:text-slate-400 truncate">
+                                                                                {branch.description}
+                                                                            </p>
+                                                                        </div>
+                                                                        {isSelected && (
+                                                                            <div className="mt-1 shrink-0">
+                                                                                <div className="rounded-full bg-blue-500 p-1">
+                                                                                    <CheckCircle2 className="size-3 text-white" />
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
                                                                     </div>
-                                                                )}
-                                                            </div>
-                                                        </button>
-                                                    ))}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
 
                                 <div className="hidden lg:block">
                                     <div className="flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">

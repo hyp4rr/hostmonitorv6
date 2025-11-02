@@ -25,8 +25,9 @@ import {
 import { useEffect, useState } from 'react';
 import { useSettings } from '@/contexts/settings-context';
 import { useTranslation } from '@/contexts/i18n-context';
-import { useBranch } from '@/contexts/branch-context';
-import { router } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
+import { PageProps } from '@/types';
+import type { CurrentBranch } from '@/types/branch';
 
 type DeviceCategory = 'all' | 'switches' | 'servers' | 'wifi' | 'tas' | 'cctv';
 type DeviceStatus = 'online' | 'offline' | 'warning' | 'unknown' | 'offline_ack';
@@ -135,10 +136,15 @@ const getStatusLabel = (status: DeviceStatus) => {
 type SortField = 'name' | 'ip_address' | 'uptime_percentage' | 'status' | 'location' | 'manufacturer';
 type SortOrder = 'asc' | 'desc';
 
+interface DevicesPageProps extends PageProps {
+    currentBranch: CurrentBranch;
+}
+
 export default function Devices() {
     const { settings } = useSettings();
     const { t } = useTranslation();
-    const { currentBranch } = useBranch();
+    const { props } = usePage<DevicesPageProps>();
+    const { currentBranch } = props;
     const [selectedCategory, setSelectedCategory] = useState<DeviceCategory>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | DeviceStatus>('all');

@@ -31,7 +31,6 @@ return new class extends Migration
             
             $table->index(['branch_id', 'status', 'is_active']);
             $table->index('category');
-            $table->index('branch');
         });
     }
 
