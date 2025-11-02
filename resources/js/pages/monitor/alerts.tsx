@@ -137,7 +137,7 @@ export default function Alerts() {
                             <div className="flex items-center gap-2 rounded-full bg-gradient-to-r from-red-500 to-orange-500 px-4 py-2.5 shadow-lg">
                                 <Bell className="size-5 animate-pulse text-white" />
                                 <span className="text-sm font-semibold text-white">
-                                    {unacknowledgedCount} {t('alerts.pending')}{unacknowledgedCount !== 1 ? 's' : ''}
+                                    {unacknowledgedCount} {unacknowledgedCount === 1 ? t('alerts.pending') : t('alerts.pending') + 's'}
                                 </span>
                             </div>
                         )}

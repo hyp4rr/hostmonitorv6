@@ -111,11 +111,11 @@ composer install --optimize-autoloader --no-dev
 - **Typography**: `font-sans` uses `Inter var` (extended in tailwind.config.js)
 
 ### Configuration File Pattern
-The `/monitor/configuration` page implements a **custom authentication system** separate from Fortify:
-- Login via `/api/config/login` (no auth required)
-- CRUD operations require Sanctum token from login
-- Uses `auth:sanctum` middleware for protected routes
-- Frontend stores token in state (consider moving to httpOnly cookie for security)
+The `/monitor/configuration` page provides **public CRUD access** for system configuration:
+- No authentication required
+- Direct access to manage branches, devices, alerts, locations, and users
+- Uses standard REST API endpoints (`/api/branches`, `/api/devices`, etc.)
+- All CRUD operations are performed via fetch requests with JSON payloads
 
 ## Integration Points
 

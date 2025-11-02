@@ -1,11 +1,7 @@
 import MonitorLayout from '@/layouts/monitor-layout';
 import {
     AlertTriangle,
-    Check,
     Edit,
-    Eye,
-    EyeOff,
-    Lock,
     Plus,
     Save,
     Server,
@@ -14,7 +10,6 @@ import {
     X,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { useSettings } from '@/contexts/settings-context';
 import { useTranslation } from '@/contexts/i18n-context';
 
 interface Device {
@@ -98,22 +93,13 @@ interface UserData {
 type CRUDEntity = 'branches' | 'devices' | 'alerts' | 'locations' | 'users';
 
 export default function Configuration() {
-    const { settings } = useSettings();
     const { t } = useTranslation();
-    // Authentication state
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [authToken, setAuthToken] = useState<string | null>(null);
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
-    const [loginError, setLoginError] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-
+    
     // CRUD state
     const [selectedEntity, setSelectedEntity] = useState<CRUDEntity>('devices');
     const [showModal, setShowModal] = useState(false);
     const [modalMode, setModalMode] = useState<'create' | 'edit' | 'delete'>('create');
-    const [selectedItem, setSelectedItem] = useState<any>(null);
+    const [selectedItem, setSelectedItem] = useState<Device | Alert | Location | Branch | UserData | null>(null);
 
     // Data state
     const [devices, setDevices] = useState<Device[]>([]);
@@ -121,27 +107,27 @@ export default function Configuration() {
     const [locations, setLocations] = useState<Location[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [users, setUsers] = useState<UserData[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
 
-    // Fetch data when authenticated
+    // Fetch data when entity changes
     useEffect(() => {
-        if (isAuthenticated && authToken) {
-            fetchData();
-        }
-    }, [isAuthenticated, selectedEntity, authToken]);
+        fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedEntity]);
 
     const fetchData = async () => {
         setIsLoading(true);
         try {
             const entityMap: Record<CRUDEntity, string> = {
-                branches: '/api/config/branches',
-                devices: '/api/config/devices',
-                alerts: '/api/config/alerts',
-                locations: '/api/config/locations',
-                users: '/api/config/users',
+                branches: '/api/branches',
+                devices: '/api/devices',
+                alerts: '/api/alerts',
+                locations: '/api/locations',
+                users: '/api/users',
             };
 
             const endpoint = entityMap[selectedEntity];
-            if (!endpoint || !authToken) {
+            if (!endpoint) {
                 setIsLoading(false);
                 return;
             }
@@ -150,7 +136,6 @@ export default function Configuration() {
                 credentials: 'same-origin',
                 headers: {
                     'Accept': 'application/json',
-                    'Authorization': `Bearer ${authToken}`,
                 },
             });
 
@@ -173,9 +158,6 @@ export default function Configuration() {
                         setUsers(data);
                         break;
                 }
-            } else if (response.status === 401) {
-                setIsAuthenticated(false);
-                setAuthToken(null);
             }
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -184,10 +166,9 @@ export default function Configuration() {
         }
     };
 
-    // Helper function to get CSRF token (refreshed version)
+    // Helper function to get CSRF token
     const getCsrfToken = async () => {
         try {
-            // Fetch fresh CSRF token from Laravel
             await fetch('/sanctum/csrf-cookie', {
                 credentials: 'same-origin',
             });
@@ -204,74 +185,6 @@ export default function Configuration() {
         }
     };
 
-    // Handle login
-    const handleLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsLoading(true);
-        setLoginError('');
-        
-        try {
-            const csrfToken = await getCsrfToken();
-            
-            const response = await fetch('/api/config/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken,
-                },
-                credentials: 'same-origin',
-                body: JSON.stringify({ username, password }),
-            });
-
-            const data = await response.json();
-
-            if (response.ok && data.success) {
-                setIsAuthenticated(true);
-                setAuthToken(data.token);
-                setLoginError('');
-            } else {
-                setLoginError(data.message || 'Invalid username or password');
-            }
-        } catch (error) {
-            console.error('Login error:', error);
-            setLoginError('Connection error. Please check your network and try again.');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    // Handle logout
-    const handleLogout = async () => {
-        try {
-            if (authToken) {
-                const csrfToken = await getCsrfToken();
-                
-                await fetch('/api/config/logout', {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken,
-                        'Authorization': `Bearer ${authToken}`,
-                    },
-                    credentials: 'same-origin',
-                });
-            }
-        } catch (error) {
-            console.error('Logout error:', error);
-        }
-        
-        setIsAuthenticated(false);
-        setAuthToken(null);
-        setUsername('');
-        setPassword('');
-        setDevices([]);
-        setAlerts([]);
-        setBranches([]);
-        setLocations([]);
-        setUsers([]);
-    };
-
     // CRUD operations
     const handleCreate = () => {
         setModalMode('create');
@@ -279,13 +192,13 @@ export default function Configuration() {
         setShowModal(true);
     };
 
-    const handleEdit = (item: any) => {
+    const handleEdit = (item: Device | Alert | Location | Branch | UserData) => {
         setModalMode('edit');
         setSelectedItem(item);
         setShowModal(true);
     };
 
-    const handleDelete = (item: any) => {
+    const handleDelete = (item: Device | Alert | Location | Branch | UserData) => {
         setModalMode('delete');
         setSelectedItem(item);
         setShowModal(true);
@@ -295,11 +208,11 @@ export default function Configuration() {
         setIsLoading(true);
         try {
             const entityMap: Record<CRUDEntity, string> = {
-                branches: '/api/config/branches',
-                devices: '/api/config/devices',
-                alerts: '/api/config/alerts',
-                locations: '/api/config/locations',
-                users: '/api/config/users',
+                branches: '/api/branches',
+                devices: '/api/devices',
+                alerts: '/api/alerts',
+                locations: '/api/locations',
+                users: '/api/users',
             };
 
             const baseUrl = entityMap[selectedEntity];
@@ -329,7 +242,6 @@ export default function Configuration() {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
                     'X-CSRF-TOKEN': csrfToken,
-                    'Authorization': `Bearer ${authToken}`,
                 },
                 credentials: 'same-origin',
                 body: JSON.stringify(data),
@@ -338,9 +250,6 @@ export default function Configuration() {
             if (response.ok) {
                 await fetchData();
                 setShowModal(false);
-            } else if (response.status === 401) {
-                setIsAuthenticated(false);
-                setAuthToken(null);
             } else {
                 const errorData = await response.json();
                 alert(errorData.message || 'Failed to save');
@@ -357,11 +266,11 @@ export default function Configuration() {
         setIsLoading(true);
         try {
             const entityMap: Record<CRUDEntity, string> = {
-                branches: '/api/config/branches',
-                devices: '/api/config/devices',
-                alerts: '/api/config/alerts',
-                locations: '/api/config/locations',
-                users: '/api/config/users',
+                branches: '/api/branches',
+                devices: '/api/devices',
+                alerts: '/api/alerts',
+                locations: '/api/locations',
+                users: '/api/users',
             };
 
             const url = `${entityMap[selectedEntity]}/${selectedItem?.id}`;
@@ -373,7 +282,6 @@ export default function Configuration() {
                 headers: {
                     'Accept': 'application/json',
                     'X-CSRF-TOKEN': csrfToken,
-                    'Authorization': `Bearer ${authToken}`,
                 },
                 credentials: 'same-origin',
             });
@@ -381,9 +289,6 @@ export default function Configuration() {
             if (response.ok) {
                 await fetchData();
                 setShowModal(false);
-            } else if (response.status === 401) {
-                setIsAuthenticated(false);
-                setAuthToken(null);
             } else {
                 const errorData = await response.json();
                 alert(errorData.error || 'Failed to delete');
@@ -395,93 +300,6 @@ export default function Configuration() {
             setIsLoading(false);
         }
     };
-
-    // Login screen
-    if (!isAuthenticated) {
-        return (
-            <MonitorLayout title={t('config.title')}>
-                <div className="flex min-h-[calc(100vh-200px)] items-center justify-center">
-                    <div className="w-full max-w-md">
-                        <div className="rounded-2xl border border-slate-200/50 bg-white p-8 shadow-xl dark:border-slate-700/50 dark:bg-slate-800">
-                            <div className="mb-8 text-center">
-                                <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30">
-                                    <Lock className="size-8 text-blue-600 dark:text-blue-400" />
-                                </div>
-                                <h2 className="bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-2xl font-bold text-transparent dark:from-white dark:to-slate-300">
-                                    {t('config.title')}
-                                </h2>
-                                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                                    Please login to access configuration settings
-                                </p>
-                            </div>
-
-                            <form onSubmit={handleLogin} className="space-y-6">
-                                {loginError && (
-                                    <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
-                                        <AlertTriangle className="size-4" />
-                                        {loginError}
-                                    </div>
-                                )}
-
-                                <div>
-                                    <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                                        {t('config.username')}
-                                    </label>
-                                    <div className="relative">
-                                        <User className="absolute left-3 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
-                                        <input
-                                            type="text"
-                                            value={username}
-                                            onChange={(e) => setUsername(e.target.value)}
-                                            className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-4 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
-                                            placeholder="Enter username"
-                                            required
-                                        />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                                        {t('config.password')}
-                                    </label>
-                                    <div className="relative">
-                                        <Lock className="absolute left-3 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
-                                        <input
-                                            type={showPassword ? 'text' : 'password'}
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-12 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
-                                            placeholder="Enter password"
-                                            required
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                                        >
-                                            {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <button
-                                    type="submit"
-                                    disabled={isLoading}
-                                    className="w-full rounded-lg bg-blue-600 py-2.5 font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50 disabled:opacity-50"
-                                >
-                                    {isLoading ? 'Logging in...' : t('config.login')}
-                                </button>
-
-                                <p className="text-center text-xs text-slate-500 dark:text-slate-400">
-                                    Use your admin credentials
-                                </p>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </MonitorLayout>
-        );
-    }
 
     // Main configuration interface
     return (
@@ -497,12 +315,6 @@ export default function Configuration() {
                             {t('config.subtitle')}
                         </p>
                     </div>
-                    <button
-                        onClick={handleLogout}
-                        className="rounded-lg bg-gradient-to-r from-red-500 to-red-600 px-4 py-2 text-sm font-medium text-white shadow-lg transition-all hover:scale-105"
-                    >
-                        {t('config.logout')}
-                    </button>
                 </div>
 
                 {/* Entity selector tabs */}
@@ -873,7 +685,7 @@ function LocationsTable({
                         Location Name
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                        Branch
+                        Branch ID
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                         Description
@@ -890,7 +702,7 @@ function LocationsTable({
                             {location.name}
                         </td>
                         <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                            {location.branch}
+                            {location.branch_id}
                         </td>
                         <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
                             {location.description || '-'}
@@ -1043,20 +855,39 @@ function EntityForm({
 }: {
     entity: CRUDEntity;
     mode: 'create' | 'edit';
-    data: any;
+    data: Device | Alert | Location | Branch | UserData | null;
 }) {
-    const [latitude, setLatitude] = useState(data?.latitude || '');
-    const [longitude, setLongitude] = useState(data?.longitude || '');
+    const [latitude, setLatitude] = useState<string>(() => {
+        if (data && 'latitude' in data && data.latitude) {
+            return String(data.latitude);
+        }
+        return '';
+    });
+    
+    const [longitude, setLongitude] = useState<string>(() => {
+        if (data && 'longitude' in data && data.longitude) {
+            return String(data.longitude);
+        }
+        return '';
+    });
+    
     const [branches, setBranches] = useState<Branch[]>([]);
     const [locations, setLocations] = useState<Location[]>([]);
-    const [selectedBranchId, setSelectedBranchId] = useState<number | null>(data?.branch_id || null);
+    
+    const [selectedBranchId, setSelectedBranchId] = useState<number | null>(() => {
+        if (data && 'branch_id' in data && data.branch_id) {
+            return data.branch_id;
+        }
+        return null;
+    });
+    
     const [manufacturers, setManufacturers] = useState<string[]>([]);
     const [models, setModels] = useState<string[]>([]);
 
     useEffect(() => {
         // Fetch branches for device/location forms
         if (entity === 'devices' || entity === 'locations') {
-            fetch('/api/config/branches', {
+            fetch('/api/branches', {
                 credentials: 'same-origin',
                 headers: { 'Accept': 'application/json' },
             })
@@ -1067,7 +898,7 @@ function EntityForm({
 
         // Fetch locations and hardware details when creating/editing devices
         if (entity === 'devices') {
-            fetch('/api/config/locations', {
+            fetch('/api/locations', {
                 credentials: 'same-origin',
                 headers: { 'Accept': 'application/json' },
             })
@@ -1076,7 +907,7 @@ function EntityForm({
             .catch(err => console.error('Error loading locations:', err));
 
             // Fetch manufacturers
-            fetch('/api/config/hardware/manufacturers', {
+            fetch('/api/hardware/manufacturers', {
                 credentials: 'same-origin',
                 headers: { 'Accept': 'application/json' },
             })
@@ -1085,7 +916,7 @@ function EntityForm({
             .catch(err => console.error('Error loading manufacturers:', err));
 
             // Fetch models
-            fetch('/api/config/hardware/models', {
+            fetch('/api/hardware/models', {
                 credentials: 'same-origin',
                 headers: { 'Accept': 'application/json' },
             })
@@ -1101,6 +932,7 @@ function EntityForm({
         : locations;
 
     if (entity === 'branches') {
+        const branchData = data as Branch | null;
         return (
             <form className="space-y-6">
                 <div>
@@ -1108,23 +940,23 @@ function EntityForm({
                     <div className="grid gap-4 sm:grid-cols-2">
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Branch Name *</label>
-                            <input type="text" name="name" defaultValue={data?.name} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="UTHM Kampus Parit Raja" required />
+                            <input type="text" name="name" defaultValue={branchData?.name || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="UTHM Kampus Parit Raja" required />
                         </div>
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Branch Code *</label>
-                            <input type="text" name="code" defaultValue={data?.code} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="PR" required />
+                            <input type="text" name="code" defaultValue={branchData?.code || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="PR" required />
                         </div>
                         <div className="sm:col-span-2">
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Description</label>
-                            <input type="text" name="description" defaultValue={data?.description} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
+                            <input type="text" name="description" defaultValue={branchData?.description || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
                         </div>
                         <div className="sm:col-span-2">
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Address</label>
-                            <textarea name="address" defaultValue={data?.address} rows={2} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
+                            <textarea name="address" defaultValue={branchData?.address || ''} rows={2} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
                         </div>
                         <div className="sm:col-span-2">
                             <label className="flex items-center gap-3 cursor-pointer">
-                                <input type="checkbox" name="is_active" defaultChecked={data?.is_active ?? true} className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700" />
+                                <input type="checkbox" name="is_active" defaultChecked={branchData?.is_active ?? true} className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700" />
                                 <span className="text-sm text-slate-700 dark:text-slate-300">Branch is active</span>
                             </label>
                         </div>
@@ -1135,6 +967,7 @@ function EntityForm({
     }
 
     if (entity === 'devices') {
+        const deviceData = data as Device | null;
         return (
             <form className="space-y-6">
                 {/* Basic Information */}
@@ -1143,23 +976,23 @@ function EntityForm({
                     <div className="grid gap-4 sm:grid-cols-2">
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Device Name *</label>
-                            <input type="text" name="name" defaultValue={data?.name} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="Enter device name" required />
+                            <input type="text" name="name" defaultValue={deviceData?.name || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="Enter device name" required />
                         </div>
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Barcode *</label>
-                            <input type="text" name="barcode" defaultValue={data?.barcode} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="Enter barcode" required />
+                            <input type="text" name="barcode" defaultValue={deviceData?.barcode || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="Enter barcode" required />
                         </div>
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">IP Address *</label>
-                            <input type="text" name="ip_address" defaultValue={data?.ip_address} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" pattern="^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$" placeholder="192.168.1.1" required />
+                            <input type="text" name="ip_address" defaultValue={deviceData?.ip_address || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" pattern="^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$" placeholder="192.168.1.1" required />
                         </div>
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">MAC Address</label>
-                            <input type="text" name="mac_address" defaultValue={data?.mac_address} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="00:1A:2B:3C:4D:5E" />
+                            <input type="text" name="mac_address" defaultValue={deviceData?.mac_address || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="00:1A:2B:3C:4D:5E" />
                         </div>
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Category *</label>
-                            <select name="category" defaultValue={data?.category || 'switch'} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" required>
+                            <select name="category" defaultValue={deviceData?.category || 'switch'} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" required>
                                 <option value="switch">Switch</option>
                                 <option value="server">Server</option>
                                 <option value="wifi">WiFi</option>
@@ -1169,7 +1002,7 @@ function EntityForm({
                         </div>
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Status *</label>
-                            <select name="status" defaultValue={data?.status || 'offline'} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" required>
+                            <select name="status" defaultValue={deviceData?.status || 'offline'} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" required>
                                 <option value="online">Online</option>
                                 <option value="offline">Offline</option>
                                 <option value="warning">Warning</option>
@@ -1194,7 +1027,7 @@ function EntityForm({
                         </div>
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Location</label>
-                            <select name="location_id" defaultValue={data?.location_id} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" disabled={!selectedBranchId}>
+                            <select name="location_id" defaultValue={deviceData?.location_id || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" disabled={!selectedBranchId}>
                                 <option value="">Select Location</option>
                                 {filteredLocations.map(location => (
                                     <option key={location.id} value={location.id}>{location.name}</option>
@@ -1203,7 +1036,7 @@ function EntityForm({
                         </div>
                         <div className="sm:col-span-2">
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Building</label>
-                            <input type="text" name="building" defaultValue={data?.building} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="Building name" />
+                            <input type="text" name="building" defaultValue={deviceData?.building || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="Building name" />
                         </div>
                     </div>
                 </div>
@@ -1217,7 +1050,7 @@ function EntityForm({
                             <input 
                                 type="text" 
                                 name="manufacturer" 
-                                defaultValue={data?.hardware_detail?.manufacturer} 
+                                defaultValue={deviceData?.hardware_detail?.manufacturer || ''} 
                                 list="manufacturers-list"
                                 className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" 
                                 placeholder="e.g., Cisco, HP, Dell" 
@@ -1233,7 +1066,7 @@ function EntityForm({
                             <input 
                                 type="text" 
                                 name="model" 
-                                defaultValue={data?.hardware_detail?.model} 
+                                defaultValue={deviceData?.hardware_detail?.model || ''} 
                                 list="models-list"
                                 className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" 
                                 placeholder="Model number" 
@@ -1246,7 +1079,7 @@ function EntityForm({
                         </div>
                         <div className="sm:col-span-2">
                             <label className="flex items-center gap-3 cursor-pointer">
-                                <input type="checkbox" name="is_active" defaultChecked={data?.is_active ?? true} className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700" />
+                                <input type="checkbox" name="is_active" defaultChecked={deviceData?.is_active ?? true} className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700" />
                                 <span className="text-sm text-slate-700 dark:text-slate-300">Device is active</span>
                             </label>
                         </div>
@@ -1257,6 +1090,7 @@ function EntityForm({
     }
 
     if (entity === 'alerts') {
+        const alertData = data as Alert | null;
         return (
             <form className="space-y-6">
                 <div>
@@ -1265,7 +1099,7 @@ function EntityForm({
                         <div className="grid gap-4 sm:grid-cols-2">
                             <div>
                                 <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Status</label>
-                                <select name="status" defaultValue={data?.status || 'active'} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white">
+                                <select name="status" defaultValue={alertData?.status || 'active'} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white">
                                     <option value="active">Active</option>
                                     <option value="acknowledged">Acknowledged</option>
                                     <option value="dismissed">Dismissed</option>
@@ -1273,20 +1107,20 @@ function EntityForm({
                             </div>
                             <div>
                                 <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Acknowledged By</label>
-                                <input type="text" name="acknowledged_by" defaultValue={data?.acknowledged_by} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
+                                <input type="text" name="acknowledged_by" defaultValue={alertData?.acknowledged_by || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
                             </div>
                         </div>
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Reason/Action Taken</label>
-                            <textarea name="reason" defaultValue={data?.reason} rows={3} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="Describe the action taken or reason for acknowledgment" />
+                            <textarea name="reason" defaultValue={alertData?.reason || ''} rows={3} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="Describe the action taken or reason for acknowledgment" />
                         </div>
                         <div className="space-y-3">
                             <label className="flex items-center gap-3 cursor-pointer">
-                                <input type="checkbox" name="acknowledged" defaultChecked={data?.acknowledged ?? false} className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700" />
+                                <input type="checkbox" name="acknowledged" defaultChecked={alertData?.acknowledged ?? false} className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700" />
                                 <span className="text-sm text-slate-700 dark:text-slate-300">Mark as acknowledged</span>
                             </label>
                             <label className="flex items-center gap-3 cursor-pointer">
-                                <input type="checkbox" name="resolved" defaultChecked={data?.resolved ?? false} className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700" />
+                                <input type="checkbox" name="resolved" defaultChecked={alertData?.resolved ?? false} className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700" />
                                 <span className="text-sm text-slate-700 dark:text-slate-300">Mark as resolved</span>
                             </label>
                         </div>
@@ -1297,6 +1131,7 @@ function EntityForm({
     }
 
     if (entity === 'locations') {
+        const locationData = data as Location | null;
         return (
             <form className="space-y-6">
                 <div>
@@ -1304,11 +1139,11 @@ function EntityForm({
                     <div className="grid gap-4">
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Location Name *</label>
-                            <input type="text" name="name" defaultValue={data?.name} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="e.g., Server Room A, Floor 3 West Wing" required />
+                            <input type="text" name="name" defaultValue={locationData?.name || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="e.g., Server Room A, Floor 3 West Wing" required />
                         </div>
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Branch *</label>
-                            <select name="branch_id" defaultValue={data?.branch_id} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" required>
+                            <select name="branch_id" defaultValue={locationData?.branch_id || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" required>
                                 <option value="">Select Branch</option>
                                 {branches.map(branch => (
                                     <option key={branch.id} value={branch.id}>{branch.name}</option>
@@ -1318,11 +1153,27 @@ function EntityForm({
                         <div className="grid gap-4 sm:grid-cols-2">
                             <div>
                                 <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Latitude</label>
-                                <input type="number" step="any" name="latitude" value={latitude} onChange={(e) => setLatitude(e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="1.853639" />
+                                <input 
+                                    type="number" 
+                                    step="any" 
+                                    name="latitude" 
+                                    value={latitude} 
+                                    onChange={(e) => setLatitude(e.target.value)} 
+                                    className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" 
+                                    placeholder="1.853639" 
+                                />
                             </div>
                             <div>
                                 <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Longitude</label>
-                                <input type="number" step="any" name="longitude" value={longitude} onChange={(e) => setLongitude(e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="103.080925" />
+                                <input 
+                                    type="number" 
+                                    step="any" 
+                                    name="longitude" 
+                                    value={longitude} 
+                                    onChange={(e) => setLongitude(e.target.value)} 
+                                    className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" 
+                                    placeholder="103.080925" 
+                                />
                             </div>
                         </div>
                         {latitude && longitude && (
@@ -1332,7 +1183,7 @@ function EntityForm({
                         )}
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Description</label>
-                            <textarea name="description" defaultValue={data?.description} rows={3} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="Additional details about this location" />
+                            <textarea name="description" defaultValue={locationData?.description || ''} rows={3} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="Additional details about this location" />
                         </div>
                     </div>
                 </div>
@@ -1341,6 +1192,7 @@ function EntityForm({
     }
 
     if (entity === 'users') {
+        const userData = data as UserData | null;
         return (
             <form className="space-y-6">
                 <div>
@@ -1348,11 +1200,11 @@ function EntityForm({
                     <div className="grid gap-4">
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Name *</label>
-                            <input type="text" name="name" defaultValue={data?.name} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" required />
+                            <input type="text" name="name" defaultValue={userData?.name || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" required />
                         </div>
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Email *</label>
-                            <input type="email" name="email" defaultValue={data?.email} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" required />
+                            <input type="email" name="email" defaultValue={userData?.email || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" required />
                         </div>
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">

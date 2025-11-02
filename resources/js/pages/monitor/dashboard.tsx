@@ -291,14 +291,14 @@ export default function Dashboard() {
                                                         alert.severity === 'info' ? 'bg-blue-500' : 'bg-gray-500'
                                                     }`} />
                                                     <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                                                        {String(alert.device_name || alert.title || 'Unknown Device')}
+                                                        {alert.device_name || alert.title || 'Unknown Device'}
                                                     </p>
                                                 </div>
                                                 <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                                                    {String(alert.message || 'No message')}
+                                                    {alert.message || 'No message'}
                                                 </p>
                                                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-500">
-                                                    {String(alert.created_at_human || new Date(alert.created_at).toLocaleString())}
+                                                    {alert.created_at_human || (alert.created_at ? new Date(alert.created_at).toLocaleString() : 'Unknown time')}
                                                 </p>
                                             </div>
                                             <div className="flex flex-col gap-1">
@@ -355,14 +355,14 @@ export default function Dashboard() {
                                         />
                                         <div className="flex-1">
                                             <p className="text-sm font-medium text-slate-900 dark:text-white">
-                                                {activity.device_name}
+                                                {activity.device_name || 'Unknown Device'}
                                             </p>
                                             <p className="text-xs text-slate-500 dark:text-slate-400">
-                                                Status: {activity.status}
+                                                Status: {activity.status || 'unknown'}
                                             </p>
                                         </div>
                                         <span className="text-xs text-slate-500 dark:text-slate-400">
-                                            {activity.time_ago}
+                                            {activity.time_ago || 'Unknown'}
                                         </span>
                                     </div>
                                 ))

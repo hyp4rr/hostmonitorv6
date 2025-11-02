@@ -21,6 +21,7 @@ import {
     X,
 } from 'lucide-react';
 import { type ReactNode, useEffect, useState } from 'react';
+import { useConfigAuth } from '@/contexts/config-auth-context';
 
 interface MonitorLayoutProps {
     children: ReactNode;
@@ -156,10 +157,12 @@ export default function MonitorLayout({ children, title }: MonitorLayoutProps) {
         }
     };
 
+    const { isAuthenticated, logout } = useConfigAuth();
+
     return (
         <>
             <Head title={title} />
-            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+            <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
                 {/* Mobile sidebar backdrop */}
                 {sidebarOpen && (
                     <div

@@ -35,6 +35,8 @@ interface Device {
     id: number;
     name: string;
     ip_address: string;
+    mac_address: string;
+    barcode: string;
     type: string;
     category: DeviceCategory;
     status: DeviceStatus;
@@ -53,10 +55,9 @@ interface Device {
     offline_reason?: string;
     offline_acknowledged_by?: string;
     offline_acknowledged_at?: string;
-    mac_address: string;
-    barcode: string;
     latitude?: number;
     longitude?: number;
+    branch_id?: number;
 }
 
 const categories = [
@@ -203,7 +204,7 @@ export default function Devices() {
     }
 
     // Get unique locations from current branch
-    const uniqueLocations = currentBranch?.locations || [];
+    const uniqueLocations = Array.from(new Set(allDevices.map(d => d.location).filter(Boolean)));
 
     // Get unique manufacturers and models for filters
     const uniqueManufacturers = Array.from(new Set(allDevices.map(d => d.manufacturer))).filter(Boolean);
@@ -735,6 +736,19 @@ export default function Devices() {
                                                 )}
                                             </div>
                                         </th>
+                                        <th 
+                                            className="px-6 py-3 text-left cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                            onClick={() => handleSort('manufacturer')}
+                                        >
+                                            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                                                Manufacturer
+                                                {sortField === 'manufacturer' ? (
+                                                    sortOrder === 'asc' ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />
+                                                ) : (
+                                                    <ArrowUpDown className="size-4 opacity-30" />
+                                                )}
+                                            </div>
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
@@ -775,6 +789,9 @@ export default function Devices() {
                                                 <span className="text-sm text-slate-600 dark:text-slate-400">
                                                     {device.location}
                                                 </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                                                {device.manufacturer && device.model ? `${device.manufacturer} ${device.model}` : '-'}
                                             </td>
                                         </tr>
                                     ))}

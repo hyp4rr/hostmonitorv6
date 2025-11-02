@@ -4,8 +4,10 @@ import './bootstrap';
 import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
+import { StrictMode } from 'react';
 import { SettingsProvider } from '@/contexts/settings-context';
 import { I18nProvider } from '@/contexts/i18n-context';
+import { ConfigAuthProvider } from '@/contexts/config-auth-context';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -22,7 +24,9 @@ createInertiaApp({
         root.render(
             <SettingsProvider>
                 <I18nProvider>
-                    <App {...props} />
+                    <ConfigAuthProvider>
+                        <App {...props} />
+                    </ConfigAuthProvider>
                 </I18nProvider>
             </SettingsProvider>
         );

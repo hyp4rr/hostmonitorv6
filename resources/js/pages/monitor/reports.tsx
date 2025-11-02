@@ -131,7 +131,9 @@ export default function Reports() {
         const offlineDevices = allDevices.filter(d => d.status === 'offline').length;
         const warningDevices = allDevices.filter(d => d.status === 'warning').length;
         const acknowledgedDevices = allDevices.filter(d => d.status === 'offline_ack').length;
-        const avgUptime = (filteredStats.reduce((sum, stat) => sum + stat.uptime, 0) / totalDevices).toFixed(2);
+        const avgUptime = totalDevices > 0 
+            ? (filteredStats.reduce((sum, stat) => sum + (stat.uptime || 0), 0) / totalDevices).toFixed(2)
+            : '0.00';
         const totalIncidents = filteredStats.reduce((sum, stat) => sum + stat.incidents, 0);
 
         // Category breakdown
@@ -259,9 +261,11 @@ export default function Reports() {
             [separator],
             ['Location', 'Device Count', 'Avg Uptime %', 'Status'],
             ['---', '---', '---', '---'],
-            ...Array.from(new Set(allDevices.map(d => d.location))).map(location => {
+            ...Array.from(new Set(allDevices.map(d => d.location).filter(Boolean))).map(location => {
                 const locationDevices = allDevices.filter(d => d.location === location);
-                const avgLocUptime = (locationDevices.reduce((sum, d) => sum + d.uptime_percentage, 0) / locationDevices.length).toFixed(2);
+                const avgLocUptime = locationDevices.length > 0
+                    ? (locationDevices.reduce((sum, d) => sum + (d.uptime_percentage || 0), 0) / locationDevices.length).toFixed(2)
+                    : '0.00';
                 const status = parseFloat(avgLocUptime) >= 99 ? 'Healthy' : 'Needs Attention';
                 return [location, locationDevices.length, `${avgLocUptime}%`, status];
             }),

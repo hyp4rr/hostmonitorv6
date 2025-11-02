@@ -360,16 +360,13 @@ export default function Maps() {
         const focusLocation = urlParams.get('focusLocation');
 
         if (locationParam && focusLocation === 'true') {
-            // Find the location in deviceLocations
             const foundLocation = deviceLocations.find(
                 loc => loc.name.toLowerCase().includes(locationParam.toLowerCase())
             );
 
             if (foundLocation && mapRef.current) {
-                // Set as selected
                 setSelectedLocation(foundLocation);
                 
-                // Fly to location with animation
                 setTimeout(() => {
                     if (mapRef.current) {
                         mapRef.current.flyTo([foundLocation.lat, foundLocation.lng], 17, {
@@ -377,7 +374,6 @@ export default function Maps() {
                             easeLinearity: 0.25
                         });
                         
-                        // Find and open the marker popup
                         const marker = markersRef.current.find(m => {
                             const latLng = m.getLatLng();
                             return latLng.lat === foundLocation.lat && latLng.lng === foundLocation.lng;
@@ -390,7 +386,7 @@ export default function Maps() {
                 }, 500);
             }
         }
-    }, []); // Run once on mount
+    }, []); // Empty dependency array since we only want this to run once on mount
 
     const toggleFullscreen = () => {
         setIsFullscreen(!isFullscreen);

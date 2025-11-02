@@ -17,7 +17,6 @@ return new class extends Migration
             $table->string('barcode')->unique();
             $table->string('category')->default('switch');
             $table->string('status')->default('offline');
-            $table->string('branch')->nullable();
             $table->string('building')->nullable();
             $table->string('brand')->nullable();
             $table->string('model')->nullable();
