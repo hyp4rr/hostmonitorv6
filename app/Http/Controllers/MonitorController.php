@@ -15,7 +15,7 @@ class MonitorController extends Controller
         $currentBranch = Branch::with('devices')->first();
         
         if (!$currentBranch) {
-            return Inertia::render('Monitor/Dashboard', [
+            return Inertia::render('monitor/dashboard', [
                 'stats' => [
                     'totalDevices' => 0,
                     'onlineDevices' => 0,
@@ -29,7 +29,7 @@ class MonitorController extends Controller
 
         $devices = $currentBranch->devices;
         
-        return Inertia::render('Monitor/Dashboard', [
+        return Inertia::render('monitor/dashboard', [
             'stats' => [
                 'totalDevices' => $devices->count(),
                 'onlineDevices' => $devices->where('status', 'online')->count(),
@@ -42,43 +42,44 @@ class MonitorController extends Controller
                 ->take(5)
                 ->get(),
             'recentActivity' => $devices->whereNotNull('last_check')
-                ->latest('last_check')
+                ->sortByDesc('last_check')
                 ->take(10)
-                ->get(),
+                ->values()
+                ->toArray(),
         ]);
     }
 
     public function devices()
     {
-        return Inertia::render('Monitor/Devices');
+        return Inertia::render('monitor/devices');
     }
 
     public function alerts()
     {
         $alerts = Alert::with('device')->latest('triggered_at')->get();
         
-        return Inertia::render('Monitor/Alerts', [
+        return Inertia::render('monitor/alerts', [
             'alerts' => $alerts,
         ]);
     }
 
     public function maps()
     {
-        return Inertia::render('Monitor/Maps');
+        return Inertia::render('monitor/maps');
     }
 
     public function reports()
     {
-        return Inertia::render('Monitor/Reports');
+        return Inertia::render('monitor/reports');
     }
 
     public function settings()
     {
-        return Inertia::render('Monitor/Settings');
+        return Inertia::render('monitor/settings');
     }
 
     public function configuration()
     {
-        return Inertia::render('Monitor/Configuration');
+        return Inertia::render('monitor/configuration');
     }
 }
