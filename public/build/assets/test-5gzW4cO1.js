@@ -1,0 +1,1 @@
+import{j as e}from"./app-DNPtm4bm.js";/* empty css            */function i(){return e.jsxs("div",{style:{padding:"20px",fontSize:"24px"},children:[e.jsx("h1",{children:"Test Page Works!"}),e.jsx("p",{children:"If you see this, React is working."})]})}export{i as default};

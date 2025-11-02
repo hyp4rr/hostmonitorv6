@@ -1,0 +1,221 @@
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use App\Models\Device;
+use App\Models\Alert;
+use App\Models\MonitoringHistory;
+
+class DeviceSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $devices = [
+            [
+                'name' => 'Core Switch 1',
+                'ip_address' => '192.168.1.1',
+                'type' => 'switch',
+                'category' => 'switches',
+                'status' => 'online',
+                'location' => 'MC Rack Server A5',
+                'building' => 'Main Campus',
+                'manufacturer' => 'Cisco',
+                'model' => 'Catalyst 9300',
+                'priority' => 1,
+                'uptime_percentage' => 99.95,
+                'response_time' => 2,
+                'last_check' => now(),
+            ],
+            [
+                'name' => 'Core Switch 2',
+                'ip_address' => '192.168.1.2',
+                'type' => 'switch',
+                'category' => 'switches',
+                'status' => 'online',
+                'location' => 'MC Rack Server C2',
+                'building' => 'Main Campus',
+                'manufacturer' => 'Cisco',
+                'model' => 'Catalyst 9300',
+                'priority' => 1,
+                'uptime_percentage' => 99.92,
+                'response_time' => 3,
+                'last_check' => now(),
+            ],
+            [
+                'name' => 'Web Server 01',
+                'ip_address' => '192.168.10.10',
+                'type' => 'server',
+                'category' => 'servers',
+                'status' => 'online',
+                'location' => 'MC Rack Server A5',
+                'building' => 'Main Campus',
+                'manufacturer' => 'Dell',
+                'model' => 'PowerEdge R740',
+                'priority' => 1,
+                'uptime_percentage' => 99.99,
+                'response_time' => 5,
+                'last_check' => now(),
+            ],
+            [
+                'name' => 'Database Server',
+                'ip_address' => '192.168.10.11',
+                'type' => 'server',
+                'category' => 'servers',
+                'status' => 'online',
+                'location' => 'MC Rack Server A5',
+                'building' => 'Main Campus',
+                'manufacturer' => 'HP',
+                'model' => 'ProLiant DL380',
+                'priority' => 1,
+                'uptime_percentage' => 99.97,
+                'response_time' => 4,
+                'last_check' => now(),
+            ],
+            [
+                'name' => 'Edge Router 1',
+                'ip_address' => '192.168.1.254',
+                'type' => 'router',
+                'category' => 'switches',
+                'status' => 'online',
+                'location' => 'MC Rack Server C2',
+                'building' => 'Main Campus',
+                'manufacturer' => 'Cisco',
+                'model' => 'ISR 4451',
+                'priority' => 1,
+                'uptime_percentage' => 99.89,
+                'response_time' => 8,
+                'last_check' => now(),
+            ],
+            [
+                'name' => 'Firewall Main',
+                'ip_address' => '192.168.1.253',
+                'type' => 'firewall',
+                'category' => 'switches',
+                'status' => 'online',
+                'location' => 'MC Rack Server C2',
+                'building' => 'Main Campus',
+                'manufacturer' => 'Fortinet',
+                'model' => 'FortiGate 200F',
+                'priority' => 1,
+                'uptime_percentage' => 99.94,
+                'response_time' => 6,
+                'last_check' => now(),
+            ],
+            [
+                'name' => 'Access Switch Floor 2',
+                'ip_address' => '192.168.2.1',
+                'type' => 'switch',
+                'category' => 'switches',
+                'status' => 'online',
+                'location' => 'MC Blok ABC',
+                'building' => 'Main Campus',
+                'manufacturer' => 'HP',
+                'model' => 'Aruba 2930F',
+                'priority' => 2,
+                'uptime_percentage' => 99.85,
+                'response_time' => 4,
+                'last_check' => now(),
+            ],
+            [
+                'name' => 'Access Switch Floor 3',
+                'ip_address' => '192.168.3.1',
+                'type' => 'switch',
+                'category' => 'switches',
+                'status' => 'warning',
+                'location' => 'MC Blok DEFG',
+                'building' => 'Main Campus',
+                'manufacturer' => 'HP',
+                'model' => 'Aruba 2930F',
+                'priority' => 2,
+                'uptime_percentage' => 98.50,
+                'response_time' => 45,
+                'last_check' => now(),
+            ],
+            [
+                'name' => 'WiFi Controller',
+                'ip_address' => '192.168.1.10',
+                'type' => 'wifi',
+                'category' => 'wifi',
+                'status' => 'online',
+                'location' => 'MC Rack Server A5',
+                'building' => 'Main Campus',
+                'manufacturer' => 'Cisco',
+                'model' => 'WLC 5520',
+                'priority' => 2,
+                'uptime_percentage' => 99.91,
+                'response_time' => 7,
+                'last_check' => now(),
+            ],
+            [
+                'name' => 'AP Floor 2 East',
+                'ip_address' => '192.168.2.10',
+                'type' => 'access_point',
+                'category' => 'wifi',
+                'status' => 'online',
+                'location' => 'MC FKEE QA.QB',
+                'building' => 'Main Campus',
+                'manufacturer' => 'Cisco',
+                'model' => 'Aironet 3800',
+                'priority' => 3,
+                'uptime_percentage' => 99.75,
+                'response_time' => 12,
+                'last_check' => now(),
+            ],
+            [
+                'name' => 'AP Floor 2 West',
+                'ip_address' => '192.168.2.11',
+                'type' => 'access_point',
+                'category' => 'wifi',
+                'status' => 'online',
+                'location' => 'MC FSKTM',
+                'building' => 'Main Campus',
+                'manufacturer' => 'Cisco',
+                'model' => 'Aironet 3800',
+                'priority' => 3,
+                'uptime_percentage' => 99.82,
+                'response_time' => 10,
+                'last_check' => now(),
+            ],
+            [
+                'name' => 'Backup Server',
+                'ip_address' => '192.168.10.12',
+                'type' => 'server',
+                'category' => 'servers',
+                'status' => 'online',
+                'location' => 'MC Rack Server C2',
+                'building' => 'Main Campus',
+                'manufacturer' => 'Dell',
+                'model' => 'PowerEdge R640',
+                'priority' => 2,
+                'uptime_percentage' => 99.88,
+                'response_time' => 6,
+                'last_check' => now(),
+            ],
+        ];
+
+        foreach ($devices as $deviceData) {
+            $device = Device::create($deviceData);
+
+            // Create monitoring history
+            MonitoringHistory::create([
+                'device_id' => $device->id,
+                'status' => $device->status,
+                'response_time' => $device->response_time,
+                'checked_at' => now(),
+            ]);
+
+            // Create alert for warning status
+            if ($device->status === 'warning') {
+                Alert::create([
+                    'device_id' => $device->id,
+                    'type' => 'high_response_time',
+                    'severity' => 'warning',
+                    'title' => 'High Response Time',
+                    'message' => "Device {$device->name} is experiencing high response time ({$device->response_time}ms)",
+                    'status' => 'active',
+                ]);
+            }
+        }
+    }
+}
