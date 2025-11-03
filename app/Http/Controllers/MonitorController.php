@@ -68,7 +68,9 @@ class MonitorController extends Controller
         }
 
         // Get the current branch with relationships
-        $branch = Branch::with(['devices', 'locations'])->find($branchId);
+        $branch = Branch::with(['devices' => function ($query) {
+            $query->where('is_active', true);
+        }, 'locations'])->find($branchId);
 
         if (!$branch) {
             return [

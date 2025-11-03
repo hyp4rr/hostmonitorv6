@@ -58,7 +58,6 @@ interface SystemStats {
 }
 
 interface DashboardProps extends PageProps {
-    currentBranch: CurrentBranch;
     stats: SystemStats;
     deviceTypes: DeviceType[];
     locationStats: LocationStat[];

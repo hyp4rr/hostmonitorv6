@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\AlertController;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\HardwareDetailController;
+use Illuminate\Http\Request;
 
 // Config authentication (no CSRF required for these endpoints)
 Route::post('/config/login', [ConfigController::class, 'login']);

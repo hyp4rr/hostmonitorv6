@@ -23,6 +23,7 @@ import {
 import { type ReactNode, useEffect, useState } from 'react';
 import { useConfigAuth } from '@/contexts/config-auth-context';
 import type { CurrentBranch } from '@/types/branch';
+import type { PageProps } from '@/types';
 
 interface MonitorLayoutProps {
     children: ReactNode;
@@ -57,10 +58,6 @@ const navigation: NavItem[] = [
 ];
 
 // Remove BranchProvider import and usage, get data from page props instead
-interface PageProps {
-    currentBranch: CurrentBranch;
-}
-
 export default function MonitorLayout({ children, title }: MonitorLayoutProps) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);

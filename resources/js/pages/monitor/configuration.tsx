@@ -8,9 +8,13 @@ import {
     Trash2,
     User,
     X,
+    Building2,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTranslation } from '@/contexts/i18n-context';
+import { usePage } from '@inertiajs/react';
+import type { CurrentBranch } from '@/types/branch';
+import { PageProps } from '@/types';
 
 interface Device {
     id: number;
@@ -94,6 +98,7 @@ type CRUDEntity = 'branches' | 'devices' | 'alerts' | 'locations' | 'users';
 
 export default function Configuration() {
     const { t } = useTranslation();
+    const { currentBranch } = usePage<PageProps>().props;
     
     // CRUD state
     const [selectedEntity, setSelectedEntity] = useState<CRUDEntity>('devices');
@@ -132,6 +137,8 @@ export default function Configuration() {
                 return;
             }
 
+            console.log('Fetching from:', endpoint); // Debug log
+
             const response = await fetch(endpoint, {
                 credentials: 'same-origin',
                 headers: {
@@ -139,10 +146,15 @@ export default function Configuration() {
                 },
             });
 
+            console.log('Response status:', response.status); // Debug log
+
             if (response.ok) {
                 const data = await response.json();
+                console.log('Fetched data:', data); // Debug log
+                
                 switch (selectedEntity) {
                     case 'branches':
+                        console.log('Setting branches:', data); // Debug log
                         setBranches(data);
                         break;
                     case 'devices':
@@ -158,6 +170,8 @@ export default function Configuration() {
                         setUsers(data);
                         break;
                 }
+            } else {
+                console.error('Failed to fetch:', response.statusText); // Debug log
             }
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -309,6 +323,25 @@ export default function Configuration() {
     return (
         <MonitorLayout title={t('config.title')}>
             <div className="space-y-6">
+                {/* Branch Info Banner */}
+                {currentBranch?.id && (
+                    <div className="rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 dark:border-blue-900/30 dark:from-blue-950/20 dark:to-indigo-950/20">
+                        <div className="flex items-center gap-3">
+                            <div className="rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 p-2 shadow-lg">
+                                <Server className="size-5 text-white" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-blue-900 dark:text-blue-100">
+                                    Managing: {currentBranch.name}
+                                </h3>
+                                <p className="text-sm text-blue-700 dark:text-blue-300">
+                                    {currentBranch.description} • Branch Code: {currentBranch.code}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
@@ -751,7 +784,7 @@ function BranchesTable({
     if (branches.length === 0) {
         return (
             <div className="p-12 text-center">
-                <Server className="mx-auto mb-4 size-12 text-slate-400" />
+                <Building2 className="mx-auto mb-4 size-12 text-slate-400" />
                 <p className="text-slate-600 dark:text-slate-400">No branches found</p>
                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-500">
                     Click "Add New" to create your first branch
@@ -764,34 +797,82 @@ function BranchesTable({
         <table className="w-full">
             <thead className="bg-slate-50 dark:bg-slate-900">
                 <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Code</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Address</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Status</th>
-                    <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                        ID
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                        Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                        Code
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                        Description
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                        Address
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                        Status
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                        Actions
+                    </th>
                 </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                 {branches.map((branch) => (
                     <tr key={branch.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                        <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">{branch.name}</td>
-                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{branch.code}</td>
-                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{branch.address || '-'}</td>
+                        <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
+                            #{branch.id}
+                        </td>
                         <td className="px-6 py-4">
-                            <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+                            <div className="flex items-center gap-2">
+                                <div className="rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 p-2">
+                                    <Building2 className="size-4 text-white" />
+                                </div>
+                                <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                                    {branch.name}
+                                </span>
+                            </div>
+                        </td>
+                        <td className="px-6 py-4">
+                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 dark:bg-slate-700 dark:text-slate-300">
+                                {branch.code}
+                            </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400 max-w-xs truncate">
+                            {branch.description || '-'}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400 max-w-xs truncate">
+                            {branch.address || '-'}
+                        </td>
+                        <td className="px-6 py-4">
+                            <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium ${
                                 branch.is_active
                                     ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                                     : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
                             }`}>
+                                <div className={`size-1.5 rounded-full ${
+                                    branch.is_active ? 'bg-green-500' : 'bg-red-500'
+                                }`} />
                                 {branch.is_active ? 'Active' : 'Inactive'}
                             </span>
                         </td>
                         <td className="px-6 py-4 text-right">
                             <div className="flex justify-end gap-2">
-                                <button onClick={() => onEdit(branch)} className="rounded-lg p-2 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30">
+                                <button 
+                                    onClick={() => onEdit(branch)} 
+                                    className="rounded-lg p-2 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30 transition-colors"
+                                    title="Edit branch"
+                                >
                                     <Edit className="size-4" />
                                 </button>
-                                <button onClick={() => onDelete(branch)} className="rounded-lg p-2 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30">
+                                <button 
+                                    onClick={() => onDelete(branch)} 
+                                    className="rounded-lg p-2 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 transition-colors"
+                                    title="Delete branch"
+                                >
                                     <Trash2 className="size-4" />
                                 </button>
                             </div>
@@ -947,29 +1028,114 @@ function EntityForm({
                     <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Branch Information</h4>
                     <div className="grid gap-4 sm:grid-cols-2">
                         <div>
-                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Branch Name *</label>
-                            <input type="text" name="name" defaultValue={branchData?.name || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="UTHM Kampus Parit Raja" required />
+                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                                Branch Name * 
+                                <span className="ml-1 text-xs text-slate-500">(e.g., UTHM Kampus Parit Raja)</span>
+                            </label>
+                            <input 
+                                type="text" 
+                                name="name" 
+                                defaultValue={branchData?.name || ''} 
+                                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" 
+                                placeholder="Enter branch name" 
+                                required 
+                            />
                         </div>
                         <div>
-                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Branch Code *</label>
-                            <input type="text" name="code" defaultValue={branchData?.code || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="PR" required />
+                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                                Branch Code * 
+                                <span className="ml-1 text-xs text-slate-500">(e.g., PR, PG)</span>
+                            </label>
+                            <input 
+                                type="text" 
+                                name="code" 
+                                defaultValue={branchData?.code || ''} 
+                                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" 
+                                placeholder="2-4 letter code" 
+                                maxLength={4}
+                                required 
+                            />
                         </div>
                         <div className="sm:col-span-2">
-                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Description</label>
-                            <input type="text" name="description" defaultValue={branchData?.description || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
+                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                                Description
+                            </label>
+                            <input 
+                                type="text" 
+                                name="description" 
+                                defaultValue={branchData?.description || ''} 
+                                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" 
+                                placeholder="Brief description of the branch"
+                            />
                         </div>
                         <div className="sm:col-span-2">
-                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Address</label>
-                            <textarea name="address" defaultValue={branchData?.address || ''} rows={2} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
+                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                                Address
+                            </label>
+                            <textarea 
+                                name="address" 
+                                defaultValue={branchData?.address || ''} 
+                                rows={3} 
+                                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" 
+                                placeholder="Full branch address"
+                            />
                         </div>
                         <div className="sm:col-span-2">
                             <label className="flex items-center gap-3 cursor-pointer">
-                                <input type="checkbox" name="is_active" defaultChecked={branchData?.is_active ?? true} className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700" />
-                                <span className="text-sm text-slate-700 dark:text-slate-300">Branch is active</span>
+                                <input 
+                                    type="checkbox" 
+                                    name="is_active" 
+                                    defaultChecked={branchData?.is_active ?? true} 
+                                    className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700" 
+                                />
+                                <span className="text-sm text-slate-700 dark:text-slate-300">
+                                    Branch is active
+                                    <span className="ml-2 text-xs text-slate-500">(Active branches are visible in the branch selector)</span>
+                                </span>
                             </label>
                         </div>
                     </div>
                 </div>
+
+                {/* Show current statistics for existing branches */}
+                {mode === 'edit' && branchData && (
+                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/30 dark:bg-blue-950/20">
+                        <h5 className="mb-2 text-sm font-semibold text-blue-900 dark:text-blue-100">
+                            Branch Statistics
+                        </h5>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <span className="text-blue-700 dark:text-blue-300">Branch ID:</span>
+                                <span className="ml-2 font-bold text-blue-900 dark:text-blue-100">
+                                    {branchData.id}
+                                </span>
+                            </div>
+                            <div>
+                                <span className="text-blue-700 dark:text-blue-300">Status:</span>
+                                <span className="ml-2 font-bold text-blue-900 dark:text-blue-100">
+                                    {branchData.is_active ? 'Active' : 'Inactive'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Warning for delete operations */}
+                {mode === 'edit' && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/30 dark:bg-amber-950/20">
+                        <div className="flex items-start gap-2">
+                            <AlertTriangle className="size-5 text-amber-600 dark:text-amber-400 mt-0.5" />
+                            <div className="text-sm text-amber-800 dark:text-amber-300">
+                                <p className="font-semibold">Important Notes:</p>
+                                <ul className="mt-2 space-y-1 list-disc list-inside">
+                                    <li>Deleting a branch will also delete all associated devices, locations, and alerts</li>
+                                    <li>Deactivating a branch hides it from the branch selector but preserves all data</li>
+                                    <li>Consider deactivating instead of deleting for data preservation</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </form>
         );
     }

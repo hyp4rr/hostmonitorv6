@@ -136,14 +136,10 @@ const getStatusLabel = (status: DeviceStatus) => {
 type SortField = 'name' | 'ip_address' | 'uptime_percentage' | 'status' | 'location' | 'manufacturer';
 type SortOrder = 'asc' | 'desc';
 
-interface DevicesPageProps extends PageProps {
-    currentBranch: CurrentBranch;
-}
-
 export default function Devices() {
     const { settings } = useSettings();
     const { t } = useTranslation();
-    const { props } = usePage<DevicesPageProps>();
+    const { props } = usePage<PageProps>();
     const { currentBranch } = props;
     const [selectedCategory, setSelectedCategory] = useState<DeviceCategory>('all');
     const [searchQuery, setSearchQuery] = useState('');

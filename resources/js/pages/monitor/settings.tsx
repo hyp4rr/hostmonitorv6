@@ -9,10 +9,13 @@ import {
 import { useState, useEffect } from 'react';
 import { useSettings } from '@/contexts/settings-context';
 import { useTranslation } from '@/contexts/i18n-context';
+import { usePage } from '@inertiajs/react';
+import { PageProps } from '@/types';
 
 export default function Settings() {
     const { settings, updateSettings, resetSettings } = useSettings();
     const { t } = useTranslation();
+    const { currentBranch } = usePage<PageProps>().props;
     const [localTheme, setLocalTheme] = useState(settings.theme);
     const [localLanguage, setLocalLanguage] = useState(settings.language);
     const [localTimezone, setLocalTimezone] = useState(settings.timezone);

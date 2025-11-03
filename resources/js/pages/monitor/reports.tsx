@@ -26,14 +26,10 @@ interface UptimeStat {
     lastIncident?: string;
 }
 
-interface ReportsPageProps extends PageProps {
-    currentBranch: CurrentBranch;
-}
-
 export default function Reports() {
     const { settings } = useSettings();
     const { t } = useTranslation();
-    const { props } = usePage<ReportsPageProps>();
+    const { props } = usePage<PageProps>();
     const { currentBranch } = props;
     
     const [dateRange, setDateRange] = useState('7days');

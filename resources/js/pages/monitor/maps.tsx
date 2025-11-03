@@ -5,6 +5,9 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useSettings } from '@/contexts/settings-context';
 import { useTranslation } from '@/contexts/i18n-context';
+import { usePage } from '@inertiajs/react';
+import type { CurrentBranch } from '@/types/branch';
+import { PageProps } from '@/types';
 
 // Note: Install these packages:
 // npm install leaflet.markercluster leaflet.heat
@@ -25,6 +28,7 @@ interface DeviceLocation {
 export default function Maps() {
     const { settings } = useSettings();
     const { t } = useTranslation();
+    const { currentBranch } = usePage<PageProps>().props;
     const mapRef = useRef<L.Map | null>(null);
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const markersRef = useRef<L.Marker[]>([]);
@@ -36,85 +40,23 @@ export default function Maps() {
     const [filterStatus, setFilterStatus] = useState<'all' | 'online' | 'warning' | 'offline'>('all');
     const [searchQuery, setSearchQuery] = useState('');
 
-    const deviceLocations: DeviceLocation[] = [
-        { 
-            lat: 3.1390, 
-            lng: 101.6869, 
-            name: 'Server Room A', 
-            status: 'online', 
-            count: 5,
-            category: 'Data Center',
-            ip: '192.168.1.10',
-            uptime: '99.9%',
-            devices: ['Web Server 01', 'Database Server', 'Mail Server', 'Application Server', 'Backup Server']
-        },
-        { 
-            lat: 3.1395, 
-            lng: 101.6875, 
-            name: 'Office Floor 2', 
-            status: 'online', 
-            count: 3,
-            category: 'Office',
-            ip: '192.168.2.10',
-            uptime: '99.8%',
-            devices: ['WiFi AP Floor 1', 'WiFi AP Floor 2', 'Access Switch']
-        },
-        { 
-            lat: 3.1385, 
-            lng: 101.6865, 
-            name: 'Data Center Main', 
-            status: 'warning', 
-            count: 2,
-            category: 'Data Center',
-            ip: '192.168.1.1',
-            uptime: '98.5%',
-            devices: ['Core Switch 01', 'Core Switch 02']
-        },
-        { 
-            lat: 3.1400, 
-            lng: 101.6880, 
-            name: 'TAS Building', 
-            status: 'online', 
-            count: 2,
-            category: 'Branch',
-            ip: '192.168.3.1',
-            uptime: '99.7%',
-            devices: ['TAS Main Gateway', 'TAS Backup Gateway']
-        },
-        { 
-            lat: 3.1392, 
-            lng: 101.6872, 
-            name: 'CCTV Hub', 
-            status: 'online', 
-            count: 2,
-            category: 'Security',
-            ip: '192.168.4.1',
-            uptime: '99.9%',
-            devices: ['CCTV NVR Main', 'CCTV NVR Backup']
-        },
-        { 
-            lat: 3.1380, 
-            lng: 101.6870, 
-            name: 'Parking WiFi', 
-            status: 'offline', 
+    // Use real devices from current branch for map markers
+    const realDevices = currentBranch?.devices || [];
+    
+    // Transform real devices to map locations
+    const deviceLocations: DeviceLocation[] = realDevices
+        .filter(d => d.latitude && d.longitude)
+        .map(device => ({
+            lat: device.latitude!,
+            lng: device.longitude!,
+            name: device.name,
+            status: device.status === 'online' ? 'online' : device.status === 'warning' ? 'warning' : 'offline',
             count: 1,
-            category: 'Access Point',
-            ip: '192.168.5.1',
-            uptime: '95.2%',
-            devices: ['WiFi AP Outdoor']
-        },
-        { 
-            lat: 3.1388, 
-            lng: 101.6867, 
-            name: 'Building B Network', 
-            status: 'online', 
-            count: 4,
-            category: 'Office',
-            ip: '192.168.6.1',
-            uptime: '99.6%',
-            devices: ['Switch B1', 'Switch B2', 'WiFi AP B1', 'WiFi AP B2']
-        },
-    ];
+            devices: [device.name],
+            category: device.category.charAt(0).toUpperCase() + device.category.slice(1),
+            ip: device.ip_address,
+            uptime: `${device.uptime_percentage}%`,
+        }));
 
     const filteredLocations = deviceLocations.filter(location => {
         const matchesStatus = filterStatus === 'all' || location.status === filterStatus;
