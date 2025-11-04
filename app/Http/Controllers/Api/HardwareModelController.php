@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\HardwareModel;
+use App\Services\ActivityLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -44,6 +45,10 @@ class HardwareModelController extends Controller
                 'description' => $request->description,
             ]);
 
+            // Log activity
+            $activityLog = new ActivityLogService();
+            $activityLog->logModelCreated($model->id, $model->name);
+
             return response()->json($model->load('brand'), 201);
         } catch (\Exception $e) {
             Log::error('Error creating model: ' . $e->getMessage());
@@ -73,7 +78,22 @@ class HardwareModelController extends Controller
             if ($request->has('name')) $model->name = $request->name;
             if ($request->has('description')) $model->description = $request->description;
 
+            // Track changes with before/after values
+            $changes = [];
+            $dirty = $model->getDirty();
+            foreach ($dirty as $field => $newValue) {
+                $changes[$field] = [
+                    'old' => $model->getOriginal($field),
+                    'new' => $newValue
+                ];
+            }
             $model->save();
+
+            // Log activity
+            if (!empty($changes)) {
+                $activityLog = new ActivityLogService();
+                $activityLog->logModelUpdated($model->id, $model->name, $changes);
+            }
 
             return response()->json($model->load('brand'));
         } catch (\Exception $e) {
@@ -95,7 +115,14 @@ class HardwareModelController extends Controller
                 ], 409);
             }
 
+            // Store info before deletion
+            $modelName = $model->name;
+            
             $model->delete();
+
+            // Log activity
+            $activityLog = new ActivityLogService();
+            $activityLog->logModelDeleted($id, $modelName);
 
             return response()->json(['message' => 'Model deleted successfully']);
         } catch (\Exception $e) {

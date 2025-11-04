@@ -56,6 +56,9 @@ interface Device {
     offline_reason?: string;
     offline_acknowledged_by?: string;
     offline_acknowledged_at?: string;
+    offline_since?: string;
+    offline_duration_minutes?: number;
+    offline_alert_sent?: boolean;
     latitude?: number;
     longitude?: number;
     branch_id?: number;
@@ -163,6 +166,8 @@ export default function Devices() {
     const [isPinging, setIsPinging] = useState(false);
     const [lastPingTime, setLastPingTime] = useState<Date | null>(null);
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+    const [autoRefresh, setAutoRefresh] = useState(true);
+    const [refreshInterval, setRefreshInterval] = useState(30); // seconds
     
     // Add state for filter options from database
     const [availableLocations, setAvailableLocations] = useState<Array<{id: number, name: string}>>([]);
@@ -192,14 +197,75 @@ export default function Devices() {
         };
     }, [selectedDevice]);
 
-    // Ping button handler - no actual API call
+    // Auto-refresh: Ping all devices at regular intervals
+    useEffect(() => {
+        if (!autoRefresh || !currentBranch?.id) return;
+
+        const intervalId = setInterval(() => {
+            handlePingAll();
+        }, refreshInterval * 1000);
+
+        return () => clearInterval(intervalId);
+    }, [autoRefresh, refreshInterval, currentBranch?.id]);
+
+    // Ping all devices in the current branch
     const handlePingAll = async () => {
+        if (!currentBranch?.id || isPinging) return;
+        
         setIsPinging(true);
-        // Simulate ping delay
-        setTimeout(() => {
+        try {
+            const response = await fetch('/api/devices/ping-branch', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({
+                    branch_id: currentBranch.id
+                })
+            });
+
+            if (response.ok) {
+                const results = await response.json();
+                console.log('Ping results:', results);
+                
+                // Reload the entire page to get updated device statuses
+                router.reload();
+                
+                setLastPingTime(new Date());
+            } else {
+                console.error('Failed to ping devices');
+            }
+        } catch (error) {
+            console.error('Error pinging devices:', error);
+        } finally {
             setIsPinging(false);
-            setLastPingTime(new Date());
-        }, 1000);
+        }
+    };
+
+    // Ping a single device
+    const handlePingDevice = async (deviceId: number) => {
+        try {
+            const response = await fetch(`/api/devices/${deviceId}/ping`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                }
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                console.log('Ping result:', result);
+                
+                // Reload to get updated status
+                router.reload();
+            } else {
+                console.error('Failed to ping device');
+            }
+        } catch (error) {
+            console.error('Error pinging device:', error);
+        }
     };
 
     let filteredDevices = selectedCategory === 'all' 
@@ -415,11 +481,39 @@ export default function Devices() {
                                 {isPinging ? t('devices.pinging') : t('devices.pingAll')}
                             </button>
 
+                            {/* Auto-Refresh Toggle */}
+                            <button
+                                onClick={() => setAutoRefresh(!autoRefresh)}
+                                className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+                                    autoRefresh
+                                        ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg'
+                                        : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                                }`}
+                                title={`Auto-refresh every ${refreshInterval}s`}
+                            >
+                                <Activity className={`size-4 ${autoRefresh ? 'animate-pulse' : ''}`} />
+                                Auto-Refresh {autoRefresh ? 'ON' : 'OFF'}
+                            </button>
+
+                            {/* Refresh Interval Selector */}
+                            {autoRefresh && (
+                                <select
+                                    value={refreshInterval}
+                                    onChange={(e) => setRefreshInterval(Number(e.target.value))}
+                                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                                >
+                                    <option value={10}>10s</option>
+                                    <option value={30}>30s</option>
+                                    <option value={60}>1min</option>
+                                    <option value={300}>5min</option>
+                                </select>
+                            )}
+
                             {/* Last Ping Time */}
                             {lastPingTime && (
                                 <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
                                     <Clock className="size-3" />
-                                    {t('devices.lastPing')}: {lastPingTime.toLocaleTimeString()}
+                                    Last: {lastPingTime.toLocaleTimeString()}
                                 </div>
                             )}
 
@@ -971,12 +1065,22 @@ export default function Devices() {
                                         </p>
                                     </div>
                                 </div>
-                                <button
-                                    onClick={() => setSelectedDevice(null)}
-                                    className="rounded-lg p-2 text-slate-500 transition-all hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
-                                >
-                                    <X className="size-5" />
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => handlePingDevice(selectedDevice.id)}
+                                        className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+                                        title="Ping this device"
+                                    >
+                                        <Activity className="size-4" />
+                                        Ping Device
+                                    </button>
+                                    <button
+                                        onClick={() => setSelectedDevice(null)}
+                                        className="rounded-lg p-2 text-slate-500 transition-all hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+                                    >
+                                        <X className="size-5" />
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Content */}
@@ -1007,6 +1111,53 @@ export default function Devices() {
                                             <span className="text-lg font-semibold">{selectedDevice.uptime_percentage}%</span>
                                         </div>
                                     </div>
+
+                                    {/* Response Time */}
+                                    <div>
+                                        <h3 className="mb-3 text-sm font-semibold text-slate-900 dark:text-white">
+                                            Response Time
+                                        </h3>
+                                        <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+                                            <Activity className="size-4" />
+                                            <span className="text-lg font-semibold">
+                                                {selectedDevice.response_time ? `${selectedDevice.response_time}ms` : 'N/A'}
+                                            </span>
+                                            {selectedDevice.response_time && selectedDevice.response_time > 100 && (
+                                                <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
+                                                    High
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {selectedDevice.status === 'offline' && (
+                                        <>
+                                            {/* Offline Duration */}
+                                            {selectedDevice.offline_duration_minutes !== undefined && selectedDevice.offline_duration_minutes > 0 && (
+                                                <div className="rounded-xl bg-orange-50 p-4 dark:bg-orange-950/20">
+                                                    <h3 className="mb-2 text-sm font-semibold text-orange-900 dark:text-orange-300">
+                                                        Offline Duration
+                                                    </h3>
+                                                    <div className="flex items-center gap-2">
+                                                        <Clock className="size-4 text-orange-600 dark:text-orange-400" />
+                                                        <span className="text-lg font-semibold text-orange-700 dark:text-orange-400">
+                                                            {selectedDevice.offline_duration_minutes} minute{selectedDevice.offline_duration_minutes !== 1 ? 's' : ''}
+                                                        </span>
+                                                        {selectedDevice.offline_duration_minutes >= 2 && (
+                                                            <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                                                                Alert Triggered
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    {selectedDevice.offline_since && (
+                                                        <p className="mt-2 text-xs text-orange-600 dark:text-orange-400">
+                                                            Offline since: {new Date(selectedDevice.offline_since).toLocaleString()}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
 
                                     {selectedDevice.status === 'offline' && (
                                         <div className="rounded-xl bg-red-50 p-4 dark:bg-red-950/20">

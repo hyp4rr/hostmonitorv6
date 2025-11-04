@@ -6,6 +6,7 @@ use App\Models\Branch;
 use App\Models\Device;
 use App\Models\Alert;
 use App\Models\MonitoringHistory;
+use App\Services\ActivityLogService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -284,27 +285,8 @@ class MonitorController extends Controller
 
     private function getRecentActivity($branchId)
     {
-        if (!Schema::hasTable('monitoring_history')) {
-            return [];
-        }
-
-        return MonitoringHistory::with('device')
-            ->whereHas('device', function ($query) use ($branchId) {
-                $query->where('branch_id', $branchId);
-            })
-            ->orderBy('checked_at', 'desc')
-            ->limit(20)
-            ->get()
-            ->map(function ($history) {
-                return [
-                    'id' => $history->id,
-                    'device_name' => $history->device->name ?? 'Unknown Device',
-                    'status' => $history->status,
-                    'checked_at' => $history->checked_at,
-                    'time_ago' => $history->checked_at->diffForHumans()
-                ];
-            })
-            ->toArray();
+        $activityLogService = new ActivityLogService();
+        return $activityLogService->getRecentActivities($branchId, 20);
     }
 
     private function getCategoryColor($category): string

@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\BrandController;
 use App\Http\Controllers\Api\ModelController;
+use App\Http\Controllers\Api\ActivityLogController;
 use Illuminate\Http\Request;
 
 // Config authentication (no CSRF required for these endpoints)
@@ -40,17 +41,20 @@ Route::middleware('api')->group(function () {
 });
 
 // Alert routes (only index, update, destroy - alerts are created by system)
-    Route::get('alerts', [AlertController::class, 'index']);
-    Route::put('alerts/{alert}', [AlertController::class, 'update']);
-    Route::delete('alerts/{alert}', [AlertController::class, 'destroy']);
+Route::get('alerts', [AlertController::class, 'index']);
+Route::put('alerts/{alert}', [AlertController::class, 'update']);
+Route::delete('alerts/{alert}', [AlertController::class, 'destroy']);
 
-// Additional device routes
-Route::get('/devices/stats', [DeviceController::class, 'stats']);
-Route::post('/devices/ping-all', [DeviceController::class, 'pingAll']);
+// Ping routes
 Route::post('/devices/{id}/ping', [DeviceController::class, 'ping']);
+Route::post('/devices/ping-multiple', [DeviceController::class, 'pingMultiple']);
+Route::post('/devices/ping-branch', [DeviceController::class, 'pingBranch']);
+
+// Acknowledge offline
+Route::post('/devices/{id}/acknowledge-offline', [DeviceController::class, 'acknowledgeOffline']);
 
 Route::get('hardware/brands', [BrandController::class, 'index']);
-    Route::get('hardware/models', [ModelController::class, 'index']);
+Route::get('hardware/models', [ModelController::class, 'index']);
 
 // Brand management routes
 Route::get('/brands', [App\Http\Controllers\Api\BrandController::class, 'index']);
@@ -75,3 +79,6 @@ Route::get('/models', [App\Http\Controllers\Api\HardwareModelController::class, 
 Route::post('/models', [App\Http\Controllers\Api\HardwareModelController::class, 'store']);
 Route::put('/models/{id}', [App\Http\Controllers\Api\HardwareModelController::class, 'update']);
 Route::delete('/models/{id}', [App\Http\Controllers\Api\HardwareModelController::class, 'destroy']);
+
+// Activity Logs
+Route::get('/activity-logs', [ActivityLogController::class, 'index']);

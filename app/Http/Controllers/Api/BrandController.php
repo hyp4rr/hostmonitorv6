@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Brand;
+use App\Services\ActivityLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -41,6 +42,10 @@ class BrandController extends Controller
                 'description' => $request->description,
             ]);
 
+            // Log activity
+            $activityLog = new ActivityLogService();
+            $activityLog->logBrandCreated($brand->id, $brand->name);
+
             return response()->json($brand, 201);
         } catch (\Exception $e) {
             Log::error('Error creating brand: ' . $e->getMessage());
@@ -68,7 +73,22 @@ class BrandController extends Controller
             if ($request->has('name')) $brand->name = $request->name;
             if ($request->has('description')) $brand->description = $request->description;
 
+            // Track changes with before/after values
+            $changes = [];
+            $dirty = $brand->getDirty();
+            foreach ($dirty as $field => $newValue) {
+                $changes[$field] = [
+                    'old' => $brand->getOriginal($field),
+                    'new' => $newValue
+                ];
+            }
             $brand->save();
+
+            // Log activity
+            if (!empty($changes)) {
+                $activityLog = new ActivityLogService();
+                $activityLog->logBrandUpdated($brand->id, $brand->name, $changes);
+            }
 
             return response()->json($brand);
         } catch (\Exception $e) {
@@ -90,7 +110,14 @@ class BrandController extends Controller
                 ], 409);
             }
 
+            // Store info before deletion
+            $brandName = $brand->name;
+            
             $brand->delete();
+
+            // Log activity
+            $activityLog = new ActivityLogService();
+            $activityLog->logBrandDeleted($id, $brandName);
 
             return response()->json(['message' => 'Brand deleted successfully']);
         } catch (\Exception $e) {

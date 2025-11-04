@@ -6,6 +6,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Device;
 use App\Models\HardwareDetail;
+use App\Services\PingService;
+use App\Services\ActivityLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -86,6 +88,10 @@ class DeviceController extends Controller
 
             $device->load(['branch', 'location', 'hardwareDetail.brand', 'hardwareDetail.hardwareModel']);
             
+            // Log activity
+            $activityLog = new ActivityLogService();
+            $activityLog->logDeviceCreated($device->id, $device->name, $device->branch_id);
+            
             return response()->json($this->transformDevice($device), 201);
         } catch (\Exception $e) {
             Log::error('Error creating device: ' . $e->getMessage());
@@ -138,9 +144,25 @@ class DeviceController extends Controller
                 'status', 'branch_id', 'location_id', 'building', 'is_active'
             ]));
 
+            // Track changes with before/after values
+            $changes = [];
+            $dirty = $device->getDirty();
+            foreach ($dirty as $field => $newValue) {
+                $changes[$field] = [
+                    'old' => $device->getOriginal($field),
+                    'new' => $newValue
+                ];
+            }
+            
             $device->save();
             
             $device->load(['branch', 'location', 'hardwareDetail.brand', 'hardwareDetail.hardwareModel']);
+
+            // Log activity
+            if (!empty($changes)) {
+                $activityLog = new ActivityLogService();
+                $activityLog->logDeviceUpdated($device->id, $device->name, $changes, $device->branch_id);
+            }
 
             return response()->json($this->transformDevice($device));
         } catch (\Exception $e) {
@@ -154,7 +176,15 @@ class DeviceController extends Controller
         try {
             $device = Device::findOrFail($id);
             
+            // Store info before deletion
+            $deviceName = $device->name;
+            $branchId = $device->branch_id;
+            
             $device->delete();
+
+            // Log activity
+            $activityLog = new ActivityLogService();
+            $activityLog->logDeviceDeleted($id, $deviceName, $branchId);
 
             return response()->json(['message' => 'Device deleted successfully']);
         } catch (\Exception $e) {
@@ -163,6 +193,140 @@ class DeviceController extends Controller
         }
     }
     
+    /**
+     * Ping a single device
+     */
+    public function ping($id)
+    {
+        try {
+            $device = Device::findOrFail($id);
+            $pingService = new PingService();
+            $result = $pingService->pingDevice($device);
+            
+            return response()->json($result);
+        } catch (\Exception $e) {
+            Log::error('Error pinging device: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to ping device'], 500);
+        }
+    }
+
+    /**
+     * Ping multiple devices
+     */
+    public function pingMultiple(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'device_ids' => 'required|array',
+                'device_ids.*' => 'required|integer|exists:devices,id',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'error' => 'Validation failed',
+                    'messages' => $validator->errors()
+                ], 422);
+            }
+
+            $pingService = new PingService();
+            $results = $pingService->pingMultipleDevices($request->device_ids);
+            
+            return response()->json($results);
+        } catch (\Exception $e) {
+            Log::error('Error pinging multiple devices: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to ping devices'], 500);
+        }
+    }
+
+    /**
+     * Ping all devices in a branch
+     */
+    public function pingBranch(Request $request)
+    {
+        try {
+            Log::info('Ping branch request received', ['branch_id' => $request->branch_id]);
+            
+            $validator = Validator::make($request->all(), [
+                'branch_id' => 'required|integer|exists:branches,id',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'error' => 'Validation failed',
+                    'messages' => $validator->errors()
+                ], 422);
+            }
+
+            $pingService = new PingService();
+            $results = $pingService->pingBranchDevices($request->branch_id);
+            
+            Log::info('Ping branch completed', ['results_count' => count($results)]);
+            
+            return response()->json($results);
+        } catch (\Exception $e) {
+            Log::error('Error pinging branch devices: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to ping branch devices'], 500);
+        }
+    }
+
+    /**
+     * Acknowledge a device as offline with reason
+     */
+    public function acknowledgeOffline(Request $request, $id)
+    {
+        try {
+            $device = Device::findOrFail($id);
+            
+            $validator = Validator::make($request->all(), [
+                'reason' => 'required|string|max:500',
+                'acknowledged_by' => 'required|string|max:255',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'error' => 'Validation failed',
+                    'messages' => $validator->errors()
+                ], 422);
+            }
+
+            $device->status = 'offline_ack';
+            $device->offline_reason = $request->reason;
+            $device->offline_acknowledged_by = $request->acknowledged_by;
+            $device->offline_acknowledged_at = now();
+            $device->save();
+
+            // Log activity
+            $activityLog = new ActivityLogService();
+            $activityLog->log(
+                'updated',
+                'device',
+                $device->id,
+                [
+                    'device_name' => $device->name,
+                    'changes' => [
+                        'status' => [
+                            'old' => 'offline',
+                            'new' => 'offline_ack'
+                        ],
+                        'offline_reason' => [
+                            'old' => null,
+                            'new' => $request->reason
+                        ]
+                    ]
+                ],
+                $device->branch_id
+            );
+
+            return response()->json([
+                'message' => 'Device offline status acknowledged',
+                'device' => $this->transformDevice($device->load(['branch', 'location', 'hardwareDetail.brand', 'hardwareDetail.hardwareModel']))
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error acknowledging offline device: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to acknowledge offline device'], 500);
+        }
+    }
+
     private function transformDevice($device)
     {
         // Get location data
@@ -182,7 +346,8 @@ class DeviceController extends Controller
                 'name' => $device->branch->name,
             ] : null,
             'location_id' => $device->location_id,
-            'location' => $device->location ? [
+            'location_name' => $locationName,
+            'location_data' => $device->location ? [
                 'id' => $device->location->id,
                 'name' => $device->location->name,
             ] : null,

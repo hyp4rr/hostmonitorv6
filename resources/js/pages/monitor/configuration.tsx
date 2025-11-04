@@ -9,7 +9,10 @@ import {
     User,
     X,
     Building2,
-    MapPin, // Add MapPin icon
+    MapPin,
+    History,
+    ChevronDown,
+    ChevronUp,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTranslation } from '@/contexts/i18n-context';
@@ -114,7 +117,25 @@ interface Model {
     description?: string;
 }
 
-type CRUDEntity = 'branches' | 'devices' | 'alerts' | 'locations' | 'users' | 'brands' | 'models';
+type CRUDEntity = 'branches' | 'devices' | 'alerts' | 'locations' | 'users' | 'brands' | 'models' | 'history';
+
+interface ActivityLog {
+    id: number;
+    user: string;
+    action: string;
+    entity_type: string;
+    entity_id: number | null;
+    details: {
+        device_name?: string;
+        location_name?: string;
+        brand_name?: string;
+        model_name?: string;
+        changes?: Record<string, any>;
+    } | null;
+    created_at: string;
+    time_ago: string;
+    ip_address?: string;
+}
 
 export default function Configuration() {
     const { t } = useTranslation();
@@ -134,6 +155,7 @@ export default function Configuration() {
     const [users, setUsers] = useState<UserData[]>([]);
     const [brands, setBrands] = useState<Brand[]>([]);
     const [models, setModels] = useState<Model[]>([]);
+    const [activityHistory, setActivityHistory] = useState<ActivityLog[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
     // Fetch data when entity changes
@@ -153,6 +175,7 @@ export default function Configuration() {
                 users: '/api/users',
                 brands: '/api/brands',
                 models: '/api/models',
+                history: '/api/activity-logs',
             };
 
             let endpoint = entityMap[selectedEntity];
@@ -161,8 +184,8 @@ export default function Configuration() {
                 return;
             }
 
-            // Add branch filter for devices, alerts, and locations
-            if (currentBranch?.id && ['devices', 'alerts', 'locations'].includes(selectedEntity)) {
+            // Add branch filter for devices, alerts, locations, and history
+            if (currentBranch?.id && ['devices', 'alerts', 'locations', 'history'].includes(selectedEntity)) {
                 endpoint += `?branch_id=${currentBranch.id}`;
             }
 
@@ -203,6 +226,9 @@ export default function Configuration() {
                         break;
                     case 'models':
                         setModels(data);
+                        break;
+                    case 'history':
+                        setActivityHistory(data);
                         break;
                 }
             } else {
@@ -424,7 +450,7 @@ export default function Configuration() {
 
                 {/* Entity selector tabs */}
                 <div className="flex gap-2 overflow-x-auto rounded-xl border border-slate-200/50 bg-white p-2 shadow-lg dark:border-slate-700/50 dark:bg-slate-800">
-                    {(['branches', 'devices', 'alerts', 'locations', 'brands', 'models', 'users'] as CRUDEntity[]).map((entity) => (
+                    {(['branches', 'devices', 'alerts', 'locations', 'brands', 'models', 'users', 'history'] as CRUDEntity[]).map((entity) => (
                         <button
                             key={entity}
                             onClick={() => setSelectedEntity(entity)}
@@ -456,13 +482,15 @@ export default function Configuration() {
                                 </p>
                             </div>
                         </div>
-                        <button
-                            onClick={handleCreate}
-                            className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-500 px-4 py-2 text-sm font-medium text-white shadow-lg transition-all hover:scale-105"
-                        >
-                            <Plus className="size-4" />
-                            Add New
-                        </button>
+                        {selectedEntity !== 'history' && (
+                            <button
+                                onClick={handleCreate}
+                                className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-500 px-4 py-2 text-sm font-medium text-white shadow-lg transition-all hover:scale-105"
+                            >
+                                <Plus className="size-4" />
+                                Add New
+                            </button>
+                        )}
                     </div>
 
                     {/* Table */}
@@ -522,6 +550,9 @@ export default function Configuration() {
                                         onEdit={handleEdit}
                                         onDelete={handleDelete}
                                     />
+                                )}
+                                {selectedEntity === 'history' && (
+                                    <HistoryView activities={activityHistory} />
                                 )}
                             </>
                         )}
@@ -1163,6 +1194,149 @@ function ModelsTable({
                 ))}
             </tbody>
         </table>
+    );
+}
+
+// History View Component
+function HistoryView({ activities }: { activities: ActivityLog[] }) {
+    const [expandedId, setExpandedId] = useState<number | null>(null);
+
+    const getActionColor = (action: string) => {
+        switch (action) {
+            case 'created': return 'bg-green-500';
+            case 'updated': return 'bg-blue-500';
+            case 'deleted': return 'bg-red-500';
+            default: return 'bg-slate-500';
+        }
+    };
+
+    const getActionIcon = (action: string) => {
+        switch (action) {
+            case 'created': return <Plus className="size-4" />;
+            case 'updated': return <Edit className="size-4" />;
+            case 'deleted': return <Trash2 className="size-4" />;
+            default: return <History className="size-4" />;
+        }
+    };
+
+    const formatFieldName = (field: string) => {
+        return field.split('_').map(word => 
+            word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
+    };
+
+    if (activities.length === 0) {
+        return (
+            <div className="p-12 text-center">
+                <History className="mx-auto mb-4 size-12 text-slate-400" />
+                <p className="text-slate-600 dark:text-slate-400">No activity history found</p>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-500">
+                    Changes made to devices, locations, brands, and models will appear here
+                </p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-3">
+            {activities.map((activity) => {
+                const isExpanded = expandedId === activity.id;
+                const entityName = activity.details?.device_name || activity.details?.location_name || activity.details?.brand_name || activity.details?.model_name || 'Unknown';
+                const hasChanges = activity.details?.changes && Object.keys(activity.details.changes).length > 0;
+
+                return (
+                    <div
+                        key={activity.id}
+                        className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition-all hover:shadow-md dark:border-slate-700 dark:bg-slate-800"
+                    >
+                        <div className="flex items-start gap-4">
+                            {/* Action Icon */}
+                            <div className={`flex-shrink-0 rounded-full p-2 text-white ${getActionColor(activity.action)}`}>
+                                {getActionIcon(activity.action)}
+                            </div>
+
+                            {/* Content */}
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="flex-1">
+                                        <h4 className="font-semibold text-slate-900 dark:text-white">
+                                            {entityName} {activity.action}
+                                        </h4>
+                                        <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                                            <span className="inline-flex items-center gap-1">
+                                                <User className="size-3" />
+                                                {activity.user}
+                                            </span>
+                                            <span>•</span>
+                                            <span className="capitalize">{activity.entity_type}</span>
+                                            {activity.ip_address && (
+                                                <>
+                                                    <span>•</span>
+                                                    <span className="font-mono text-xs">{activity.ip_address}</span>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <span className="flex-shrink-0 text-xs text-slate-500 dark:text-slate-400">
+                                        {activity.time_ago}
+                                    </span>
+                                </div>
+
+                                {/* Changes Detail */}
+                                {hasChanges && (
+                                    <div className="mt-3">
+                                        <button
+                                            onClick={() => setExpandedId(isExpanded ? null : activity.id)}
+                                            className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                                        >
+                                            {isExpanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+                                            {isExpanded ? 'Hide' : 'Show'} Changes ({Object.keys(activity.details.changes).length})
+                                        </button>
+
+                                        {isExpanded && (
+                                            <div className="mt-3 space-y-3 rounded-lg bg-slate-50 p-4 dark:bg-slate-900/50">
+                                                {Object.entries(activity.details.changes).map(([field, value]) => {
+                                                    // Check if value has old/new structure
+                                                    const hasBeforeAfter = typeof value === 'object' && value !== null && 'old' in value && 'new' in value;
+                                                    
+                                                    return (
+                                                        <div key={field} className="border-l-2 border-blue-500 pl-3">
+                                                            <div className="font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                                                {formatFieldName(field)}
+                                                            </div>
+                                                            {hasBeforeAfter ? (
+                                                                <div className="space-y-1 text-sm">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-red-600 dark:text-red-400 font-medium">Before:</span>
+                                                                        <span className="font-mono text-slate-600 dark:text-slate-400 bg-red-50 dark:bg-red-950/20 px-2 py-0.5 rounded">
+                                                                            {value.old === null ? 'null' : String(value.old)}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-green-600 dark:text-green-400 font-medium">After:</span>
+                                                                        <span className="font-mono text-slate-600 dark:text-slate-400 bg-green-50 dark:bg-green-950/20 px-2 py-0.5 rounded">
+                                                                            {value.new === null ? 'null' : String(value.new)}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <span className="font-mono text-sm text-slate-600 dark:text-slate-400">
+                                                                    {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
     );
 }
 

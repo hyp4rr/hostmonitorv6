@@ -29,13 +29,19 @@ class Device extends Model
         'offline_reason',
         'offline_acknowledged_by',
         'offline_acknowledged_at',
+        'offline_since',
+        'offline_duration_minutes',
+        'offline_alert_sent',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'uptime_percentage' => 'decimal:2',
+        'response_time' => 'decimal:2',
         'last_ping' => 'datetime',
         'offline_acknowledged_at' => 'datetime',
+        'offline_since' => 'datetime',
+        'offline_alert_sent' => 'boolean',
     ];
 
     protected $appends = ['brand', 'model'];

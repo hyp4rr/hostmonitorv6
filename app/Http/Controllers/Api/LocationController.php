@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Location;
+use App\Services\ActivityLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -54,6 +55,10 @@ class LocationController extends Controller
                 'longitude' => $request->longitude,
             ]);
 
+            // Log activity
+            $activityLog = new ActivityLogService();
+            $activityLog->logLocationCreated($location->id, $location->name, $location->branch_id);
+
             return response()->json($location->load('branch'), 201);
         } catch (\Exception $e) {
             Log::error('Error creating location: ' . $e->getMessage());
@@ -98,7 +103,22 @@ class LocationController extends Controller
             if ($request->has('latitude')) $location->latitude = $request->latitude;
             if ($request->has('longitude')) $location->longitude = $request->longitude;
 
+            // Track changes with before/after values
+            $changes = [];
+            $dirty = $location->getDirty();
+            foreach ($dirty as $field => $newValue) {
+                $changes[$field] = [
+                    'old' => $location->getOriginal($field),
+                    'new' => $newValue
+                ];
+            }
             $location->save();
+
+            // Log activity
+            if (!empty($changes)) {
+                $activityLog = new ActivityLogService();
+                $activityLog->logLocationUpdated($location->id, $location->name, $changes, $location->branch_id);
+            }
 
             return response()->json($location->load('branch'));
         } catch (\Exception $e) {
@@ -120,7 +140,15 @@ class LocationController extends Controller
                 ], 409);
             }
 
+            // Store info before deletion
+            $locationName = $location->name;
+            $branchId = $location->branch_id;
+            
             $location->delete();
+
+            // Log activity
+            $activityLog = new ActivityLogService();
+            $activityLog->logLocationDeleted($id, $locationName, $branchId);
 
             return response()->json(['message' => 'Location deleted successfully']);
         } catch (\Exception $e) {

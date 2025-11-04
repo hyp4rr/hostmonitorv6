@@ -44,9 +44,18 @@ interface RecentAlert {
 
 interface RecentActivity {
     id: number;
-    device_name: string;
-    status: string;
-    checked_at: string;
+    user: string;
+    action: string; // created, updated, deleted
+    entity_type: string; // device, location, brand, model
+    entity_id: number | null;
+    details: {
+        device_name?: string;
+        location_name?: string;
+        brand_name?: string;
+        model_name?: string;
+        changes?: Record<string, any>;
+    } | null;
+    created_at: string;
     time_ago: string;
 }
 
@@ -383,30 +392,65 @@ export default function Dashboard() {
                         </div>
                         <div className="divide-y divide-slate-200/50 dark:divide-slate-700/50">
                             {recentActivity.length > 0 ? (
-                                recentActivity.map((activity) => (
-                                    <div key={activity.id} className="flex items-center gap-4 p-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                                        <div
-                                            className={`size-2 rounded-full ${
-                                                activity.status === 'online' || activity.status === 'up'
-                                                    ? 'bg-green-500'
-                                                    : activity.status === 'warning'
-                                                    ? 'bg-yellow-500'
-                                                    : 'bg-red-500'
-                                            }`}
-                                        />
-                                        <div className="flex-1">
-                                            <p className="text-sm font-medium text-slate-900 dark:text-white">
-                                                {activity.device_name}
-                                            </p>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400">
-                                                Status: {activity.status}
-                                            </p>
+                                recentActivity.map((activity) => {
+                                    const getActionColor = (action: string) => {
+                                        switch (action) {
+                                            case 'created': return 'bg-green-500';
+                                            case 'updated': return 'bg-blue-500';
+                                            case 'deleted': return 'bg-red-500';
+                                            default: return 'bg-slate-500';
+                                        }
+                                    };
+
+                                    const getActionText = (action: string, entityType: string, details: any) => {
+                                        const entityName = details?.device_name || details?.location_name || details?.brand_name || details?.model_name || 'Unknown';
+                                        const actionVerb = action === 'created' ? 'added' : action === 'updated' ? 'updated' : 'removed';
+                                        return `${entityName} ${actionVerb}`;
+                                    };
+
+                                    const getChangesText = (details: any) => {
+                                        if (!details?.changes) return null;
+                                        const changes = details.changes;
+                                        const changedFields = Object.keys(changes);
+                                        
+                                        if (changedFields.length === 0) return null;
+                                        
+                                        // Format field names nicely
+                                        const formatFieldName = (field: string) => {
+                                            return field.split('_').map(word => 
+                                                word.charAt(0).toUpperCase() + word.slice(1)
+                                            ).join(' ');
+                                        };
+                                        
+                                        if (changedFields.length === 1) {
+                                            return `Changed ${formatFieldName(changedFields[0])}`;
+                                        } else if (changedFields.length === 2) {
+                                            return `Changed ${formatFieldName(changedFields[0])} and ${formatFieldName(changedFields[1])}`;
+                                        } else {
+                                            return `Changed ${changedFields.length} fields`;
+                                        }
+                                    };
+
+                                    return (
+                                        <div key={activity.id} className="flex items-center gap-4 p-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                                            <div className={`size-2 rounded-full ${getActionColor(activity.action)}`} />
+                                            <div className="flex-1">
+                                                <p className="text-sm font-medium text-slate-900 dark:text-white">
+                                                    {getActionText(activity.action, activity.entity_type, activity.details)}
+                                                </p>
+                                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                                    {activity.entity_type.charAt(0).toUpperCase() + activity.entity_type.slice(1)} • {activity.user}
+                                                    {getChangesText(activity.details) && (
+                                                        <span className="ml-1">• {getChangesText(activity.details)}</span>
+                                                    )}
+                                                </p>
+                                            </div>
+                                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                                                {activity.time_ago}
+                                            </span>
                                         </div>
-                                        <span className="text-xs text-slate-500 dark:text-slate-400">
-                                            {activity.time_ago}
-                                        </span>
-                                    </div>
-                                ))
+                                    );
+                                })
                             ) : (
                                 <div className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">
                                     No recent activity
