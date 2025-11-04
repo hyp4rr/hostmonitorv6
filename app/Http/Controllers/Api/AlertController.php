@@ -6,63 +6,27 @@ use App\Http\Controllers\Controller;
 use App\Models\Alert;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Validator;
 
 class AlertController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         try {
-            if (!Schema::hasTable('alerts')) {
-                return response()->json([]);
-            }
-
-            $alerts = Alert::with('device')
-                ->orderBy('triggered_at', 'desc')
-                ->get();
+            $query = Alert::with('device.branch')->orderBy('created_at', 'desc');
             
+            // Filter by branch if provided
+            if ($request->has('branch_id')) {
+                $query->whereHas('device', function($q) use ($request) {
+                    $q->where('branch_id', $request->branch_id);
+                });
+            }
+            
+            $alerts = $query->get();
             return response()->json($alerts);
         } catch (\Exception $e) {
             Log::error('Error fetching alerts: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to fetch alerts'], 500);
-        }
-    }
-
-    public function store(Request $request)
-    {
-        try {
-            $validated = $request->validate([
-                'device_id' => 'required|exists:devices,id',
-                'type' => 'required|string|max:50',
-                'severity' => 'required|in:info,warning,error,critical',
-                'category' => 'required|string|max:50',
-                'title' => 'required|string|max:255',
-                'message' => 'required|string',
-                'status' => 'required|string|max:50',
-                'acknowledged' => 'boolean',
-                'acknowledged_by' => 'nullable|string|max:255',
-                'reason' => 'nullable|string',
-                'resolved' => 'boolean',
-            ]);
-
-            $validated['acknowledged'] = $request->boolean('acknowledged', false);
-            $validated['resolved'] = $request->boolean('resolved', false);
-            $validated['triggered_at'] = now();
-
-            if ($validated['acknowledged'] && !$request->has('acknowledged_at')) {
-                $validated['acknowledged_at'] = now();
-            }
-
-            if ($validated['resolved'] && !$request->has('resolved_at')) {
-                $validated['resolved_at'] = now();
-            }
-
-            $alert = Alert::create($validated);
-
-            return response()->json($alert->load('device'), 201);
-        } catch (\Exception $e) {
-            Log::error('Error creating alert: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to create alert', 'message' => $e->getMessage()], 500);
         }
     }
 
@@ -71,27 +35,40 @@ class AlertController extends Controller
         try {
             $alert = Alert::findOrFail($id);
 
-            $validated = $request->validate([
-                'status' => 'required|string|max:50',
-                'acknowledged' => 'boolean',
+            $validator = Validator::make($request->all(), [
+                'status' => 'sometimes|string|in:active,acknowledged,dismissed',
+                'acknowledged' => 'sometimes|boolean',
                 'acknowledged_by' => 'nullable|string|max:255',
-                'reason' => 'nullable|string',
-                'resolved' => 'boolean',
+                'reason' => 'nullable|string|max:1000',
+                'resolved' => 'sometimes|boolean',
             ]);
 
-            $validated['acknowledged'] = $request->boolean('acknowledged', false);
-            $validated['resolved'] = $request->boolean('resolved', false);
-
-            // Set timestamps when status changes
-            if ($validated['acknowledged'] && !$alert->acknowledged) {
-                $validated['acknowledged_at'] = now();
+            if ($validator->fails()) {
+                return response()->json([
+                    'error' => 'Validation failed',
+                    'messages' => $validator->errors()
+                ], 422);
             }
 
-            if ($validated['resolved'] && !$alert->resolved) {
-                $validated['resolved_at'] = now();
+            if ($request->has('status')) $alert->status = $request->status;
+            if ($request->has('acknowledged_by')) $alert->acknowledged_by = $request->acknowledged_by;
+            if ($request->has('reason')) $alert->reason = $request->reason;
+            
+            if ($request->has('acknowledged')) {
+                $alert->acknowledged = filter_var($request->acknowledged, FILTER_VALIDATE_BOOLEAN);
+                if ($alert->acknowledged && !$alert->acknowledged_at) {
+                    $alert->acknowledged_at = now();
+                }
+            }
+            
+            if ($request->has('resolved')) {
+                $alert->resolved = filter_var($request->resolved, FILTER_VALIDATE_BOOLEAN);
+                if ($alert->resolved && !$alert->resolved_at) {
+                    $alert->resolved_at = now();
+                }
             }
 
-            $alert->update($validated);
+            $alert->save();
 
             return response()->json($alert->load('device'));
         } catch (\Exception $e) {
@@ -109,7 +86,7 @@ class AlertController extends Controller
             return response()->json(['message' => 'Alert deleted successfully']);
         } catch (\Exception $e) {
             Log::error('Error deleting alert: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to delete alert', 'message' => $e->getMessage()], 500);
+            return response()->json(['error' => 'Failed to delete alert'], 500);
         }
     }
 }

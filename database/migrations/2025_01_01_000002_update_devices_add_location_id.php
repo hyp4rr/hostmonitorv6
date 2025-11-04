@@ -14,6 +14,11 @@ return new class extends Migration
                 $table->foreignId('location_id')->nullable()->after('branch_id')->constrained('locations')->onDelete('set null');
             }
             
+            // Add hardware_detail_id foreign key
+            if (!Schema::hasColumn('devices', 'hardware_detail_id')) {
+                $table->foreignId('hardware_detail_id')->nullable()->after('location_id')->constrained('hardware_details')->onDelete('set null');
+            }
+            
             // Remove priority column if exists
             if (Schema::hasColumn('devices', 'priority')) {
                 $table->dropColumn('priority');
@@ -34,12 +39,14 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('devices', function (Blueprint $table) {
-            $table->dropForeign(['location_id']);
-            $table->dropColumn('location_id');
-            $table->integer('priority')->default(5);
-            $table->boolean('is_monitored')->default(true);
-            $table->decimal('latitude', 10, 8)->nullable();
-            $table->decimal('longitude', 11, 8)->nullable();
+            if (Schema::hasColumn('devices', 'location_id')) {
+                $table->dropForeign(['location_id']);
+                $table->dropColumn('location_id');
+            }
+            if (Schema::hasColumn('devices', 'hardware_detail_id')) {
+                $table->dropForeign(['hardware_detail_id']);
+                $table->dropColumn('hardware_detail_id');
+            }
         });
     }
 };

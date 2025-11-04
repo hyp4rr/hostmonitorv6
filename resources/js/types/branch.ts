@@ -7,24 +7,37 @@ export interface BranchListItem {
 
 export interface BranchDevice {
     id: number;
+    branch_id: number;
+    location_id?: number;
+    hardware_detail_id?: number;
     name: string;
     ip_address: string;
-    mac_address: string | null;
+    mac_address?: string;
     barcode: string;
     category: string;
     status: string;
-    location: string;
-    building: string;
-    manufacturer: string;
-    model: string;
     uptime_percentage: number;
-    response_time: number | null;
-    last_check: string | null;
-    latitude: number | null;
-    longitude: number | null;
-    offline_reason?: string;
-    offline_acknowledged_by?: string;
-    offline_acknowledged_at?: string;
+    response_time?: number;
+    is_active: boolean;
+    last_check?: string;
+    location?: string;
+    brand?: string;
+    model?: string;
+    latitude?: number;
+    longitude?: number;
+    hardware_detail?: {
+        id: number;
+        brand_id: number;
+        model_id: number;
+        brand?: {
+            id: number;
+            name: string;
+        };
+        hardware_model?: {
+            id: number;
+            name: string;
+        };
+    };
 }
 
 export interface BranchLocation {

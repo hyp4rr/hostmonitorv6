@@ -11,6 +11,7 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Log;
+use Inertia\Response;
 
 class MonitorController extends Controller
 {
@@ -69,7 +70,8 @@ class MonitorController extends Controller
 
         // Get the current branch with relationships
         $branch = Branch::with(['devices' => function ($query) {
-            $query->where('is_active', true);
+            $query->where('is_active', true)
+                ->with(['location', 'hardwareDetail.brand', 'hardwareDetail.hardwareModel']);
         }, 'locations'])->find($branchId);
 
         if (!$branch) {
@@ -89,6 +91,30 @@ class MonitorController extends Controller
             ];
         }
 
+        // Transform devices to include location data
+        $transformedDevices = $branch->devices->map(function ($device) {
+            return [
+                'id' => $device->id,
+                'branch_id' => $device->branch_id,
+                'location_id' => $device->location_id,
+                'name' => $device->name,
+                'ip_address' => $device->ip_address,
+                'mac_address' => $device->mac_address,
+                'barcode' => $device->barcode,
+                'category' => $device->category,
+                'status' => $device->status,
+                'building' => $device->building,
+                'location' => $device->location ? $device->location->name : $device->building,
+                'latitude' => $device->location ? $device->location->latitude : null,
+                'longitude' => $device->location ? $device->location->longitude : null,
+                'brand' => $device->brand ?? '',
+                'model' => $device->model ?? '',
+                'uptime_percentage' => $device->uptime_percentage ?? 0,
+                'is_active' => $device->is_active,
+                'last_check' => $device->last_ping,
+            ];
+        })->toArray();
+
         return [
             'id' => $branch->id,
             'name' => $branch->name,
@@ -98,14 +124,14 @@ class MonitorController extends Controller
             'latitude' => $branch->latitude,
             'longitude' => $branch->longitude,
             'is_active' => $branch->is_active,
-            'devices' => $branch->devices->toArray(),
-            'deviceCount' => $branch->devices->count(),
+            'devices' => $transformedDevices,
+            'deviceCount' => count($transformedDevices),
             'locations' => $branch->locations->pluck('name')->unique()->values()->toArray(),
             'branches' => $allBranches,
         ];
     }
 
-    public function dashboard(Request $request)
+    public function dashboard(Request $request): Response
     {
         try {
             if (!Schema::hasTable('branches')) {
@@ -346,5 +372,56 @@ class MonitorController extends Controller
         return Inertia::render('monitor/configuration', [
             'currentBranch' => $this->getBranchData($branchId),
         ]);
+    }
+
+    private function transformDevice($device)
+    {
+        // Get location data
+        $locationName = $device->location ? $device->location->name : ($device->building ?? '');
+        $latitude = $device->location ? $device->location->latitude : null;
+        $longitude = $device->location ? $device->location->longitude : null;
+        
+        return [
+            'id' => $device->id,
+            'branch_id' => $device->branch_id,
+            'location_id' => $device->location_id,
+            'hardware_detail_id' => $device->hardware_detail_id,
+            'name' => $device->name,
+            'ip_address' => $device->ip_address,
+            'mac_address' => $device->mac_address,
+            'barcode' => $device->barcode,
+            'category' => $device->category,
+            'status' => $device->status,
+            'building' => $device->building,
+            'location' => $locationName,
+            'latitude' => $latitude,
+            'longitude' => $longitude,
+            'brand' => $device->brand ?? '',
+            'model' => $device->model ?? '',
+            'uptime_percentage' => $device->uptime_percentage ?? 0,
+            'is_active' => $device->is_active,
+            'last_check' => $device->last_ping,
+        ];
+    }
+
+    private function calculateStats($currentBranch)
+    {
+        if (!$currentBranch) {
+            return [
+                'totalDevices' => 0,
+                'onlineDevices' => 0,
+                'offlineDevices' => 0,
+                'warningDevices' => 0,
+            ];
+        }
+
+        $devices = $currentBranch->devices;
+
+        return [
+            'totalDevices' => $devices->count(),
+            'onlineDevices' => $devices->where('status', 'online')->count(),
+            'offlineDevices' => $devices->where('status', 'offline')->count(),
+            'warningDevices' => $devices->where('status', 'warning')->count(),
+        ];
     }
 }

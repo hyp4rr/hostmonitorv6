@@ -1,4 +1,5 @@
 <?php
+// filepath: c:\Users\hyper\Herd\hostmonitorv6\app\Http\Controllers\Api\DeviceController.php
 
 namespace App\Http\Controllers\Api;
 
@@ -7,23 +8,28 @@ use App\Models\Device;
 use App\Models\HardwareDetail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 
 class DeviceController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         try {
-            if (!Schema::hasTable('devices')) {
-                return response()->json([]);
-            }
-
-            $devices = Device::with(['branch', 'hardwareDetail'])
-                ->orderBy('name')
-                ->get();
+            $query = Device::with(['branch', 'location', 'hardwareDetail.brand', 'hardwareDetail.hardwareModel']);
             
-            return response()->json($devices);
+            // Filter by branch if provided
+            if ($request->has('branch_id')) {
+                $query->where('branch_id', $request->branch_id);
+            }
+            
+            $devices = $query->orderBy('name', 'asc')->get();
+            
+            // Transform the data to match frontend expectations
+            $transformedDevices = $devices->map(function ($device) {
+                return $this->transformDevice($device);
+            });
+            
+            return response()->json($transformedDevices);
         } catch (\Exception $e) {
             Log::error('Error fetching devices: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to fetch devices'], 500);
@@ -33,69 +39,57 @@ class DeviceController extends Controller
     public function store(Request $request)
     {
         try {
-            $validated = $request->validate([
-                'branch_id' => 'required|exists:branches,id',
-                'location_id' => 'nullable|exists:locations,id',
+            $validator = Validator::make($request->all(), [
                 'name' => 'required|string|max:255',
                 'ip_address' => 'required|ip|unique:devices,ip_address',
-                'mac_address' => 'nullable|string|max:17',
                 'barcode' => 'required|string|max:255|unique:devices,barcode',
-                'type' => 'nullable|string|max:50',
-                'category' => 'required|string|max:50',
-                'status' => 'required|in:online,offline,warning,maintenance',
+                'mac_address' => 'nullable|string|max:17',
+                'category' => 'required|string|in:switches,servers,wifi,tas,cctv',
+                'status' => 'required|string|in:online,offline,warning,maintenance',
+                'branch_id' => 'required|exists:branches,id',
+                'location_id' => 'required|exists:locations,id',
+                'model_id' => 'required|exists:hardware_models,id', // Changed from hardware_detail_id
                 'building' => 'nullable|string|max:255',
-                'manufacturer' => 'nullable|string|max:100',
-                'model' => 'nullable|string|max:100',
                 'is_active' => 'boolean',
-                'response_time' => 'nullable|integer|min:0',
-                'latitude' => 'nullable|numeric|between:-90,90',
-                'longitude' => 'nullable|numeric|between:-180,180',
             ]);
 
-            // Handle hardware details
-            $hardwareDetailId = null;
-            if (!empty($validated['manufacturer']) && !empty($validated['model'])) {
-                $hardwareDetail = HardwareDetail::firstOrCreate([
-                    'manufacturer' => $validated['manufacturer'],
-                    'model' => $validated['model'],
-                ]);
-                $hardwareDetailId = $hardwareDetail->id;
+            if ($validator->fails()) {
+                return response()->json([
+                    'error' => 'Validation failed',
+                    'messages' => $validator->errors()
+                ], 422);
             }
 
-            // Remove manufacturer and model from validated data
-            unset($validated['manufacturer'], $validated['model']);
+            // Get the model and its brand
+            $model = \App\Models\HardwareModel::with('brand')->findOrFail($request->model_id);
             
-            $validated['hardware_detail_id'] = $hardwareDetailId;
-            $validated['is_active'] = $request->boolean('is_active', true);
-            $validated['type'] = $validated['type'] ?? $validated['category'];
-            $validated['uptime_percentage'] = 0;
+            // Create hardware detail
+            $hardwareDetail = HardwareDetail::create([
+                'brand_id' => $model->brand_id,
+                'model_id' => $model->id,
+            ]);
 
-            $device = Device::create($validated);
+            $device = Device::create([
+                'name' => $request->name,
+                'ip_address' => $request->ip_address,
+                'barcode' => $request->barcode,
+                'mac_address' => $request->mac_address,
+                'category' => $request->category,
+                'status' => $request->status,
+                'branch_id' => $request->branch_id,
+                'location_id' => $request->location_id,
+                'hardware_detail_id' => $hardwareDetail->id, // Use the created hardware_detail
+                'building' => $request->building,
+                'is_active' => $request->is_active ?? true,
+                'uptime_percentage' => 0,
+            ]);
 
-            return response()->json($device->load(['branch', 'hardwareDetail']), 201);
+            $device->load(['branch', 'location', 'hardwareDetail.brand', 'hardwareDetail.hardwareModel']);
+            
+            return response()->json($this->transformDevice($device), 201);
         } catch (\Exception $e) {
             Log::error('Error creating device: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to create device', 'message' => $e->getMessage()], 500);
-        }
-    }
-
-    public function show($id)
-    {
-        try {
-            if (!Schema::hasTable('devices')) {
-                return response()->json(['error' => 'Device not found'], 404);
-            }
-
-            $device = Device::with('branch')->find($id);
-
-            if (!$device) {
-                return response()->json(['error' => 'Device not found'], 404);
-            }
-
-            return response()->json($device);
-        } catch (\Exception $e) {
-            Log::error('Device show error: ' . $e->getMessage());
-            return response()->json(['error' => 'Device not found'], 404);
+            return response()->json(['error' => 'Failed to create device: ' . $e->getMessage()], 500);
         }
     }
 
@@ -105,67 +99,53 @@ class DeviceController extends Controller
             $device = Device::findOrFail($id);
 
             $validator = Validator::make($request->all(), [
-                'name' => 'required|string|max:255',
-                'ip_address' => 'required|ip|unique:devices,ip_address,' . $id,
+                'name' => 'sometimes|required|string|max:255',
+                'ip_address' => 'sometimes|required|ip|unique:devices,ip_address,' . $id,
+                'barcode' => 'sometimes|required|string|max:255|unique:devices,barcode,' . $id,
                 'mac_address' => 'nullable|string|max:17',
-                'barcode' => 'required|string|max:255|unique:devices,barcode,' . $id,
-                'category' => 'required|in:switches,servers,wifi,tas,cctv',
-                'status' => 'required|in:online,offline,warning,maintenance,offline_ack',
-                'branch_id' => 'required|exists:branches,id',
-                'location_id' => 'nullable|exists:locations,id',
+                'category' => 'sometimes|required|string|in:switches,servers,wifi,tas,cctv',
+                'status' => 'sometimes|required|string|in:online,offline,warning,maintenance',
+                'branch_id' => 'sometimes|required|exists:branches,id',
+                'location_id' => 'sometimes|required|exists:locations,id',
+                'model_id' => 'sometimes|required|exists:hardware_models,id', // Changed
                 'building' => 'nullable|string|max:255',
-                'manufacturer' => 'nullable|string|max:255',
-                'model' => 'nullable|string|max:255',
                 'is_active' => 'boolean',
             ]);
 
             if ($validator->fails()) {
                 return response()->json([
-                    'success' => false,
-                    'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'error' => 'Validation failed',
+                    'messages' => $validator->errors()
                 ], 422);
             }
 
-            $data = $request->all();
-            
-            // Handle boolean conversion
-            if (isset($data['is_active'])) {
-                $data['is_active'] = filter_var($data['is_active'], FILTER_VALIDATE_BOOLEAN);
-            }
-
-            // Handle hardware details
-            $manufacturer = $data['manufacturer'] ?? null;
-            $model = $data['model'] ?? null;
-            unset($data['manufacturer'], $data['model']);
-
-            // Update device
-            $device->update($data);
-
-            // Handle hardware detail
-            if ($manufacturer || $model) {
-                $hardwareDetail = HardwareDetail::firstOrCreate(
-                    [
-                        'manufacturer' => $manufacturer,
-                        'model' => $model,
-                    ]
-                );
+            // If model_id is being updated, create new hardware detail
+            if ($request->has('model_id')) {
+                $model = \App\Models\HardwareModel::with('brand')->findOrFail($request->model_id);
+                
+                // Create new hardware detail
+                $hardwareDetail = HardwareDetail::create([
+                    'brand_id' => $model->brand_id,
+                    'model_id' => $model->id,
+                ]);
+                
                 $device->hardware_detail_id = $hardwareDetail->id;
-                $device->save();
             }
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Device updated successfully',
-                'data' => $device->load(['branch', 'location', 'hardware_detail'])
-            ]);
+            // Update other fields
+            $device->fill($request->only([
+                'name', 'ip_address', 'barcode', 'mac_address', 'category', 
+                'status', 'branch_id', 'location_id', 'building', 'is_active'
+            ]));
 
+            $device->save();
+            
+            $device->load(['branch', 'location', 'hardwareDetail.brand', 'hardwareDetail.hardwareModel']);
+
+            return response()->json($this->transformDevice($device));
         } catch (\Exception $e) {
             Log::error('Error updating device: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update device: ' . $e->getMessage()
-            ], 500);
+            return response()->json(['error' => 'Failed to update device: ' . $e->getMessage()], 500);
         }
     }
 
@@ -174,62 +154,62 @@ class DeviceController extends Controller
         try {
             $device = Device::findOrFail($id);
             
-            // Soft delete to preserve history
-            $device->is_active = false;
-            $device->save();
             $device->delete();
 
             return response()->json(['message' => 'Device deleted successfully']);
         } catch (\Exception $e) {
             Log::error('Error deleting device: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to delete device', 'message' => $e->getMessage()], 500);
+            return response()->json(['error' => 'Failed to delete device'], 500);
         }
     }
-
-    public function stats()
+    
+    private function transformDevice($device)
     {
-        try {
-            if (!Schema::hasTable('devices')) {
-                return response()->json([
-                    'total' => 0,
-                    'online' => 0,
-                    'offline' => 0,
-                    'warning' => 0,
-                ]);
-            }
-
-            $stats = [
-                'total' => Device::where('is_active', true)->count(),
-                'online' => Device::where('is_active', true)->where('status', 'online')->count(),
-                'offline' => Device::where('is_active', true)->whereIn('status', ['offline', 'down'])->count(),
-                'warning' => Device::where('is_active', true)->where('status', 'warning')->count(),
-            ];
-
-            return response()->json($stats);
-        } catch (\Exception $e) {
-            Log::error('Device stats error: ' . $e->getMessage());
-            return response()->json([
-                'total' => 0,
-                'online' => 0,
-                'offline' => 0,
-                'warning' => 0,
-            ], 200);
-        }
-    }
-
-    public function pingAll()
-    {
-        try {
-            return response()->json([
-                'success' => true,
-                'message' => 'Ping initiated for all devices',
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Ping all error: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 200);
-        }
+        // Get location data
+        $locationName = $device->location ? $device->location->name : ($device->building ?? '');
+        $latitude = $device->location ? $device->location->latitude : null;
+        $longitude = $device->location ? $device->location->longitude : null;
+        
+        // Get hardware details
+        $brand = $device->hardwareDetail?->brand?->name ?? '';
+        $model = $device->hardwareDetail?->hardwareModel?->name ?? '';
+        
+        return [
+            'id' => $device->id,
+            'branch_id' => $device->branch_id,
+            'branch' => $device->branch ? [
+                'id' => $device->branch->id,
+                'name' => $device->branch->name,
+            ] : null,
+            'location_id' => $device->location_id,
+            'location' => $device->location ? [
+                'id' => $device->location->id,
+                'name' => $device->location->name,
+            ] : null,
+            'hardware_detail_id' => $device->hardware_detail_id,
+            'hardware_detail' => $device->hardwareDetail ? [
+                'id' => $device->hardwareDetail->id,
+                'brand' => $brand,
+                'model' => $model,
+            ] : null,
+            'name' => $device->name,
+            'ip_address' => $device->ip_address,
+            'mac_address' => $device->mac_address,
+            'barcode' => $device->barcode,
+            'category' => $device->category,
+            'status' => $device->status,
+            'building' => $device->building,
+            'location' => $locationName,
+            'latitude' => $latitude,
+            'longitude' => $longitude,
+            'brand' => $brand,
+            'model' => $model,
+            'uptime_percentage' => $device->uptime_percentage ?? 0,
+            'is_active' => $device->is_active,
+            'response_time' => $device->response_time,
+            'last_check' => $device->last_ping,
+            'created_at' => $device->created_at,
+            'updated_at' => $device->updated_at,
+        ];
     }
 }

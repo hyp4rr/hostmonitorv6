@@ -4,19 +4,25 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class HardwareDetail extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'manufacturer',
-        'model',
-    ];
+    protected $fillable = ['brand_id', 'model_id'];
 
-    public function devices(): HasMany
+    public function brand()
     {
-        return $this->hasMany(Device::class);
+        return $this->belongsTo(Brand::class);
+    }
+
+    public function hardwareModel()
+    {
+        return $this->belongsTo(HardwareModel::class, 'model_id');
+    }
+
+    public function devices()
+    {
+        return $this->hasMany(Device::class, 'hardware_detail_id');
     }
 }

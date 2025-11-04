@@ -15,11 +15,9 @@ return new class extends Migration
             $table->string('ip_address')->unique();
             $table->string('mac_address')->nullable();
             $table->string('barcode')->unique();
-            $table->string('category')->default('switch');
+            $table->string('category')->default('switches');
             $table->string('status')->default('offline');
             $table->string('building')->nullable();
-            $table->string('brand')->nullable();
-            $table->string('model')->nullable();
             $table->decimal('uptime_percentage', 5, 2)->default(0);
             $table->integer('response_time')->nullable();
             $table->boolean('is_active')->default(true);

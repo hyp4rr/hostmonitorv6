@@ -8,7 +8,8 @@ use App\Http\Controllers\Api\BranchController;
 use App\Http\Controllers\Api\AlertController;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\UserController;
-use App\Http\Controllers\Api\HardwareDetailController;
+use App\Http\Controllers\Api\BrandController;
+use App\Http\Controllers\Api\ModelController;
 use Illuminate\Http\Request;
 
 // Config authentication (no CSRF required for these endpoints)
@@ -28,19 +29,49 @@ Route::get('/test', function () {
     return response()->json(['status' => 'API is working']);
 });
 
-// Public CRUD endpoints (no authentication required per project specs)
-// Using apiResource for RESTful routes - this automatically creates all routes including PUT
-Route::apiResource('branches', BranchController::class);
-Route::apiResource('devices', DeviceController::class);
-Route::apiResource('alerts', AlertController::class);
-Route::apiResource('locations', LocationController::class);
-Route::apiResource('users', UserController::class);
+Route::middleware('api')->group(function () {
+    Route::apiResource('branches', BranchController::class);
+    Route::apiResource('devices', DeviceController::class);
+    Route::apiResource('alerts', AlertController::class);
+    Route::apiResource('locations', LocationController::class);
+    Route::apiResource('users', UserController::class);
+    Route::apiResource('brands', BrandController::class);
+    Route::apiResource('models', ModelController::class);
+});
+
+// Alert routes (only index, update, destroy - alerts are created by system)
+    Route::get('alerts', [AlertController::class, 'index']);
+    Route::put('alerts/{alert}', [AlertController::class, 'update']);
+    Route::delete('alerts/{alert}', [AlertController::class, 'destroy']);
 
 // Additional device routes
 Route::get('/devices/stats', [DeviceController::class, 'stats']);
 Route::post('/devices/ping-all', [DeviceController::class, 'pingAll']);
 Route::post('/devices/{id}/ping', [DeviceController::class, 'ping']);
 
-// Hardware detail helper routes
-Route::get('/hardware/manufacturers', [HardwareDetailController::class, 'manufacturers']);
-Route::get('/hardware/models', [HardwareDetailController::class, 'models']);
+Route::get('hardware/brands', [BrandController::class, 'index']);
+    Route::get('hardware/models', [ModelController::class, 'index']);
+
+// Brand management routes
+Route::get('/brands', [App\Http\Controllers\Api\BrandController::class, 'index']);
+Route::post('/brands', [App\Http\Controllers\Api\BrandController::class, 'store']);
+Route::put('/brands/{id}', [App\Http\Controllers\Api\BrandController::class, 'update']);
+Route::delete('/brands/{id}', [App\Http\Controllers\Api\BrandController::class, 'destroy']);
+
+// Model management routes (hardware models)
+Route::get('/models', [App\Http\Controllers\Api\ModelController::class, 'index']);
+Route::post('/models', [App\Http\Controllers\Api\ModelController::class, 'store']);
+Route::put('/models/{id}', [App\Http\Controllers\Api\ModelController::class, 'update']);
+Route::delete('/models/{id}', [App\Http\Controllers\Api\ModelController::class, 'destroy']);
+
+// Device CRUD
+Route::get('/devices', [App\Http\Controllers\Api\DeviceController::class, 'index']);
+Route::post('/devices', [App\Http\Controllers\Api\DeviceController::class, 'store']);
+Route::put('/devices/{id}', [App\Http\Controllers\Api\DeviceController::class, 'update']);
+Route::delete('/devices/{id}', [App\Http\Controllers\Api\DeviceController::class, 'destroy']);
+
+// Hardware Model CRUD
+Route::get('/models', [App\Http\Controllers\Api\HardwareModelController::class, 'index']);
+Route::post('/models', [App\Http\Controllers\Api\HardwareModelController::class, 'store']);
+Route::put('/models/{id}', [App\Http\Controllers\Api\HardwareModelController::class, 'update']);
+Route::delete('/models/{id}', [App\Http\Controllers\Api\HardwareModelController::class, 'destroy']);

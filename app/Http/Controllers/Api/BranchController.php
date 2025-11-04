@@ -13,7 +13,7 @@ class BranchController extends Controller
     public function index()
     {
         try {
-            $branches = Branch::orderBy('name')->get();
+            $branches = Branch::orderBy('id', 'asc')->get();
             return response()->json($branches);
         } catch (\Exception $e) {
             Log::error('Error fetching branches: ' . $e->getMessage());
@@ -85,7 +85,7 @@ class BranchController extends Controller
                 ], 422);
             }
 
-            $branch->update($request->only(['name', 'code', 'description', 'address']));
+            $branch->update($request->only(['name', 'code', 'description', 'address', 'is_active']));
             
             if ($request->has('is_active')) {
                 $branch->is_active = $request->boolean('is_active');

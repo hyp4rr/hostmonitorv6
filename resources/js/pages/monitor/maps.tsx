@@ -1,5 +1,5 @@
 import MonitorLayout from '@/layouts/monitor-layout';
-import { MapPin, Server, Maximize2, Minimize2, Layers, Filter, Search } from 'lucide-react';
+import { MapPin, Server, Maximize2, Minimize2, Layers, Filter, Search, AlertTriangle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -29,34 +29,124 @@ export default function Maps() {
     const { settings } = useSettings();
     const { t } = useTranslation();
     const { currentBranch } = usePage<PageProps>().props;
+    
+    // Get navigation parameters from URL query string
+    const urlParams = new URLSearchParams(window.location.search);
+    const navDeviceId = urlParams.get('deviceId') ? parseInt(urlParams.get('deviceId')!) : null;
+    const navLat = urlParams.get('lat') ? parseFloat(urlParams.get('lat')!) : null;
+    const navLng = urlParams.get('lng') ? parseFloat(urlParams.get('lng')!) : null;
+    
     const mapRef = useRef<L.Map | null>(null);
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const markersRef = useRef<L.Marker[]>([]);
     const tileLayerRef = useRef<L.TileLayer | null>(null);
+    const highlightMarkerRef = useRef<L.Marker | null>(null);
     const [selectedLocation, setSelectedLocation] = useState<DeviceLocation | null>(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [mapStyle, setMapStyle] = useState<'street' | 'satellite' | 'dark'>('street');
     const [showHeatmap, setShowHeatmap] = useState(false);
     const [filterStatus, setFilterStatus] = useState<'all' | 'online' | 'warning' | 'offline'>('all');
     const [searchQuery, setSearchQuery] = useState('');
+    const [markersReady, setMarkersReady] = useState(false);
+
+    // Add state for real locations from database
+    const [dbLocations, setDbLocations] = useState<Array<{
+        id: number;
+        name: string;
+        description: string | null;
+        latitude: number;
+        longitude: number;
+        branch_id: number;
+    }>>([]);
+    const [isLoadingLocations, setIsLoadingLocations] = useState(true);
+
+    // Fetch locations from database
+    useEffect(() => {
+        if (!currentBranch?.id) return;
+
+        setIsLoadingLocations(true);
+        fetch(`/api/locations?branch_id=${currentBranch.id}`, {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' },
+        })
+        .then(res => res.ok ? res.json() : [])
+        .then(data => {
+            console.log('Loaded locations:', data);
+            setDbLocations(data);
+        })
+        .catch(err => console.error('Error loading locations:', err))
+        .finally(() => setIsLoadingLocations(false));
+    }, [currentBranch?.id]);
 
     // Use real devices from current branch for map markers
     const realDevices = currentBranch?.devices || [];
     
-    // Transform real devices to map locations
-    const deviceLocations: DeviceLocation[] = realDevices
-        .filter(d => d.latitude && d.longitude)
-        .map(device => ({
-            lat: device.latitude!,
-            lng: device.longitude!,
-            name: device.name,
-            status: device.status === 'online' ? 'online' : device.status === 'warning' ? 'warning' : 'offline',
-            count: 1,
-            devices: [device.name],
-            category: device.category.charAt(0).toUpperCase() + device.category.slice(1),
-            ip: device.ip_address,
-            uptime: `${device.uptime_percentage}%`,
-        }));
+    // Group devices by location coordinates
+    const deviceLocationMap = new Map<string, typeof realDevices>();
+    realDevices.forEach(device => {
+        if (device.latitude && device.longitude) {
+            const key = `${device.latitude},${device.longitude}`;
+            const existing = deviceLocationMap.get(key) || [];
+            deviceLocationMap.set(key, [...existing, device]);
+        }
+    });
+
+    // Transform database locations + devices to map locations
+    const deviceLocations: DeviceLocation[] = [];
+
+    // Add locations from database with their assigned devices
+    dbLocations.forEach(location => {
+        if (!location.latitude || !location.longitude) return;
+
+        // Find devices assigned to this location using location_id
+        const locationDevices = realDevices.filter(d => 
+            d.location_id === location.id
+        );
+
+        // Determine overall status based on devices at this location
+        let status: 'online' | 'warning' | 'offline' = 'online';
+        if (locationDevices.some(d => d.status === 'offline')) {
+            status = 'offline';
+        } else if (locationDevices.some(d => d.status === 'warning')) {
+            status = 'warning';
+        }
+
+        // Calculate average uptime
+        const avgUptime = locationDevices.length > 0
+            ? (locationDevices.reduce((sum, d) => sum + (d.uptime_percentage || 0), 0) / locationDevices.length).toFixed(1)
+            : '0.0';
+
+        deviceLocations.push({
+            lat: location.latitude,
+            lng: location.longitude,
+            name: location.name,
+            status: status,
+            count: locationDevices.length,
+            devices: locationDevices.map(d => d.name),
+            category: location.description || 'Location',
+            ip: locationDevices[0]?.ip_address,
+            uptime: `${avgUptime}%`,
+        });
+    });
+
+    // Add devices without location assignment (fallback to device coordinates)
+    realDevices.forEach(device => {
+        // Only show if device has no location_id but has coordinates
+        if (!device.location_id && device.latitude && device.longitude) {
+            deviceLocations.push({
+                lat: device.latitude,
+                lng: device.longitude,
+                name: device.name,
+                status: device.status === 'online' ? 'online' : 
+                        device.status === 'warning' ? 'warning' : 'offline',
+                count: 1,
+                devices: [device.name],
+                category: device.category.charAt(0).toUpperCase() + device.category.slice(1),
+                ip: device.ip_address,
+                uptime: `${device.uptime_percentage}%`,
+            });
+        }
+    });
 
     const filteredLocations = deviceLocations.filter(location => {
         const matchesStatus = filterStatus === 'all' || location.status === filterStatus;
@@ -222,13 +312,18 @@ export default function Maps() {
         tileLayerRef.current = layer;
     }, [mapStyle]);
 
-    // Update markers when filters change
+    // Update markers when locations or filters change
     useEffect(() => {
         if (!mapRef.current) return;
 
         // Clear existing markers
         markersRef.current.forEach(marker => marker.remove());
         markersRef.current = [];
+
+        // Show loading state
+        if (isLoadingLocations) {
+            return;
+        }
 
         // Add markers for filtered locations
         filteredLocations.forEach((location) => {
@@ -254,10 +349,12 @@ export default function Maps() {
                             <span style="color: #64748b; font-weight: 500;">Devices:</span>
                             <span style="color: #1e293b; font-weight: 600;">${location.count} device${location.count !== 1 ? 's' : ''}</span>
                             
-                            <span style="color: #64748b; font-weight: 500;">IP Address:</span>
-                            <span style="color: #1e293b; font-weight: 600;">${location.ip}</span>
+                            ${location.ip ? `
+                                <span style="color: #64748b; font-weight: 500;">Primary IP:</span>
+                                <span style="color: #1e293b; font-weight: 600;">${location.ip}</span>
+                            ` : ''}
                             
-                            <span style="color: #64748b; font-weight: 500;">Uptime:</span>
+                            <span style="color: #64748b; font-weight: 500;">Avg Uptime:</span>
                             <span style="color: #10b981; font-weight: 600;">${location.uptime}</span>
                         </div>
                         
@@ -280,7 +377,6 @@ export default function Maps() {
                 setSelectedLocation(location);
             });
 
-            // Add hover effect
             marker.on('mouseover', () => {
                 marker.openPopup();
             });
@@ -292,8 +388,14 @@ export default function Maps() {
         if (filteredLocations.length > 0) {
             const bounds = L.latLngBounds(filteredLocations.map(loc => [loc.lat, loc.lng]));
             mapRef.current.fitBounds(bounds, { padding: [50, 50] });
+        } else if (currentBranch?.id) {
+            // Center on default coordinates if no locations
+            mapRef.current.setView([3.1390, 101.6869], 15);
         }
-    }, [filterStatus, searchQuery]);
+
+        // Signal that markers are ready
+        setMarkersReady(markersRef.current.length > 0);
+    }, [filterStatus, searchQuery, isLoadingLocations, dbLocations.length]);
 
     // Check for incoming location parameter from dashboard
     useEffect(() => {
@@ -330,6 +432,101 @@ export default function Maps() {
         }
     }, []); // Empty dependency array since we only want this to run once on mount
 
+    // Handle navigation from devices page with specific coordinates
+    useEffect(() => {
+        console.log('Navigation params:', { navDeviceId, navLat, navLng, markersReady });
+        
+        if (navLat && navLng && mapRef.current && markersReady) {
+            // Remove previous highlight marker if exists
+            if (highlightMarkerRef.current) {
+                highlightMarkerRef.current.remove();
+            }
+
+            // Create a special highlight marker
+            const highlightIcon = L.divIcon({
+                className: 'highlight-marker',
+                html: `
+                    <div style="position: relative;">
+                        <div style="
+                            position: absolute;
+                            width: 60px;
+                            height: 60px;
+                            left: -18px;
+                            top: -18px;
+                            background: #3b82f6;
+                            border-radius: 50%;
+                            opacity: 0;
+                            animation: highlight-pulse 1.5s ease-out infinite;
+                        "></div>
+                        <div style="
+                            width: 24px;
+                            height: 24px;
+                            background: #3b82f6;
+                            border: 4px solid white;
+                            border-radius: 50%;
+                            box-shadow: 0 0 20px rgba(59, 130, 246, 0.8), 0 4px 12px rgba(0,0,0,0.3);
+                            position: relative;
+                            z-index: 1000;
+                        "></div>
+                        <style>
+                            @keyframes highlight-pulse {
+                                0% {
+                                    transform: scale(0.3);
+                                    opacity: 1;
+                                }
+                                100% {
+                                    transform: scale(2);
+                                    opacity: 0;
+                                }
+                            }
+                        </style>
+                    </div>
+                `,
+                iconSize: [24, 24],
+                iconAnchor: [12, 12],
+            });
+
+            // Add highlight marker
+            const highlightMarker = L.marker([navLat, navLng], { 
+                icon: highlightIcon,
+                zIndexOffset: 1000 
+            }).addTo(mapRef.current);
+            
+            highlightMarkerRef.current = highlightMarker;
+
+            // Fly to the location with smooth animation
+            setTimeout(() => {
+                if (mapRef.current) {
+                    mapRef.current.flyTo([navLat, navLng], 18, {
+                        duration: 1.5,
+                        easeLinearity: 0.25
+                    });
+
+                    // Find and open popup for the marker at this location
+                    const marker = markersRef.current.find(m => {
+                        const latLng = m.getLatLng();
+                        return Math.abs(latLng.lat - navLat) < 0.0001 && 
+                               Math.abs(latLng.lng - navLng) < 0.0001;
+                    });
+                    
+                    if (marker) {
+                        setTimeout(() => {
+                            marker.openPopup();
+                        }, 1000);
+                    }
+                }
+            }, 300);
+
+            // Remove highlight marker after 5 seconds
+            setTimeout(() => {
+                if (highlightMarkerRef.current) {
+                    highlightMarkerRef.current.remove();
+                    highlightMarkerRef.current = null;
+                }
+            }, 5000);
+        }
+    }, [navLat, navLng, markersReady]);
+
     const toggleFullscreen = () => {
         setIsFullscreen(!isFullscreen);
         
@@ -344,6 +541,56 @@ export default function Maps() {
     return (
         <MonitorLayout title={t('maps.title')}>
             <div className="space-y-6">
+                {/* Loading State */}
+                {isLoadingLocations && (
+                    <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/30 dark:from-blue-950/20 dark:to-indigo-950/20">
+                        <div className="flex items-center gap-3">
+                            <div className="size-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"></div>
+                            <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                                Loading locations from database...
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                {/* No Locations Warning */}
+                {!isLoadingLocations && dbLocations.length === 0 && (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/30 dark:bg-amber-950/20">
+                        <div className="flex items-center gap-3">
+                            <AlertTriangle className="size-5 text-amber-600 dark:text-amber-400" />
+                            <div>
+                                <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                                    No Locations Found
+                                </p>
+                                <p className="text-sm text-amber-700 dark:text-amber-300">
+                                    Add locations in the Configuration page with latitude/longitude coordinates to display them on the map.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Branch Info Banner */}
+                {currentBranch?.id && (
+                    <div className="rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 dark:border-blue-900/30 dark:from-blue-950/20 dark:to-indigo-950/20">
+                        <div className="flex items-center gap-3">
+                            <div className="rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 p-2 shadow-lg">
+                                <MapPin className="size-5 text-white" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-blue-900 dark:text-blue-100">
+                                    {currentBranch.name} - Network Map
+                                </h3>
+                                <p className="text-sm text-blue-700 dark:text-blue-300">
+                                    {dbLocations.length} location{dbLocations.length !== 1 ? 's' : ''} • 
+                                    {deviceLocations.length} marker{deviceLocations.length !== 1 ? 's' : ''} • 
+                                    {realDevices.length} device{realDevices.length !== 1 ? 's' : ''}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Header - Hide in fullscreen */}
                 {!isFullscreen && (
                     <div className="flex items-center justify-between">

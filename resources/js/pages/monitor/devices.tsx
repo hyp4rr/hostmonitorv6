@@ -21,6 +21,7 @@ import {
     WifiOff,
     X,
     Barcode,
+    Activity
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useSettings } from '@/contexts/settings-context';
@@ -38,14 +39,13 @@ interface Device {
     ip_address: string;
     mac_address: string;
     barcode: string;
-    type: string;
+    type?: string;
     category: DeviceCategory;
     status: DeviceStatus;
     location: string;
-    building: string;
-    manufacturer: string;
-    model: string;
-    priority: number;
+    brand: string; // Virtual attribute from backend
+    model: string; // Virtual attribute from backend
+    priority?: number;
     uptime_percentage: number;
     response_time: number | null;
     is_monitored?: boolean;
@@ -59,6 +59,15 @@ interface Device {
     latitude?: number;
     longitude?: number;
     branch_id?: number;
+    location_id?: number;
+    hardware_detail_id?: number;
+    hardware_detail?: {
+        id: number;
+        brand_id: number;
+        model_id: number;
+        brand?: { id: number; name: string };
+        hardware_model?: { id: number; name: string };
+    };
 }
 
 const categories = [
@@ -133,7 +142,7 @@ const getStatusLabel = (status: DeviceStatus) => {
     }
 };
 
-type SortField = 'name' | 'ip_address' | 'uptime_percentage' | 'status' | 'location' | 'manufacturer';
+type SortField = 'name' | 'ip_address' | 'uptime_percentage' | 'status' | 'location' | 'brand';
 type SortOrder = 'asc' | 'desc';
 
 export default function Devices() {
@@ -145,7 +154,7 @@ export default function Devices() {
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | DeviceStatus>('all');
     const [locationFilter, setLocationFilter] = useState<string>('all');
-    const [manufacturerFilter, setManufacturerFilter] = useState<string>('all');
+    const [brandFilter, setBrandFilter] = useState<string>('all');
     const [modelFilter, setModelFilter] = useState<string>('all');
     const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
@@ -155,6 +164,11 @@ export default function Devices() {
     const [lastPingTime, setLastPingTime] = useState<Date | null>(null);
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
     
+    // Add state for filter options from database
+    const [availableLocations, setAvailableLocations] = useState<Array<{id: number, name: string}>>([]);
+    const [availableBrands, setAvailableBrands] = useState<Array<{id: number, name: string}>>([]);
+    const [availableModels, setAvailableModels] = useState<Array<{id: number, name: string, brand_id: number}>>([]);
+
     // Get devices from current branch
     const allDevices = currentBranch?.devices || [];
 
@@ -205,26 +219,58 @@ export default function Devices() {
         filteredDevices = filteredDevices.filter(d => d.status === statusFilter);
     }
 
-    // Get unique locations from current branch
-    const uniqueLocations = Array.from(new Set(allDevices.map(d => d.location).filter(Boolean)));
+    // Get unique locations from current branch (fallback to device data if API fails)
+    const uniqueLocations = availableLocations.length > 0 
+        ? availableLocations 
+        : Array.from(new Set(allDevices.map(d => d.location).filter(Boolean))).map((loc, idx) => ({
+            id: idx,
+            name: loc
+        }));
 
-    // Get unique manufacturers and models for filters
-    const uniqueManufacturers = Array.from(new Set(allDevices.map(d => d.manufacturer))).filter(Boolean);
-    const uniqueModels = Array.from(new Set(allDevices.map(d => d.model))).filter(Boolean);
+    // Get unique brands - use hardware_detail when available
+    const uniqueBrands = availableBrands.length > 0 
+        ? availableBrands 
+        : Array.from(new Set(
+            allDevices
+                .map(d => d.hardware_detail?.brand?.name || d.brand)
+                .filter(Boolean)
+          )).map((brand, idx) => ({
+            id: idx,
+            name: brand
+        }));
+
+    // Filter models based on selected brand
+    const filteredModelsForDropdown = brandFilter !== 'all'
+        ? availableModels.filter(m => m.brand_id === parseInt(brandFilter))
+        : availableModels;
 
     // Apply location filter
     if (locationFilter !== 'all') {
         filteredDevices = filteredDevices.filter(d => d.location === locationFilter);
     }
 
-    // Apply manufacturer filter
-    if (manufacturerFilter !== 'all') {
-        filteredDevices = filteredDevices.filter(d => d.manufacturer === manufacturerFilter);
+    // Apply brand filter - handle both API brands and fallback brands
+    if (brandFilter !== 'all') {
+        const selectedBrandName = uniqueBrands.find(b => String(b.id) === brandFilter)?.name;
+        if (selectedBrandName) {
+            filteredDevices = filteredDevices.filter(d => {
+                // Check both virtual attribute and hardware_detail
+                return d.brand === selectedBrandName || 
+                       d.hardware_detail?.brand?.name === selectedBrandName;
+            });
+        }
     }
 
-    // Apply model filter
+    // Apply model filter - handle both API models and fallback models
     if (modelFilter !== 'all') {
-        filteredDevices = filteredDevices.filter(d => d.model === modelFilter);
+        const selectedModelName = availableModels.find(m => String(m.id) === modelFilter)?.name;
+        if (selectedModelName) {
+            filteredDevices = filteredDevices.filter(d => {
+                // Check both virtual attribute and hardware_detail
+                return d.model === selectedModelName ||
+                       d.hardware_detail?.hardware_model?.name === selectedModelName;
+            });
+        }
     }
 
     // Sorting function
@@ -261,7 +307,7 @@ export default function Devices() {
         setSearchQuery('');
         setStatusFilter('all');
         setLocationFilter('all');
-        setManufacturerFilter('all');
+        setBrandFilter('all');
         setModelFilter('all');
         setSelectedCategory('all');
     };
@@ -270,10 +316,42 @@ export default function Devices() {
         searchQuery,
         statusFilter !== 'all',
         locationFilter !== 'all',
-        manufacturerFilter !== 'all',
+        brandFilter !== 'all',
         modelFilter !== 'all',
         selectedCategory !== 'all',
     ].filter(Boolean).length;
+
+    // Fetch filter options from database when branch changes
+    useEffect(() => {
+        if (currentBranch?.id) {
+            // Fetch locations for current branch
+            fetch(`/api/locations?branch_id=${currentBranch.id}`, {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' },
+            })
+            .then(res => res.ok ? res.json() : [])
+            .then(data => setAvailableLocations(data))
+            .catch(err => console.error('Error loading locations:', err));
+
+            // Fetch brands (formerly manufacturers)
+            fetch('/api/brands', {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' },
+            })
+            .then(res => res.ok ? res.json() : [])
+            .then(data => setAvailableBrands(data))
+            .catch(err => console.error('Error loading brands:', err));
+
+            // Fetch models
+            fetch('/api/models', {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' },
+            })
+            .then(res => res.ok ? res.json() : [])
+            .then(data => setAvailableModels(data))
+            .catch(err => console.error('Error loading models:', err));
+        }
+    }, [currentBranch?.id]);
 
     return (
         <MonitorLayout title={t('devices.title')}>
@@ -396,7 +474,7 @@ export default function Devices() {
                         <button
                             onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
                             className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
-                                showAdvancedFilters || manufacturerFilter !== 'all' || modelFilter !== 'all' || locationFilter !== 'all'
+                                showAdvancedFilters || brandFilter !== 'all' || modelFilter !== 'all' || locationFilter !== 'all'
                                     ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
                                     : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
                             }`}
@@ -431,32 +509,44 @@ export default function Devices() {
                                         onChange={(e) => setLocationFilter(e.target.value)}
                                         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                                     >
-                                        <option value="all">All Locations</option>
+                                        <option value="all">All Locations ({uniqueLocations.length})</option>
                                         {uniqueLocations.map((location) => (
-                                            <option key={location} value={location}>
-                                                {location}
+                                            <option key={location.id} value={location.name}>
+                                                {location.name}
                                             </option>
                                         ))}
                                     </select>
+                                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                        Filtered by {currentBranch?.name || 'current branch'}
+                                    </p>
                                 </div>
 
-                                {/* Manufacturer Filter */}
+                                {/* Brand Filter (formerly Manufacturer) */}
                                 <div>
                                     <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                                        Manufacturer
+                                        Brand
                                     </label>
                                     <select
-                                        value={manufacturerFilter}
-                                        onChange={(e) => setManufacturerFilter(e.target.value)}
+                                        value={brandFilter}
+                                        onChange={(e) => {
+                                            setBrandFilter(e.target.value);
+                                            // Reset model filter when brand changes
+                                            if (e.target.value === 'all') {
+                                                setModelFilter('all');
+                                            }
+                                        }}
                                         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                                     >
-                                        <option value="all">All Manufacturers</option>
-                                        {uniqueManufacturers.map((manufacturer) => (
-                                            <option key={manufacturer} value={manufacturer}>
-                                                {manufacturer}
+                                        <option value="all">All Brands ({uniqueBrands.length})</option>
+                                        {uniqueBrands.map((brand) => (
+                                            <option key={brand.id} value={brand.id}>
+                                                {brand.name}
                                             </option>
                                         ))}
                                     </select>
+                                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                        From database
+                                    </p>
                                 </div>
 
                                 {/* Model Filter */}
@@ -467,27 +557,35 @@ export default function Devices() {
                                     <select
                                         value={modelFilter}
                                         onChange={(e) => setModelFilter(e.target.value)}
-                                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                        disabled={brandFilter === 'all'}
+                                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                                     >
-                                        <option value="all">All Models</option>
-                                        {uniqueModels.map((model) => (
-                                            <option key={model} value={model}>
-                                                {model}
+                                        <option value="all">
+                                            {brandFilter === 'all' 
+                                                ? 'Select brand first' 
+                                                : `All Models (${filteredModelsForDropdown.length})`}
+                                        </option>
+                                        {filteredModelsForDropdown.map((model) => (
+                                            <option key={model.id} value={model.id}>
+                                                {model.name}
                                             </option>
                                         ))}
                                     </select>
+                                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                        {brandFilter === 'all' ? 'Dependent on brand' : 'From database'}
+                                    </p>
                                 </div>
                             </div>
 
                             {/* Active Filters Summary */}
-                            {(manufacturerFilter !== 'all' || modelFilter !== 'all' || locationFilter !== 'all') && (
+                            {(brandFilter !== 'all' || modelFilter !== 'all' || locationFilter !== 'all') && (
                                 <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-200 pt-4 dark:border-slate-700">
                                     <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">
                                         Active:
                                     </span>
                                     {locationFilter !== 'all' && (
                                         <span className="flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                                            Location: {locationFilter}
+                                            Location: {uniqueLocations.find(l => l.name === locationFilter)?.name || locationFilter}
                                             <button
                                                 onClick={() => setLocationFilter('all')}
                                                 className="hover:text-blue-900 dark:hover:text-blue-100"
@@ -496,11 +594,14 @@ export default function Devices() {
                                             </button>
                                         </span>
                                     )}
-                                    {manufacturerFilter !== 'all' && (
+                                    {brandFilter !== 'all' && (
                                         <span className="flex items-center gap-1 rounded-full bg-purple-100 px-2 py-1 text-xs font-medium text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
-                                            Manufacturer: {manufacturerFilter}
+                                            Brand: {uniqueBrands.find(b => String(b.id) === brandFilter)?.name || brandFilter}
                                             <button
-                                                onClick={() => setManufacturerFilter('all')}
+                                                onClick={() => {
+                                                    setBrandFilter('all');
+                                                    setModelFilter('all');
+                                                }}
                                                 className="hover:text-purple-900 dark:hover:text-purple-100"
                                             >
                                                 <X className="size-3" />
@@ -509,7 +610,7 @@ export default function Devices() {
                                     )}
                                     {modelFilter !== 'all' && (
                                         <span className="flex items-center gap-1 rounded-full bg-pink-100 px-2 py-1 text-xs font-medium text-pink-700 dark:bg-pink-900/30 dark:text-pink-300">
-                                            Model: {modelFilter}
+                                            Model: {availableModels.find(m => String(m.id) === modelFilter)?.name || modelFilter}
                                             <button
                                                 onClick={() => setModelFilter('all')}
                                                 className="hover:text-pink-900 dark:hover:text-pink-100"
@@ -520,6 +621,21 @@ export default function Devices() {
                                     )}
                                 </div>
                             )}
+
+                            {/* Info Banner */}
+                            <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-900/30 dark:bg-blue-950/20">
+                                <div className="flex items-start gap-2">
+                                    <Activity className="size-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+                                    <div className="text-xs text-blue-800 dark:text-blue-300">
+                                        <p className="font-semibold">Advanced Filters</p>
+                                        <p className="mt-1">
+                                            • Location: Shows locations within <strong>{currentBranch?.name || 'current branch'}</strong> only
+                                        </p>
+                                        <p>• Brand & Model: Loaded from database configuration</p>
+                                        <p>• Select brand to filter available models</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -740,11 +856,11 @@ export default function Devices() {
                                         </th>
                                         <th 
                                             className="px-6 py-3 text-left cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                                            onClick={() => handleSort('manufacturer')}
+                                            onClick={() => handleSort('brand')}
                                         >
                                             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                                                Manufacturer
-                                                {sortField === 'manufacturer' ? (
+                                                Brand/Model
+                                                {sortField === 'brand' ? (
                                                     sortOrder === 'asc' ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />
                                                 ) : (
                                                     <ArrowUpDown className="size-4 opacity-30" />
@@ -788,12 +904,37 @@ export default function Devices() {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className="text-sm text-slate-600 dark:text-slate-400">
-                                                    {device.location}
-                                                </span>
+                                                {device.latitude && device.longitude ? (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            router.visit(`/monitor/maps?deviceId=${device.id}&lat=${device.latitude}&lng=${device.longitude}`);
+                                                        }}
+                                                        className="flex items-center gap-1.5 rounded-lg bg-blue-100 px-2 py-1 text-blue-700 transition-all hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50"
+                                                        title="View on map"
+                                                    >
+                                                        <MapPin className="size-3.5" />
+                                                        <span className="text-xs font-medium">{device.location}</span>
+                                                    </button>
+                                                ) : (
+                                                    <span className="text-sm text-slate-600 dark:text-slate-400">
+                                                        {device.location}
+                                                    </span>
+                                                )}
                                             </td>
-                                            <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                                                {device.manufacturer && device.model ? `${device.manufacturer} ${device.model}` : '-'}
+                                            <td className="px-6 py-4">
+                                                {(device.brand && device.model) ? (
+                                                    <div className="flex flex-col">
+                                                        <span className="text-sm font-bold text-slate-900 dark:text-white">
+                                                            {device.brand}
+                                                        </span>
+                                                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                                                            {device.model}
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-slate-400 dark:text-slate-600">-</span>
+                                                )}
                                             </td>
                                         </tr>
                                     ))}
@@ -1043,16 +1184,19 @@ export default function Devices() {
                                                 </button>
                                             </div>
                                             <div className="flex justify-between items-center">
-                                                <span className="text-slate-600 dark:text-slate-400">Manufacturer:</span>
-                                                <span className="font-medium text-slate-900 dark:text-white">
-                                                    {selectedDevice.manufacturer}
-                                                </span>
-                                            </div>
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-slate-600 dark:text-slate-400">Model:</span>
-                                                <span className="font-medium text-slate-900 dark:text-white">
-                                                    {selectedDevice.model}
-                                                </span>
+                                                <span className="text-slate-600 dark:text-slate-400">Brand/Model:</span>
+                                                {(selectedDevice.brand && selectedDevice.model) ? (
+                                                    <div className="flex flex-col items-end">
+                                                        <span className="text-sm font-bold text-slate-900 dark:text-white">
+                                                            {selectedDevice.brand}
+                                                        </span>
+                                                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                                                            {selectedDevice.model}
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-slate-400 dark:text-slate-600">-</span>
+                                                )}
                                             </div>
                                             <div className="flex justify-between items-center">
                                                 <span className="text-slate-600 dark:text-slate-400">Device ID:</span>

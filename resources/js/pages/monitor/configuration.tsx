@@ -9,10 +9,12 @@ import {
     User,
     X,
     Building2,
+    MapPin, // Add MapPin icon
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTranslation } from '@/contexts/i18n-context';
 import { usePage } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
 import type { CurrentBranch } from '@/types/branch';
 import { PageProps } from '@/types';
 
@@ -31,7 +33,7 @@ interface Device {
     hardware_detail_id?: number;
     hardware_detail?: {
         id: number;
-        manufacturer: string;
+        brand: string;
         model: string;
     };
     name: string;
@@ -41,12 +43,13 @@ interface Device {
     type: string;
     category: string;
     status: string;
-    building: string;
     uptime_percentage: number;
     is_active: boolean;
     response_time?: number;
     last_check?: string;
     offline_reason?: string;
+    latitude?: number;
+    longitude?: number;
 }
 
 interface Alert {
@@ -94,7 +97,24 @@ interface UserData {
     created_at: string;
 }
 
-type CRUDEntity = 'branches' | 'devices' | 'alerts' | 'locations' | 'users';
+interface Brand {
+    id: number;
+    name: string;
+    description?: string;
+}
+
+interface Model {
+    id: number;
+    brand_id: number;
+    brand?: {
+        id: number;
+        name: string;
+    };
+    name: string;
+    description?: string;
+}
+
+type CRUDEntity = 'branches' | 'devices' | 'alerts' | 'locations' | 'users' | 'brands' | 'models';
 
 export default function Configuration() {
     const { t } = useTranslation();
@@ -104,7 +124,7 @@ export default function Configuration() {
     const [selectedEntity, setSelectedEntity] = useState<CRUDEntity>('devices');
     const [showModal, setShowModal] = useState(false);
     const [modalMode, setModalMode] = useState<'create' | 'edit' | 'delete'>('create');
-    const [selectedItem, setSelectedItem] = useState<Device | Alert | Location | Branch | UserData | null>(null);
+    const [selectedItem, setSelectedItem] = useState<Device | Alert | Location | Branch | UserData | Brand | Model | null>(null);
 
     // Data state
     const [devices, setDevices] = useState<Device[]>([]);
@@ -112,6 +132,8 @@ export default function Configuration() {
     const [locations, setLocations] = useState<Location[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [users, setUsers] = useState<UserData[]>([]);
+    const [brands, setBrands] = useState<Brand[]>([]);
+    const [models, setModels] = useState<Model[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
     // Fetch data when entity changes
@@ -129,15 +151,22 @@ export default function Configuration() {
                 alerts: '/api/alerts',
                 locations: '/api/locations',
                 users: '/api/users',
+                brands: '/api/brands',
+                models: '/api/models',
             };
 
-            const endpoint = entityMap[selectedEntity];
+            let endpoint = entityMap[selectedEntity];
             if (!endpoint) {
                 setIsLoading(false);
                 return;
             }
 
-            console.log('Fetching from:', endpoint); // Debug log
+            // Add branch filter for devices, alerts, and locations
+            if (currentBranch?.id && ['devices', 'alerts', 'locations'].includes(selectedEntity)) {
+                endpoint += `?branch_id=${currentBranch.id}`;
+            }
+
+            console.log('Fetching from:', endpoint);
 
             const response = await fetch(endpoint, {
                 credentials: 'same-origin',
@@ -146,15 +175,15 @@ export default function Configuration() {
                 },
             });
 
-            console.log('Response status:', response.status); // Debug log
+            console.log('Response status:', response.status);
 
             if (response.ok) {
                 const data = await response.json();
-                console.log('Fetched data:', data); // Debug log
+                console.log('Fetched data:', data);
                 
                 switch (selectedEntity) {
                     case 'branches':
-                        console.log('Setting branches:', data); // Debug log
+                        console.log('Setting branches:', data);
                         setBranches(data);
                         break;
                     case 'devices':
@@ -169,9 +198,15 @@ export default function Configuration() {
                     case 'users':
                         setUsers(data);
                         break;
+                    case 'brands':
+                        setBrands(data);
+                        break;
+                    case 'models':
+                        setModels(data);
+                        break;
                 }
             } else {
-                console.error('Failed to fetch:', response.statusText); // Debug log
+                console.error('Failed to fetch:', response.statusText);
             }
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -206,13 +241,13 @@ export default function Configuration() {
         setShowModal(true);
     };
 
-    const handleEdit = (item: Device | Alert | Location | Branch | UserData) => {
+    const handleEdit = (item: Device | Alert | Location | Branch | UserData | Brand | Model) => {
         setModalMode('edit');
         setSelectedItem(item);
         setShowModal(true);
     };
 
-    const handleDelete = (item: Device | Alert | Location | Branch | UserData) => {
+    const handleDelete = (item: Device | Alert | Location | Branch | UserData | Brand | Model) => {
         setModalMode('delete');
         setSelectedItem(item);
         setShowModal(true);
@@ -224,9 +259,11 @@ export default function Configuration() {
             const entityMap: Record<CRUDEntity, string> = {
                 branches: '/api/branches',
                 devices: '/api/devices',
-                alerts: '/api/alerts',
+                alerts: '/api alerts',
                 locations: '/api/locations',
                 users: '/api/users',
+                brands: '/api/brands',
+                models: '/api/models',
             };
 
             const baseUrl = entityMap[selectedEntity];
@@ -235,16 +272,32 @@ export default function Configuration() {
                 : `${baseUrl}/${selectedItem?.id}`;
             
             const formData = new FormData(document.querySelector('form') as HTMLFormElement);
-            const data = Object.fromEntries(formData.entries());
+            const data: Record<string, any> = {};
             
-            // Convert boolean checkboxes
-            ['is_active', 'acknowledged', 'resolved'].forEach(field => {
-                if (data[field] === 'on') {
-                    data[field] = 'true';
-                } else if (!data[field]) {
-                    data[field] = 'false';
+            // Convert FormData to object, handling checkboxes properly
+            formData.forEach((value, key) => {
+                // Skip empty values for optional foreign keys
+                if (key === 'location_id' && value === '') {
+                    return;
+                }
+                if (key === 'hardware_detail_id' && value === '') {
+                    return;
+                }
+                data[key] = value;
+            });
+            
+            // Convert boolean checkboxes - must check if key exists in form
+            const form = document.querySelector('form') as HTMLFormElement;
+            const checkboxFields = ['is_active', 'acknowledged', 'resolved'];
+            
+            checkboxFields.forEach(field => {
+                const checkbox = form.querySelector(`input[name="${field}"]`) as HTMLInputElement;
+                if (checkbox) {
+                    data[field] = checkbox.checked;
                 }
             });
+            
+            console.log('Saving data:', data); // Debug log
             
             const csrfToken = await getCsrfToken();
 
@@ -253,6 +306,8 @@ export default function Configuration() {
             const requestData = modalMode === 'create' 
                 ? data 
                 : { ...data, _method: 'PUT' };
+
+            console.log('Request data:', requestData); // Debug log
 
             const response = await fetch(url, {
                 method: method,
@@ -268,9 +323,11 @@ export default function Configuration() {
             if (response.ok) {
                 await fetchData();
                 setShowModal(false);
+                setSelectedItem(null);
             } else {
                 const errorData = await response.json();
-                alert(errorData.message || 'Failed to save');
+                console.error('Save error:', errorData); // Debug log
+                alert(`Failed to save: ${errorData.error || errorData.message || 'Unknown error'}\n${JSON.stringify(errorData.messages || {}, null, 2)}`);
             }
         } catch (error) {
             console.error('Error saving:', error);
@@ -289,6 +346,8 @@ export default function Configuration() {
                 alerts: '/api/alerts',
                 locations: '/api/locations',
                 users: '/api/users',
+                brands: '/api/brands',
+                models: '/api/models',
             };
 
             const url = `${entityMap[selectedEntity]}/${selectedItem?.id}`;
@@ -318,6 +377,15 @@ export default function Configuration() {
             setIsLoading(false);
         }
     };
+
+    // Add error logging
+    useEffect(() => {
+        const handleError = (error: ErrorEvent) => {
+            console.error('Configuration page error:', error);
+        };
+        window.addEventListener('error', handleError);
+        return () => window.removeEventListener('error', handleError);
+    }, []);
 
     // Main configuration interface
     return (
@@ -356,7 +424,7 @@ export default function Configuration() {
 
                 {/* Entity selector tabs */}
                 <div className="flex gap-2 overflow-x-auto rounded-xl border border-slate-200/50 bg-white p-2 shadow-lg dark:border-slate-700/50 dark:bg-slate-800">
-                    {(['branches', 'devices', 'alerts', 'locations', 'users'] as CRUDEntity[]).map((entity) => (
+                    {(['branches', 'devices', 'alerts', 'locations', 'brands', 'models', 'users'] as CRUDEntity[]).map((entity) => (
                         <button
                             key={entity}
                             onClick={() => setSelectedEntity(entity)}
@@ -437,6 +505,20 @@ export default function Configuration() {
                                 {selectedEntity === 'users' && (
                                     <UsersTable
                                         users={users}
+                                        onEdit={handleEdit}
+                                        onDelete={handleDelete}
+                                    />
+                                )}
+                                {selectedEntity === 'brands' && (
+                                    <BrandsTable
+                                        brands={brands}
+                                        onEdit={handleEdit}
+                                        onDelete={handleDelete}
+                                    />
+                                )}
+                                {selectedEntity === 'models' && (
+                                    <ModelsTable
+                                        models={models}
                                         onEdit={handleEdit}
                                         onDelete={handleDelete}
                                     />
@@ -565,7 +647,7 @@ function DevicesTable({
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Status</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Branch</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Location</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Hardware</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Brand/Model</th>
                     <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Actions</th>
                 </tr>
             </thead>
@@ -575,11 +657,13 @@ function DevicesTable({
                         <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
                             {device.name}
                         </td>
-                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400 font-mono">
                             {device.ip_address}
                         </td>
                         <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                            {device.category}
+                            <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium dark:bg-slate-700">
+                                {device.category}
+                            </span>
                         </td>
                         <td className="px-6 py-4">
                             <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
@@ -592,13 +676,53 @@ function DevicesTable({
                             </span>
                         </td>
                         <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                            {device.branch?.name || '-'}
+                            <div className="flex items-center gap-2">
+                                <Building2 className="size-3.5 text-slate-400" />
+                                <span>{device.branch?.name || '-'}</span>
+                            </div>
                         </td>
                         <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                            {device.location?.name || '-'}
+                            {device.location ? (
+                                device.latitude && device.longitude ? (
+                                    <button
+                                        onClick={() => {
+                                            router.visit('/monitor/maps', {
+                                                data: {
+                                                    deviceId: device.id,
+                                                    lat: device.latitude,
+                                                    lng: device.longitude,
+                                                }
+                                            });
+                                        }}
+                                        className="flex items-center gap-1.5 rounded-lg bg-blue-100 px-2 py-1 text-blue-700 transition-all hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50"
+                                        title="View on map"
+                                    >
+                                        <MapPin className="size-3.5" />
+                                        <span className="text-xs font-medium">{device.location.name}</span>
+                                    </button>
+                                ) : (
+                                    <div className="flex items-center gap-2">
+                                        <MapPin className="size-3.5 text-slate-400" />
+                                        <span>{device.location.name}</span>
+                                    </div>
+                                )
+                            ) : (
+                                <span className="text-slate-400 dark:text-slate-600">-</span>
+                            )}
                         </td>
-                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                            {device.hardware_detail ? `${device.hardware_detail.manufacturer} ${device.hardware_detail.model}` : '-'}
+                        <td className="px-6 py-4">
+                            {device.hardware_detail ? (
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-bold text-slate-900 dark:text-white">
+                                        {device.hardware_detail.brand}
+                                    </span>
+                                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                                        {device.hardware_detail.model}
+                                    </span>
+                                </div>
+                            ) : (
+                                <span className="text-slate-400 dark:text-slate-600">-</span>
+                            )}
                         </td>
                         <td className="px-6 py-4 text-right">
                             <div className="flex justify-end gap-2">
@@ -936,6 +1060,112 @@ function UsersTable({
     );
 }
 
+// Brands Table Component
+function BrandsTable({
+    brands,
+    onEdit,
+    onDelete,
+}: {
+    brands: Brand[];
+    onEdit: (brand: Brand) => void;
+    onDelete: (brand: Brand) => void;
+}) {
+    if (brands.length === 0) {
+        return (
+            <div className="p-12 text-center">
+                <Server className="mx-auto mb-4 size-12 text-slate-400" />
+                <p className="text-slate-600 dark:text-slate-400">No brands found</p>
+            </div>
+        );
+    }
+
+    return (
+        <table className="w-full">
+            <thead className="bg-slate-50 dark:bg-slate-900">
+                <tr>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">ID</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Description</th>
+                    <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Actions</th>
+                </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                {brands.map((brand) => (
+                    <tr key={brand.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                        <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">#{brand.id}</td>
+                        <td className="px-6 py-4 text-sm font-semibold text-slate-900 dark:text-white">{brand.name}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{brand.description || '-'}</td>
+                        <td className="px-6 py-4 text-right">
+                            <div className="flex justify-end gap-2">
+                                <button onClick={() => onEdit(brand)} className="rounded-lg p-2 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30">
+                                    <Edit className="size-4" />
+                                </button>
+                                <button onClick={() => onDelete(brand)} className="rounded-lg p-2 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30">
+                                    <Trash2 className="size-4" />
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    );
+}
+
+// Models Table Component
+function ModelsTable({
+    models,
+    onEdit,
+    onDelete,
+}: {
+    models: Model[];
+    onEdit: (model: Model) => void;
+    onDelete: (model: Model) => void;
+}) {
+    if (models.length === 0) {
+        return (
+            <div className="p-12 text-center">
+                <Server className="mx-auto mb-4 size-12 text-slate-400" />
+                <p className="text-slate-600 dark:text-slate-400">No models found</p>
+            </div>
+        );
+    }
+
+    return (
+        <table className="w-full">
+            <thead className="bg-slate-50 dark:bg-slate-900">
+                <tr>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">ID</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Brand</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Description</th>
+                    <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Actions</th>
+                </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                {models.map((model) => (
+                    <tr key={model.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                        <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">#{model.id}</td>
+                        <td className="px-6 py-4 text-sm font-semibold text-slate-900 dark:text-white">{model.name}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{model.brand?.name || '-'}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{model.description || '-'}</td>
+                        <td className="px-6 py-4 text-right">
+                            <div className="flex justify-end gap-2">
+                                <button onClick={() => onEdit(model)} className="rounded-lg p-2 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30">
+                                    <Edit className="size-4" />
+                                </button>
+                                <button onClick={() => onDelete(model)} className="rounded-lg p-2 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30">
+                                    <Trash2 className="size-4" />
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    );
+}
+
 // Entity Form Component
 function EntityForm({
     entity,
@@ -944,7 +1174,7 @@ function EntityForm({
 }: {
     entity: CRUDEntity;
     mode: 'create' | 'edit';
-    data: Device | Alert | Location | Branch | UserData | null;
+    data: Device | Alert | Location | Branch | UserData | Brand | Model | null;
 }) {
     const [latitude, setLatitude] = useState<string>(() => {
         if (data && 'latitude' in data && data.latitude) {
@@ -970,8 +1200,11 @@ function EntityForm({
         return null;
     });
     
-    const [manufacturers, setManufacturers] = useState<string[]>([]);
-    const [models, setModels] = useState<string[]>([]);
+    const [brands, setBrands] = useState<Brand[]>([]);
+    const [models, setModels] = useState<Model[]>([]);
+
+    // Get current branch from page props
+    const { currentBranch } = usePage<PageProps>().props;
 
     useEffect(() => {
         // Fetch branches for device/location forms
@@ -981,7 +1214,13 @@ function EntityForm({
                 headers: { 'Accept': 'application/json' },
             })
             .then(res => res.ok ? res.json() : [])
-            .then(data => setBranches(data))
+            .then(data => {
+                setBranches(data);
+                // Auto-select current branch for new items
+                if (mode === 'create' && currentBranch?.id && !selectedBranchId) {
+                    setSelectedBranchId(currentBranch.id);
+                }
+            })
             .catch(err => console.error('Error loading branches:', err));
         }
 
@@ -995,17 +1234,17 @@ function EntityForm({
             .then(data => setLocations(data))
             .catch(err => console.error('Error loading locations:', err));
 
-            // Fetch manufacturers
-            fetch('/api/hardware/manufacturers', {
+            // Fetch brands
+            fetch('/api/brands', {
                 credentials: 'same-origin',
                 headers: { 'Accept': 'application/json' },
             })
             .then(res => res.ok ? res.json() : [])
-            .then(data => setManufacturers(data))
-            .catch(err => console.error('Error loading manufacturers:', err));
+            .then(data => setBrands(data))
+            .catch(err => console.error('Error loading brands:', err));
 
             // Fetch models
-            fetch('/api/hardware/models', {
+            fetch('/api/models', {
                 credentials: 'same-origin',
                 headers: { 'Accept': 'application/json' },
             })
@@ -1013,7 +1252,7 @@ function EntityForm({
             .then(data => setModels(data))
             .catch(err => console.error('Error loading models:', err));
         }
-    }, [entity]);
+    }, [entity, currentBranch, mode, selectedBranchId]);
 
     // Filter locations by selected branch
     const filteredLocations = selectedBranchId 
@@ -1051,8 +1290,7 @@ function EntityForm({
                                 name="code" 
                                 defaultValue={branchData?.code || ''} 
                                 className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" 
-                                placeholder="2-4 letter code" 
-                                maxLength={4}
+                                placeholder="Enter branch code" 
                                 required 
                             />
                         </div>
@@ -1142,6 +1380,70 @@ function EntityForm({
 
     if (entity === 'devices') {
         const deviceData = data as Device | null;
+        
+        // Initialize location from device data
+        const [selectedLocationId, setSelectedLocationId] = useState<number | null>(() => {
+            if (deviceData?.location_id) {
+                return deviceData.location_id;
+            }
+            return null;
+        });
+
+        // Initialize model and brand from device's hardware_detail (already in deviceData from API)
+        const [selectedModelId, setSelectedModelId] = useState<number | null>(null);
+        const [brandFilter, setBrandFilter] = useState<number | null>(null);
+
+        // Set initial hardware values when models are loaded
+        useEffect(() => {
+            if (mode === 'edit' && deviceData && models.length > 0) {
+                // Get model info from the device's hardware_detail that came from API
+                if (deviceData.hardware_detail_id) {
+                    // Find model by matching brand and model names from device data
+                    const deviceBrand = deviceData.hardware_detail?.brand;
+                    const deviceModel = deviceData.hardware_detail?.model;
+                    
+                    if (deviceBrand && deviceModel) {
+                        // Find brand by name
+                        const brand = brands.find(b => b.name === deviceBrand);
+                        if (brand) {
+                            setBrandFilter(brand.id);
+                            
+                            // Find model by name and brand
+                            const model = models.find(m => 
+                                m.name === deviceModel && m.brand_id === brand.id
+                            );
+                            if (model) {
+                                setSelectedModelId(model.id);
+                            }
+                        }
+                    }
+                }
+            }
+        }, [mode, deviceData, models, brands]);
+
+        const selectedModel = models.find(m => m.id === selectedModelId);
+        const selectedBrand = selectedModel?.brand;
+
+        const filteredModels = brandFilter 
+            ? models.filter(m => m.brand_id === brandFilter)
+            : models;
+        
+        // Initialize branch_id from device data or current branch
+        useEffect(() => {
+            if (mode === 'edit' && deviceData?.branch_id) {
+                setSelectedBranchId(deviceData.branch_id);
+            } else if (mode === 'create' && currentBranch?.id && !selectedBranchId) {
+                setSelectedBranchId(currentBranch.id);
+            }
+        }, [deviceData, currentBranch, mode]);
+
+        // Only reset location in create mode
+        useEffect(() => {
+            if (mode === 'create' && selectedBranchId !== deviceData?.branch_id) {
+                setSelectedLocationId(null);
+            }
+        }, [selectedBranchId, mode, deviceData?.branch_id]);
+
         return (
             <form className="space-y-6">
                 {/* Basic Information */}
@@ -1166,11 +1468,11 @@ function EntityForm({
                         </div>
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Category *</label>
-                            <select name="category" defaultValue={deviceData?.category || 'switch'} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" required>
-                                <option value="switch">Switch</option>
-                                <option value="server">Server</option>
+                            <select name="category" defaultValue={deviceData?.category || 'switches'} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" required>
+                                <option value="switches">Switches</option>
+                                <option value="servers">Servers</option>
                                 <option value="wifi">WiFi</option>
-                                <option value="TAS">TAS</option>
+                                <option value="tas">TAS</option>
                                 <option value="cctv">CCTV</option>
                             </select>
                         </div>
@@ -1192,7 +1494,20 @@ function EntityForm({
                     <div className="grid gap-4 sm:grid-cols-2">
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Branch *</label>
-                            <select name="branch_id" value={selectedBranchId || ''} onChange={(e) => setSelectedBranchId(e.target.value ? Number(e.target.value) : null)} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" required>
+                            <select 
+                                name="branch_id" 
+                                value={selectedBranchId || ''} 
+                                onChange={(e) => {
+                                    const newBranchId = e.target.value ? Number(e.target.value) : null;
+                                    setSelectedBranchId(newBranchId);
+                                    // Only reset location in create mode
+                                    if (mode === 'create') {
+                                        setSelectedLocationId(null);
+                                    }
+                                }} 
+                                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" 
+                                required
+                            >
                                 <option value="">Select Branch</option>
                                 {branches.map(branch => (
                                     <option key={branch.id} value={branch.id}>{branch.name}</option>
@@ -1200,17 +1515,27 @@ function EntityForm({
                             </select>
                         </div>
                         <div>
-                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Location</label>
-                            <select name="location_id" defaultValue={deviceData?.location_id || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" disabled={!selectedBranchId}>
+                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                                Location *
+                            </label>
+                            <select 
+                                name="location_id" 
+                                value={selectedLocationId || ''} 
+                                onChange={(e) => setSelectedLocationId(e.target.value ? Number(e.target.value) : null)}
+                                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" 
+                                disabled={!selectedBranchId}
+                                required
+                            >
                                 <option value="">Select Location</option>
                                 {filteredLocations.map(location => (
                                     <option key={location.id} value={location.id}>{location.name}</option>
                                 ))}
                             </select>
-                        </div>
-                        <div className="sm:col-span-2">
-                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Building</label>
-                            <input type="text" name="building" defaultValue={deviceData?.building || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="Building name" />
+                            {!selectedBranchId && (
+                                <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                                    Select a branch first
+                                </p>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -1220,44 +1545,74 @@ function EntityForm({
                     <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Hardware Details</h4>
                     <div className="grid gap-4 sm:grid-cols-2">
                         <div>
-                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Manufacturer</label>
-                            <input 
-                                type="text" 
-                                name="manufacturer" 
-                                defaultValue={deviceData?.hardware_detail?.manufacturer || ''} 
-                                list="manufacturers-list"
-                                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" 
-                                placeholder="e.g., Cisco, HP, Dell" 
-                            />
-                            <datalist id="manufacturers-list">
-                                {manufacturers.map(mfr => (
-                                    <option key={mfr} value={mfr} />
+                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Brand *</label>
+                            <select 
+                                value={brandFilter || ''} 
+                                onChange={(e) => {
+                                    const newBrandId = e.target.value ? Number(e.target.value) : null;
+                                    setBrandFilter(newBrandId);
+                                    setSelectedModelId(null);
+                                }}
+                                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                                required
+                            >
+                                <option value="">Select Brand</option>
+                                {brands.map(brand => (
+                                    <option key={brand.id} value={brand.id}>{brand.name}</option>
                                 ))}
-                            </datalist>
+                            </select>
                         </div>
                         <div>
-                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Model</label>
-                            <input 
-                                type="text" 
-                                name="model" 
-                                defaultValue={deviceData?.hardware_detail?.model || ''} 
-                                list="models-list"
-                                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" 
-                                placeholder="Model number" 
-                            />
-                            <datalist id="models-list">
-                                {models.map(mdl => (
-                                    <option key={mdl} value={mdl} />
+                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Model *</label>
+                            <select 
+                                name="model_id"
+                                value={selectedModelId || ''}
+                                onChange={(e) => setSelectedModelId(e.target.value ? Number(e.target.value) : null)}
+                                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                                disabled={!brandFilter}
+                                required
+                            >
+                                <option value="">Select Model</option>
+                                {filteredModels.map(model => (
+                                    <option key={model.id} value={model.id}>{model.name}</option>
                                 ))}
-                            </datalist>
-                        </div>
-                        <div className="sm:col-span-2">
-                            <label className="flex items-center gap-3 cursor-pointer">
-                                <input type="checkbox" name="is_active" defaultChecked={deviceData?.is_active ?? true} className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700" />
-                                <span className="text-sm text-slate-700 dark:text-slate-300">Device is active</span>
-                            </label>
+                            </select>
+                            {!brandFilter && (
+                                <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                                    Select a brand first
+                                </p>
+                            )}
                         </div>
                     </div>
+                    
+                    {selectedBrand && selectedModel && (
+                        <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-900/30 dark:bg-blue-950/20">
+                            <p className="text-xs font-semibold text-blue-700 dark:text-blue-300">Selected Hardware:</p>
+                            <p className="mt-1 text-sm font-medium text-blue-900 dark:text-blue-100">
+                                {selectedBrand.name} - {selectedModel.name}
+                            </p>
+                        </div>
+                    )}
+
+                    <div className="mt-4">
+                        <label className="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" name="is_active" defaultChecked={deviceData?.is_active ?? true} className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700" />
+                            <span className="text-sm text-slate-700 dark:text-slate-300">Device is active</span>
+                        </label>
+                    </div>
+                </div>
+
+                {/* Info panel */}
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/30 dark:bg-blue-950/20">
+                    <h5 className="mb-2 text-sm font-semibold text-blue-900 dark:text-blue-100">
+                        Device Requirements
+                    </h5>
+                    <ul className="space-y-1 text-sm text-blue-800 dark:text-blue-300">
+                        <li>• IP address and barcode must be unique across all devices</li>
+                        <li>• Branch and location are required - location is filtered by selected branch</li>
+                        <li>• Hardware: Select brand first, then choose model from that brand</li>
+                        <li>• Add brands and models in their respective tabs before creating devices</li>
+                    </ul>
                 </div>
             </form>
         );
@@ -1267,7 +1622,7 @@ function EntityForm({
         const alertData = data as Alert | null;
         return (
             <form className="space-y-6">
-                <div>
+                               <div>
                     <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Alert Management</h4>
                     <div className="grid gap-4">
                         <div className="grid gap-4 sm:grid-cols-2">
@@ -1306,6 +1661,16 @@ function EntityForm({
 
     if (entity === 'locations') {
         const locationData = data as Location | null;
+        
+        // Initialize branch_id from location data or current branch
+        useEffect(() => {
+            if (mode === 'edit' && locationData?.branch_id) {
+                setSelectedBranchId(locationData.branch_id);
+            } else if (mode === 'create' && currentBranch?.id && !selectedBranchId) {
+                setSelectedBranchId(currentBranch.id);
+            }
+        }, [locationData, currentBranch, mode]);
+
         return (
             <form className="space-y-6">
                 <div>
@@ -1317,7 +1682,13 @@ function EntityForm({
                         </div>
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Branch *</label>
-                            <select name="branch_id" defaultValue={locationData?.branch_id || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" required>
+                            <select 
+                                name="branch_id" 
+                                value={selectedBranchId || ''} 
+                                onChange={(e) => setSelectedBranchId(e.target.value ? Number(e.target.value) : null)}
+                                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" 
+                                required
+                            >
                                 <option value="">Select Branch</option>
                                 {branches.map(branch => (
                                     <option key={branch.id} value={branch.id}>{branch.name}</option>
@@ -1326,7 +1697,7 @@ function EntityForm({
                         </div>
                         <div className="grid gap-4 sm:grid-cols-2">
                             <div>
-                                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Latitude</label>
+                                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Latitude *</label>
                                 <input 
                                     type="number" 
                                     step="any" 
@@ -1334,11 +1705,12 @@ function EntityForm({
                                     value={latitude} 
                                     onChange={(e) => setLatitude(e.target.value)} 
                                     className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" 
-                                    placeholder="1.853639" 
+                                    placeholder="1.853639"
+                                    required
                                 />
                             </div>
                             <div>
-                                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Longitude</label>
+                                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Longitude *</label>
                                 <input 
                                     type="number" 
                                     step="any" 
@@ -1346,7 +1718,8 @@ function EntityForm({
                                     value={longitude} 
                                     onChange={(e) => setLongitude(e.target.value)} 
                                     className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" 
-                                    placeholder="103.080925" 
+                                    placeholder="103.080925"
+                                    required
                                 />
                             </div>
                         </div>
@@ -1360,6 +1733,18 @@ function EntityForm({
                             <textarea name="description" defaultValue={locationData?.description || ''} rows={3} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="Additional details about this location" />
                         </div>
                     </div>
+                </div>
+
+                {/* Info panel */}
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/30 dark:bg-blue-950/20">
+                    <h5 className="mb-2 text-sm font-semibold text-blue-900 dark:text-blue-100">
+                        Location Requirements
+                    </h5>
+                    <ul className="space-y-1 text-sm text-blue-800 dark:text-blue-300">
+                        <li>• Latitude and longitude are required for map display</li>
+                        <li>• Use decimal degrees format (e.g., 1.853639, 103.080925)</li>
+                        <li>• Locations are filtered by branch in the device form</li>
+                    </ul>
                 </div>
             </form>
         );
@@ -1385,6 +1770,69 @@ function EntityForm({
                                 {mode === 'create' ? 'Password *' : 'New Password (leave blank to keep current)'}
                             </label>
                             <input type="password" name="password" className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" {...(mode === 'create' ? { required: true } : {})} />
+                        </div>
+                    </div>
+                </div>
+            </form>
+        );
+    }
+
+    if (entity === 'brands') {
+        const brandData = data as Brand | null;
+        return (
+            <form className="space-y-6">
+                <div>
+                    <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Brand Information</h4>
+                    <div className="grid gap-4">
+                        <div>
+                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Brand Name *</label>
+                            <input type="text" name="name" defaultValue={brandData?.name || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="e.g., Cisco, HP, Dell" required />
+                        </div>
+                        <div>
+                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Description</label>
+                            <textarea name="description" defaultValue={brandData?.description || ''} rows={3} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="Brief description" />
+                        </div>
+                    </div>
+                </div>
+            </form>
+        );
+    }
+
+    if (entity === 'models') {
+        const modelData = data as Model | null;
+        const [modelBrands, setModelBrands] = useState<Brand[]>([]);
+
+        useEffect(() => {
+            fetch('/api/brands', {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' },
+            })
+            .then(res => res.ok ? res.json() : [])
+            .then(data => setModelBrands(data))
+            .catch(err => console.error('Error loading brands:', err));
+        }, []);
+
+        return (
+            <form className="space-y-6">
+                <div>
+                    <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Model Information</h4>
+                    <div className="grid gap-4">
+                        <div>
+                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Brand *</label>
+                            <select name="brand_id" defaultValue={modelData?.brand_id || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" required>
+                                <option value="">Select Brand</option>
+                                {modelBrands.map(brand => (
+                                    <option key={brand.id} value={brand.id}>{brand.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Model Name *</label>
+                            <input type="text" name="name" defaultValue={modelData?.name || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="e.g., Catalyst 2960, ProLiant DL380" required />
+                        </div>
+                        <div>
+                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Description</label>
+                            <textarea name="description" defaultValue={modelData?.description || ''} rows={3} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="Brief description" />
                         </div>
                     </div>
                 </div>
