@@ -25,9 +25,9 @@ class DashboardController extends Controller
                 ]);
             }
 
-            // Get basic device counts
+            // Get basic device counts (exclude offline_ack devices)
             $stats = [
-                'total' => DB::table('devices')->where('is_active', true)->count(),
+                'total' => DB::table('devices')->where('is_active', true)->where('status', '!=', 'offline_ack')->count(),
                 'online' => DB::table('devices')->where('is_active', true)->where('status', 'online')->count(),
                 'offline' => DB::table('devices')->where('is_active', true)->whereIn('status', ['offline', 'down'])->count(),
                 'warning' => DB::table('devices')->where('is_active', true)->where('status', 'warning')->count(),

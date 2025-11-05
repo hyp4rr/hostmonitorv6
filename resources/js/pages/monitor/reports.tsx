@@ -34,42 +34,56 @@ export default function Reports() {
     
     const [dateRange, setDateRange] = useState('7days');
     const [selectedCategory, setSelectedCategory] = useState('all');
+    const [uptimeStats, setUptimeStats] = useState<UptimeStat[]>([]);
+    const [deviceEvents, setDeviceEvents] = useState<DeviceEvent[]>([]);
+    const [categoryStatsData, setCategoryStatsData] = useState<any[]>([]);
+    const [alertSummary, setAlertSummary] = useState<any>(null);
+    const [summary, setSummary] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
-    // Use real device data from branch
-    const allDevices = currentBranch?.devices || [];
-
-    // Calculate uptime statistics from real devices
-    const uptimeStats: UptimeStat[] = allDevices.map(device => {
-        const incidents = device.status === 'offline' || device.status === 'offline_ack' ? 1 : 0;
-        const downtimeMinutes = device.status === 'offline' ? Math.floor((100 - device.uptime_percentage) * 10.08) : 0;
-        const hours = Math.floor(downtimeMinutes / 60);
-        const minutes = downtimeMinutes % 60;
-        const downtimeStr = hours > 0 ? `${hours}h ${minutes}min` : `${minutes}min`;
+    // Fetch real data from API
+    useEffect(() => {
+        if (!currentBranch?.id) return;
         
-        return {
-            device: device.name,
-            uptime: device.uptime_percentage,
-            downtime: downtimeStr,
-            incidents: incidents,
-            category: device.category.charAt(0).toUpperCase() + device.category.slice(1),
-            lastIncident: device.last_check ? new Date(device.last_check).toLocaleDateString() : 'Never',
-        };
-    });
-
-    // Generate mock device events from current devices
-    const deviceEvents: DeviceEvent[] = allDevices
-        .filter(d => d.last_check)
-        .slice(0, 10)
-        .map((device, idx) => ({
-            id: `event-${device.id}-${idx}`,
-            deviceName: device.name,
-            deviceIp: device.ip_address,
-            eventType: device.status === 'online' ? 'up' as const : 'down' as const,
-            timestamp: new Date(device.last_check || Date.now()),
-            duration: device.status === 'offline' ? '2h 15m' : undefined,
-            category: device.category.charAt(0).toUpperCase() + device.category.slice(1),
-        }))
-        .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+        setIsLoading(true);
+        
+        // Fetch summary
+        fetch(`/api/reports/summary?branch_id=${currentBranch.id}&date_range=${dateRange}`)
+            .then(res => res.json())
+            .then(data => setSummary(data))
+            .catch(err => console.error('Error fetching summary:', err));
+        
+        // Fetch uptime stats
+        fetch(`/api/reports/uptime-stats?branch_id=${currentBranch.id}&date_range=${dateRange}`)
+            .then(res => res.json())
+            .then(data => setUptimeStats(data))
+            .catch(err => console.error('Error fetching uptime stats:', err));
+        
+        // Fetch device events
+        fetch(`/api/reports/device-events?branch_id=${currentBranch.id}&date_range=${dateRange}&limit=50`)
+            .then(res => res.json())
+            .then(data => {
+                const events = data.map((event: any) => ({
+                    ...event,
+                    timestamp: new Date(event.timestamp)
+                }));
+                setDeviceEvents(events);
+            })
+            .catch(err => console.error('Error fetching device events:', err));
+        
+        // Fetch category stats
+        fetch(`/api/reports/category-stats?branch_id=${currentBranch.id}`)
+            .then(res => res.json())
+            .then(data => setCategoryStatsData(data))
+            .catch(err => console.error('Error fetching category stats:', err));
+        
+        // Fetch alert summary
+        fetch(`/api/reports/alert-summary?branch_id=${currentBranch.id}&date_range=${dateRange}`)
+            .then(res => res.json())
+            .then(data => setAlertSummary(data))
+            .catch(err => console.error('Error fetching alert summary:', err))
+            .finally(() => setIsLoading(false));
+    }, [currentBranch?.id, dateRange]);
 
     const filteredStats = selectedCategory === 'all' 
         ? uptimeStats 
@@ -420,11 +434,13 @@ export default function Reports() {
                         <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-green-500/5 opacity-0 transition-opacity group-hover:opacity-100" />
                         <div className="relative flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">{t('reports.avgUptime')}</p>
-                                <p className="mt-2 text-4xl font-bold text-slate-900 dark:text-white">99.67%</p>
+                                <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Average Uptime</p>
+                                <p className="mt-2 text-4xl font-bold text-slate-900 dark:text-white">
+                                    {isLoading ? '...' : `${summary?.avgUptime || 0}%`}
+                                </p>
                                 <p className="mt-1 flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
                                     <TrendingUp className="size-3" />
-                                    +0.12% from last period
+                                    {isLoading ? 'Loading...' : `All systems operational`}
                                 </p>
                             </div>
                             <div className="rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 p-3 shadow-lg">
@@ -437,11 +453,13 @@ export default function Reports() {
                         <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-orange-500/5 opacity-0 transition-opacity group-hover:opacity-100" />
                         <div className="relative flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-red-600 dark:text-red-400">{t('reports.totalIncidents')}</p>
-                                <p className="mt-2 text-4xl font-bold text-slate-900 dark:text-white">8</p>
+                                <p className="text-sm font-medium text-red-600 dark:text-red-400">Total Incidents</p>
+                                <p className="mt-2 text-4xl font-bold text-slate-900 dark:text-white">
+                                    {isLoading ? '...' : summary?.totalIncidents || 0}
+                                </p>
                                 <p className="mt-1 flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
                                     <TrendingDown className="size-3" />
-                                    -2 from last period
+                                    {isLoading ? 'Loading...' : 'from last period'}
                                 </p>
                             </div>
                             <div className="rounded-xl bg-gradient-to-br from-red-500 to-orange-600 p-3 shadow-lg">
@@ -454,11 +472,13 @@ export default function Reports() {
                         <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5 opacity-0 transition-opacity group-hover:opacity-100" />
                         <div className="relative flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-amber-600 dark:text-amber-400">{t('reports.totalDowntime')}</p>
-                                <p className="mt-2 text-4xl font-bold text-slate-900 dark:text-white">3h 23m</p>
+                                <p className="text-sm font-medium text-amber-600 dark:text-amber-400">Total Downtime</p>
+                                <p className="mt-2 text-4xl font-bold text-slate-900 dark:text-white">
+                                    {isLoading ? '...' : summary?.totalDowntime?.formatted || '0m'}
+                                </p>
                                 <p className="mt-1 flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
                                     <Clock className="size-3" />
-                                    0.33% of total time
+                                    {isLoading ? 'Loading...' : `${summary?.totalDowntime?.percentage || 0}% of total time`}
                                 </p>
                             </div>
                             <div className="rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 p-3 shadow-lg">
@@ -471,11 +491,13 @@ export default function Reports() {
                         <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 opacity-0 transition-opacity group-hover:opacity-100" />
                         <div className="relative flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">{t('reports.devicesMonitored')}</p>
-                                <p className="mt-2 text-4xl font-bold text-slate-900 dark:text-white">18</p>
+                                <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">Devices Monitored</p>
+                                <p className="mt-2 text-4xl font-bold text-slate-900 dark:text-white">
+                                    {isLoading ? '...' : summary?.devicesMonitored || 0}
+                                </p>
                                 <p className="mt-1 flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400">
                                     <Activity className="size-3" />
-                                    All systems operational
+                                    {isLoading ? 'Loading...' : 'All systems operational'}
                                 </p>
                             </div>
                             <div className="rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 p-3 shadow-lg">

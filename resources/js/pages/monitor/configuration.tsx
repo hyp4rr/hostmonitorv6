@@ -13,6 +13,7 @@ import {
     History,
     ChevronDown,
     ChevronUp,
+    CheckCircle2,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTranslation } from '@/contexts/i18n-context';
@@ -51,6 +52,11 @@ interface Device {
     response_time?: number;
     last_check?: string;
     offline_reason?: string;
+    offline_acknowledged_by?: string;
+    offline_acknowledged_at?: string;
+    offline_since?: string;
+    offline_duration_minutes?: number;
+    offline_alert_sent?: boolean;
     latitude?: number;
     longitude?: number;
 }
@@ -144,7 +150,7 @@ export default function Configuration() {
     // CRUD state
     const [selectedEntity, setSelectedEntity] = useState<CRUDEntity>('devices');
     const [showModal, setShowModal] = useState(false);
-    const [modalMode, setModalMode] = useState<'create' | 'edit' | 'delete'>('create');
+    const [modalMode, setModalMode] = useState<'create' | 'edit' | 'delete' | 'acknowledge'>('create');
     const [selectedItem, setSelectedItem] = useState<Device | Alert | Location | Branch | UserData | Brand | Model | null>(null);
 
     // Data state
@@ -276,6 +282,12 @@ export default function Configuration() {
     const handleDelete = (item: Device | Alert | Location | Branch | UserData | Brand | Model) => {
         setModalMode('delete');
         setSelectedItem(item);
+        setShowModal(true);
+    };
+
+    const handleAcknowledgeOffline = (device: Device) => {
+        setModalMode('acknowledge');
+        setSelectedItem(device);
         setShowModal(true);
     };
 
@@ -514,6 +526,7 @@ export default function Configuration() {
                                         devices={devices}
                                         onEdit={handleEdit}
                                         onDelete={handleDelete}
+                                        onAcknowledgeOffline={handleAcknowledgeOffline}
                                     />
                                 )}
                                 {selectedEntity === 'alerts' && (
@@ -570,6 +583,7 @@ export default function Configuration() {
                                 {modalMode === 'create' && `Create New ${selectedEntity.slice(0, -1)}`}
                                 {modalMode === 'edit' && `Edit ${selectedEntity.slice(0, -1)}`}
                                 {modalMode === 'delete' && `Delete ${selectedEntity.slice(0, -1)}`}
+                                {modalMode === 'acknowledge' && 'Acknowledge Offline Device'}
                             </h3>
                             <button
                                 onClick={() => setShowModal(false)}
@@ -601,6 +615,8 @@ export default function Configuration() {
                                         </div>
                                     )}
                                 </div>
+                            ) : modalMode === 'acknowledge' ? (
+                                <AcknowledgeOfflineForm device={selectedItem as Device} />
                             ) : (
                                 <EntityForm
                                     entity={selectedEntity}
@@ -651,10 +667,12 @@ function DevicesTable({
     devices,
     onEdit,
     onDelete,
+    onAcknowledgeOffline,
 }: {
     devices: Device[];
     onEdit: (device: Device) => void;
     onDelete: (device: Device) => void;
+    onAcknowledgeOffline: (device: Device) => void;
 }) {
     if (devices.length === 0) {
         return (
@@ -757,6 +775,15 @@ function DevicesTable({
                         </td>
                         <td className="px-6 py-4 text-right">
                             <div className="flex justify-end gap-2">
+                                {device.status === 'offline' && (
+                                    <button 
+                                        onClick={() => onAcknowledgeOffline(device)} 
+                                        className="rounded-lg p-2 text-orange-600 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-900/30"
+                                        title="Acknowledge Offline"
+                                    >
+                                        <CheckCircle2 className="size-4" />
+                                    </button>
+                                )}
                                 <button onClick={() => onEdit(device)} className="rounded-lg p-2 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30">
                                     <Edit className="size-4" />
                                 </button>
@@ -1194,6 +1221,113 @@ function ModelsTable({
                 ))}
             </tbody>
         </table>
+    );
+}
+
+// Acknowledge Offline Form Component
+function AcknowledgeOfflineForm({ device }: { device: Device }) {
+    const [reason, setReason] = useState('');
+    const [acknowledgedBy, setAcknowledgedBy] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+
+        try {
+            const response = await fetch(`/api/devices/${device.id}/acknowledge-offline`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({
+                    reason,
+                    acknowledged_by: acknowledgedBy,
+                }),
+            });
+
+            if (response.ok) {
+                router.reload();
+            } else {
+                const error = await response.json();
+                alert(error.error || 'Failed to acknowledge offline device');
+            }
+        } catch (error) {
+            console.error('Error acknowledging offline device:', error);
+            alert('Failed to acknowledge offline device');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="rounded-lg bg-orange-50 p-4 dark:bg-orange-950/20">
+                <div className="flex items-start gap-3">
+                    <AlertTriangle className="size-5 text-orange-600 dark:text-orange-400 mt-0.5" />
+                    <div>
+                        <p className="font-semibold text-orange-900 dark:text-orange-300">
+                            Device: {device.name}
+                        </p>
+                        <p className="mt-1 text-sm text-orange-700 dark:text-orange-400">
+                            IP: {device.ip_address}
+                        </p>
+                        {device.offline_duration_minutes !== undefined && device.offline_duration_minutes > 0 && (
+                            <p className="mt-1 text-sm text-orange-700 dark:text-orange-400">
+                                Offline for: {device.offline_duration_minutes} minute{device.offline_duration_minutes !== 1 ? 's' : ''}
+                            </p>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Acknowledged By <span className="text-red-500">*</span>
+                </label>
+                <input
+                    type="text"
+                    value={acknowledgedBy}
+                    onChange={(e) => setAcknowledgedBy(e.target.value)}
+                    required
+                    className="w-full rounded-lg border border-slate-300 px-4 py-2 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                    placeholder="Your name"
+                />
+            </div>
+
+            <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Reason <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    required
+                    rows={4}
+                    className="w-full rounded-lg border border-slate-300 px-4 py-2 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                    placeholder="Explain why this device is offline (e.g., scheduled maintenance, hardware replacement, etc.)"
+                />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4">
+                <button
+                    type="button"
+                    onClick={() => router.reload()}
+                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-50"
+                >
+                    <CheckCircle2 className="size-4" />
+                    {isSubmitting ? 'Acknowledging...' : 'Acknowledge Offline'}
+                </button>
+            </div>
+        </form>
     );
 }
 

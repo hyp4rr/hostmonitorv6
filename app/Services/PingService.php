@@ -14,6 +14,16 @@ class PingService
      */
     public function pingDevice(Device $device): array
     {
+        // Skip pinging acknowledged offline devices
+        if ($device->status === 'offline_ack') {
+            return [
+                'device_id' => $device->id,
+                'status' => 'offline_ack',
+                'response_time' => null,
+                'message' => 'Device is acknowledged as offline, skipping ping'
+            ];
+        }
+
         $startTime = microtime(true);
         $status = 'offline';
         $responseTime = null;
@@ -70,6 +80,8 @@ class PingService
         Log::info("Updating device {$device->id} ({$device->name}) - Old status: {$device->status}, New status: {$status}");
         
         $oldStatus = $device->status;
+        $statusChanged = ($oldStatus !== $status);
+        
         $device->status = $status;
         $device->response_time = $responseTime;
         $device->last_ping = now();
@@ -81,15 +93,23 @@ class PingService
                 $device->offline_since = now();
                 $device->offline_duration_minutes = 0;
                 $device->offline_alert_sent = false;
+                Log::info("Device {$device->id} just went offline, starting tracking");
             } elseif ($device->offline_since) {
-                // Already offline, calculate duration
-                $device->offline_duration_minutes = now()->diffInMinutes($device->offline_since);
+                // Already offline, calculate duration using absolute value
+                $device->offline_duration_minutes = abs(now()->diffInMinutes($device->offline_since));
+                Log::info("Device {$device->id} offline duration: {$device->offline_duration_minutes} minutes");
                 
                 // Create alert if offline for more than 2 minutes and alert not sent yet
                 if ($device->offline_duration_minutes >= 2 && !$device->offline_alert_sent) {
+                    Log::info("Creating offline alert for device {$device->id}");
                     $this->createOfflineAlert($device);
                     $device->offline_alert_sent = true;
                 }
+            } else {
+                // offline_since is null but device is offline, set it now
+                $device->offline_since = now();
+                $device->offline_duration_minutes = 0;
+                Log::info("Device {$device->id} offline but offline_since was null, setting now");
             }
         } else {
             // Device is back online, reset offline tracking
@@ -98,8 +118,17 @@ class PingService
             $device->offline_alert_sent = false;
         }
         
-        $device->save();
-        Log::info("Device {$device->id} saved with status: {$device->status}");
+        // Only update updated_at if status actually changed
+        if ($statusChanged) {
+            $device->timestamps = true; // Enable timestamps for this save
+            $device->save();
+            Log::info("Device {$device->id} status CHANGED from {$oldStatus} to {$status}, updated_at will be updated");
+        } else {
+            $device->timestamps = false; // Disable timestamps to prevent updated_at change
+            $device->save();
+            $device->timestamps = true; // Re-enable for future saves
+            Log::info("Device {$device->id} status UNCHANGED ({$status}), updated_at will NOT be updated");
+        }
 
         // Log to monitoring history
         $this->logMonitoringHistory($device, $status, $responseTime);
@@ -187,7 +216,7 @@ class PingService
             if ($totalCount > 0) {
                 $uptimePercentage = round(($onlineCount / $totalCount) * 100, 2);
                 $device->uptime_percentage = $uptimePercentage;
-                $device->save();
+                $device->saveQuietly();
             }
         } catch (\Exception $e) {
             Log::error("Failed to update uptime for device {$device->id}: " . $e->getMessage());
@@ -207,10 +236,10 @@ class PingService
                 ->first();
 
             if (!$existingAlert) {
-                Alert::create([
+                $alert = Alert::create([
                     'device_id' => $device->id,
-                    'branch_id' => $device->branch_id,
                     'type' => 'offline',
+                    'category' => $device->category,
                     'severity' => 'high',
                     'title' => "Device Offline: {$device->name}",
                     'message' => "Device {$device->name} ({$device->ip_address}) has been offline for {$device->offline_duration_minutes} minutes.",
@@ -218,7 +247,9 @@ class PingService
                     'triggered_at' => now(),
                 ]);
                 
-                Log::info("Created offline alert for device {$device->id} ({$device->name})");
+                Log::info("Created offline alert for device {$device->id} ({$device->name}), alert ID: {$alert->id}");
+            } else {
+                Log::info("Alert already exists for device {$device->id}, skipping creation");
             }
         } catch (\Exception $e) {
             Log::error("Failed to create offline alert for device {$device->id}: " . $e->getMessage());

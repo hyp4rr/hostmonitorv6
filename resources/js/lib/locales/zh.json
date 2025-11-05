@@ -1,0 +1,89 @@
+{
+  "nav": {
+    "dashboard": "仪表板",
+    "devices": "设备",
+    "maps": "地图",
+    "reports": "报告",
+    "alerts": "警报",
+    "configuration": "配置"
+  },
+  "settings": {
+    "title": "设置",
+    "theme": "主题",
+    "language": "语言",
+    "sign_out": "登出",
+    "light": "浅色",
+    "dark": "深色",
+    "system": "系统"
+  },
+  "devices": {
+    "all": "所有设备",
+    "online": "在线",
+    "offline": "离线",
+    "warning": "警告",
+    "unknown": "未知",
+    "search": "搜索设备...",
+    "filters": "筛选",
+    "category": "类别",
+    "status": "状态",
+    "location": "位置",
+    "brand": "品牌",
+    "model": "型号",
+    "ping_all": "Ping 所有",
+    "auto_refresh": "自动刷新",
+    "last_ping": "最后 Ping",
+    "device_details": "设备详情",
+    "response_time": "响应时间",
+    "last_updated": "最后更新",
+    "uptime": "正常运行时间",
+    "ip_address": "IP 地址",
+    "mac_address": "MAC 地址",
+    "barcode": "条形码"
+  },
+  "alerts": {
+    "title": "警报",
+    "severity": "严重程度",
+    "critical": "严重",
+    "high": "高",
+    "medium": "中",
+    "low": "低",
+    "resolved": "已解决",
+    "unresolved": "未解决",
+    "device": "设备",
+    "message": "消息",
+    "created": "创建时间"
+  },
+  "reports": {
+    "title": "报告",
+    "device_status": "设备状态",
+    "uptime_report": "正常运行时间报告",
+    "alert_summary": "警报摘要",
+    "export": "导出"
+  },
+  "configuration": {
+    "title": "配置",
+    "devices": "设备",
+    "branches": "分支",
+    "locations": "位置",
+    "users": "用户",
+    "brands": "品牌",
+    "models": "型号",
+    "add_new": "添加新",
+    "edit": "编辑",
+    "delete": "删除",
+    "save": "保存",
+    "cancel": "取消"
+  },
+  "common": {
+    "loading": "加载中...",
+    "error": "错误",
+    "success": "成功",
+    "confirm": "确认",
+    "close": "关闭",
+    "actions": "操作",
+    "search": "搜索",
+    "filter": "筛选",
+    "export": "导出",
+    "refresh": "刷新"
+  }
+}

@@ -69,9 +69,10 @@ class MonitorController extends Controller
             $branchId = $allBranches[0]['id'];
         }
 
-        // Get the current branch with relationships
+        // Get the current branch with relationships (exclude offline_ack devices)
         $branch = Branch::with(['devices' => function ($query) {
             $query->where('is_active', true)
+                ->where('status', '!=', 'offline_ack')
                 ->with(['location', 'hardwareDetail.brand', 'hardwareDetail.hardwareModel']);
         }, 'locations'])->find($branchId);
 
@@ -113,6 +114,9 @@ class MonitorController extends Controller
                 'uptime_percentage' => $device->uptime_percentage ?? 0,
                 'is_active' => $device->is_active,
                 'last_check' => $device->last_ping,
+                'response_time' => $device->response_time,
+                'last_ping' => $device->last_ping,
+                'updated_at' => $device->updated_at?->toIso8601String(),
             ];
         })->toArray();
 
@@ -203,19 +207,20 @@ class MonitorController extends Controller
     private function calculateBranchStats($branchId)
     {
         return [
-            'totalDevices' => Device::where('branch_id', $branchId)->where('is_active', true)->count(),
+            'totalDevices' => Device::where('branch_id', $branchId)->where('is_active', true)->where('status', '!=', 'offline_ack')->count(),
             'onlineDevices' => Device::where('branch_id', $branchId)->where('is_active', true)->where('status', 'online')->count(),
             'warningDevices' => Device::where('branch_id', $branchId)->where('is_active', true)->where('status', 'warning')->count(),
-            'offlineDevices' => Device::where('branch_id', $branchId)->where('is_active', true)->whereIn('status', ['offline', 'offline_ack'])->count(),
+            'offlineDevices' => Device::where('branch_id', $branchId)->where('is_active', true)->where('status', 'offline')->count(),
         ];
     }
 
     private function getDeviceTypeBreakdown($branchId)
     {
-        $totalDevices = Device::where('branch_id', $branchId)->where('is_active', true)->count();
+        $totalDevices = Device::where('branch_id', $branchId)->where('is_active', true)->where('status', '!=', 'offline_ack')->count();
         
         return Device::where('branch_id', $branchId)
             ->where('is_active', true)
+            ->where('status', '!=', 'offline_ack')
             ->select('category', DB::raw('count(*) as count'))
             ->groupBy('category')
             ->get()
@@ -238,11 +243,12 @@ class MonitorController extends Controller
 
         return Device::where('devices.branch_id', $branchId)
             ->where('devices.is_active', true)
+            ->where('devices.status', '!=', 'offline_ack')
             ->whereNotNull('devices.location_id')
             ->join('locations', 'devices.location_id', '=', 'locations.id')
             ->select('locations.name as location', DB::raw('count(*) as total'))
             ->addSelect(DB::raw("SUM(CASE WHEN devices.status = 'online' THEN 1 ELSE 0 END) as online"))
-            ->addSelect(DB::raw("SUM(CASE WHEN devices.status IN ('offline', 'offline_ack') THEN 1 ELSE 0 END) as offline"))
+            ->addSelect(DB::raw("SUM(CASE WHEN devices.status = 'offline' THEN 1 ELSE 0 END) as offline"))
             ->groupBy('locations.id', 'locations.name')
             ->havingRaw('count(*) > 0')
             ->get()
@@ -383,6 +389,9 @@ class MonitorController extends Controller
             'uptime_percentage' => $device->uptime_percentage ?? 0,
             'is_active' => $device->is_active,
             'last_check' => $device->last_ping,
+            'response_time' => $device->response_time,
+            'last_ping' => $device->last_ping,
+            'updated_at' => $device->updated_at?->toIso8601String(),
         ];
     }
 

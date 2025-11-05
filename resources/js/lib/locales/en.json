@@ -1,0 +1,89 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "devices": "Devices",
+    "maps": "Maps",
+    "reports": "Reports",
+    "alerts": "Alerts",
+    "configuration": "Configuration"
+  },
+  "settings": {
+    "title": "Settings",
+    "theme": "Theme",
+    "language": "Language",
+    "sign_out": "Sign out",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "devices": {
+    "all": "All Devices",
+    "online": "Online",
+    "offline": "Offline",
+    "warning": "Warning",
+    "unknown": "Unknown",
+    "search": "Search devices...",
+    "filters": "Filters",
+    "category": "Category",
+    "status": "Status",
+    "location": "Location",
+    "brand": "Brand",
+    "model": "Model",
+    "ping_all": "Ping All",
+    "auto_refresh": "Auto Refresh",
+    "last_ping": "Last Ping",
+    "device_details": "Device Details",
+    "response_time": "Response Time",
+    "last_updated": "Last Updated",
+    "uptime": "Uptime",
+    "ip_address": "IP Address",
+    "mac_address": "MAC Address",
+    "barcode": "Barcode"
+  },
+  "alerts": {
+    "title": "Alerts",
+    "severity": "Severity",
+    "critical": "Critical",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low",
+    "resolved": "Resolved",
+    "unresolved": "Unresolved",
+    "device": "Device",
+    "message": "Message",
+    "created": "Created"
+  },
+  "reports": {
+    "title": "Reports",
+    "device_status": "Device Status",
+    "uptime_report": "Uptime Report",
+    "alert_summary": "Alert Summary",
+    "export": "Export"
+  },
+  "configuration": {
+    "title": "Configuration",
+    "devices": "Devices",
+    "branches": "Branches",
+    "locations": "Locations",
+    "users": "Users",
+    "brands": "Brands",
+    "models": "Models",
+    "add_new": "Add New",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "confirm": "Confirm",
+    "close": "Close",
+    "actions": "Actions",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "refresh": "Refresh"
+  }
+}

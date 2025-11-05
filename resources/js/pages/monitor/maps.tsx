@@ -78,8 +78,8 @@ export default function Maps() {
         .finally(() => setIsLoadingLocations(false));
     }, [currentBranch?.id]);
 
-    // Use real devices from current branch for map markers
-    const realDevices = currentBranch?.devices || [];
+    // Use real devices from current branch for map markers (exclude offline_ack devices)
+    const realDevices = (currentBranch?.devices || []).filter(device => device.status !== 'offline_ack');
     
     // Group devices by location coordinates
     const deviceLocationMap = new Map<string, typeof realDevices>();

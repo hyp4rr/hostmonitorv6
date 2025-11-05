@@ -51,6 +51,7 @@ interface Device {
     is_monitored?: boolean;
     is_active?: boolean;
     last_check: string | null;
+    last_ping?: string | null;
     created_at?: string;
     updated_at?: string;
     offline_reason?: string;
@@ -174,8 +175,8 @@ export default function Devices() {
     const [availableBrands, setAvailableBrands] = useState<Array<{id: number, name: string}>>([]);
     const [availableModels, setAvailableModels] = useState<Array<{id: number, name: string, brand_id: number}>>([]);
 
-    // Get devices from current branch
-    const allDevices = currentBranch?.devices || [];
+    // Get devices from current branch (exclude offline_ack devices)
+    const allDevices = (currentBranch?.devices || []).filter(device => device.status !== 'offline_ack');
 
     // Update category counts
     const updatedCategories = categories.map(cat => ({
@@ -548,7 +549,7 @@ export default function Devices() {
                     {/* Filters Row */}
                     <div className="flex flex-wrap items-center gap-2">
                         {/* Status Filters */}
-                        {(['all', 'online', 'warning', 'offline', 'offline_ack'] as const).map((status) => (
+                        {(['all', 'online', 'warning', 'offline'] as const).map((status) => (
                             <button
                                 key={status}
                                 onClick={() => setStatusFilter(status)}
@@ -559,7 +560,6 @@ export default function Devices() {
                                 }`}
                             >
                                 {status === 'all' ? t('devices.all') : 
-                                 status === 'offline_ack' ? 'Offline (Ack)' :
                                  status.charAt(0).toUpperCase() + status.slice(1)}
                             </button>
                         ))}
@@ -1314,6 +1314,28 @@ export default function Devices() {
                                                         {selectedDevice.barcode}
                                                     </span>
                                                 </div>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-slate-600 dark:text-slate-400">Response Time:</span>
+                                                <span className="font-medium text-slate-900 dark:text-white">
+                                                    {selectedDevice.response_time ? `${selectedDevice.response_time}ms` : 'N/A'}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-slate-600 dark:text-slate-400">Last Ping:</span>
+                                                <span className="font-medium text-slate-900 dark:text-white">
+                                                    {selectedDevice.last_ping 
+                                                        ? new Date(selectedDevice.last_ping).toLocaleString()
+                                                        : 'Never'}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-slate-600 dark:text-slate-400">Last Updated:</span>
+                                                <span className="font-medium text-slate-900 dark:text-white">
+                                                    {selectedDevice.updated_at 
+                                                        ? new Date(selectedDevice.updated_at).toLocaleString()
+                                                        : 'N/A'}
+                                                </span>
                                             </div>
                                             <div className="flex justify-between items-center">
                                                 <span className="text-slate-600 dark:text-slate-400">Location:</span>

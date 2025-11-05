@@ -1,0 +1,89 @@
+{
+  "nav": {
+    "dashboard": "Papan Pemuka",
+    "devices": "Peranti",
+    "maps": "Peta",
+    "reports": "Laporan",
+    "alerts": "Amaran",
+    "configuration": "Konfigurasi"
+  },
+  "settings": {
+    "title": "Tetapan",
+    "theme": "Tema",
+    "language": "Bahasa",
+    "sign_out": "Log Keluar",
+    "light": "Cerah",
+    "dark": "Gelap",
+    "system": "Sistem"
+  },
+  "devices": {
+    "all": "Semua Peranti",
+    "online": "Dalam Talian",
+    "offline": "Luar Talian",
+    "warning": "Amaran",
+    "unknown": "Tidak Diketahui",
+    "search": "Cari peranti...",
+    "filters": "Penapis",
+    "category": "Kategori",
+    "status": "Status",
+    "location": "Lokasi",
+    "brand": "Jenama",
+    "model": "Model",
+    "ping_all": "Ping Semua",
+    "auto_refresh": "Auto Muat Semula",
+    "last_ping": "Ping Terakhir",
+    "device_details": "Butiran Peranti",
+    "response_time": "Masa Respons",
+    "last_updated": "Kemaskini Terakhir",
+    "uptime": "Masa Aktif",
+    "ip_address": "Alamat IP",
+    "mac_address": "Alamat MAC",
+    "barcode": "Kod Bar"
+  },
+  "alerts": {
+    "title": "Amaran",
+    "severity": "Keterukan",
+    "critical": "Kritikal",
+    "high": "Tinggi",
+    "medium": "Sederhana",
+    "low": "Rendah",
+    "resolved": "Diselesaikan",
+    "unresolved": "Belum Selesai",
+    "device": "Peranti",
+    "message": "Mesej",
+    "created": "Dicipta"
+  },
+  "reports": {
+    "title": "Laporan",
+    "device_status": "Status Peranti",
+    "uptime_report": "Laporan Masa Aktif",
+    "alert_summary": "Ringkasan Amaran",
+    "export": "Eksport"
+  },
+  "configuration": {
+    "title": "Konfigurasi",
+    "devices": "Peranti",
+    "branches": "Cawangan",
+    "locations": "Lokasi",
+    "users": "Pengguna",
+    "brands": "Jenama",
+    "models": "Model",
+    "add_new": "Tambah Baru",
+    "edit": "Edit",
+    "delete": "Padam",
+    "save": "Simpan",
+    "cancel": "Batal"
+  },
+  "common": {
+    "loading": "Memuatkan...",
+    "error": "Ralat",
+    "success": "Berjaya",
+    "confirm": "Sahkan",
+    "close": "Tutup",
+    "actions": "Tindakan",
+    "search": "Cari",
+    "filter": "Tapis",
+    "export": "Eksport",
+    "refresh": "Muat Semula"
+  }
+}
