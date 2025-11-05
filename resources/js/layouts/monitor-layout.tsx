@@ -90,23 +90,73 @@ export default function MonitorLayout({ children, title }: MonitorLayoutProps) {
         setShowBranchMenu(false);
     };
     
-    // Mock alerts - in production, this would come from your backend
-    const [alerts, setAlerts] = useState<Alert[]>(() => [
-        {
-            id: '1',
-            deviceName: 'Backup Server',
-            deviceIp: '192.168.1.14',
-            timestamp: new Date(Date.now() - 1000 * 60 * 15),
-            acknowledged: false,
-        },
-        {
-            id: '2',
-            deviceName: 'Database Server',
-            deviceIp: '192.168.1.11',
-            timestamp: new Date(Date.now() - 1000 * 60 * 5),
-            acknowledged: false,
-        },
-    ]);
+    // Fetch real alerts from API
+    const [alerts, setAlerts] = useState<Alert[]>([]);
+    const [alertCount, setAlertCount] = useState(0);
+
+    // Fetch alerts
+    const fetchAlerts = () => {
+        if (!currentBranch?.id) return;
+
+        fetch(`/api/alerts?branch_id=${currentBranch.id}&status=active`)
+            .then(res => res.json())
+            .then(data => {
+                const formattedAlerts = data.map((alert: any) => ({
+                    id: alert.id.toString(),
+                    deviceName: alert.device?.name || 'Unknown Device',
+                    deviceIp: alert.device?.ip_address || 'N/A',
+                    timestamp: new Date(alert.triggered_at),
+                    acknowledged: alert.acknowledged,
+                    acknowledgedBy: alert.acknowledged_by,
+                    reason: alert.reason,
+                }));
+                setAlerts(formattedAlerts);
+                setAlertCount(formattedAlerts.filter((a: Alert) => !a.acknowledged).length);
+            })
+            .catch(err => console.error('Error fetching alerts:', err));
+    };
+
+    // Auto-ping devices every 30 seconds
+    const autoPing = () => {
+        if (!currentBranch?.id) return;
+
+        fetch(`/api/devices/ping-branch`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({ branch_id: currentBranch.id }),
+        })
+            .then(res => res.json())
+            .then(() => {
+                // Refresh alerts after ping
+                fetchAlerts();
+                // Reload current page data
+                router.reload({ only: ['currentBranch'] });
+            })
+            .catch(err => console.error('Auto-ping error:', err));
+    };
+
+    // Initial fetch and setup intervals
+    useEffect(() => {
+        if (!currentBranch?.id) return;
+
+        // Initial fetch
+        fetchAlerts();
+
+        // Set up auto-ping interval (30 seconds)
+        const pingInterval = setInterval(autoPing, 30000);
+
+        // Set up alert refresh interval (10 seconds)
+        const alertInterval = setInterval(fetchAlerts, 10000);
+
+        // Cleanup intervals on unmount
+        return () => {
+            clearInterval(pingInterval);
+            clearInterval(alertInterval);
+        };
+    }, [currentBranch?.id]);
 
     const unacknowledgedCount = alerts.filter(a => !a.acknowledged).length;
 
@@ -216,14 +266,29 @@ export default function MonitorLayout({ children, title }: MonitorLayoutProps) {
                     <nav className="flex-1 space-y-1 overflow-y-auto p-4">
                         {navigation.map((item) => {
                             const Icon = item.icon;
+                            const isAlerts = item.name === 'Alerts';
                             return (
                                 <Link
                                     key={item.name}
                                     href={item.href}
                                     className="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition-all hover:bg-gradient-to-r hover:from-blue-500 hover:to-indigo-500 hover:text-white hover:shadow-lg dark:text-slate-300 dark:hover:from-blue-600 dark:hover:to-indigo-600"
                                 >
-                                    <Icon className="size-5 shrink-0 transition-transform group-hover:scale-110" />
-                                    {!sidebarCollapsed && <span>{item.name}</span>}
+                                    <div className="relative">
+                                        <Icon className="size-5 shrink-0 transition-transform group-hover:scale-110" />
+                                        {isAlerts && alertCount > 0 && (
+                                            <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white dark:ring-slate-900">
+                                                {alertCount > 9 ? '9+' : alertCount}
+                                            </span>
+                                        )}
+                                    </div>
+                                    {!sidebarCollapsed && (
+                                        <span className="flex-1">{item.name}</span>
+                                    )}
+                                    {!sidebarCollapsed && isAlerts && alertCount > 0 && (
+                                        <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white">
+                                            {alertCount}
+                                        </span>
+                                    )}
                                 </Link>
                             );
                         })}

@@ -34,8 +34,9 @@ export default function Alerts() {
     const [alerts, setAlerts] = useState<Alert[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
-    const [severityFilter, setSeverityFilter] = useState<'all' | 'critical' | 'warning' | 'info' | 'error'>('all');
+    const [severityFilter, setSeverityFilter] = useState<'all' | 'low' | 'medium' | 'high' | 'critical'>('all');
     const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'acknowledged' | 'dismissed'>('all');
+    const [categoryFilter, setCategoryFilter] = useState<'all' | 'manual' | 'offline' | 'performance' | 'security' | 'maintenance'>('all');
 
     useEffect(() => {
         fetchAlerts();
@@ -70,15 +71,17 @@ export default function Alerts() {
                             alert.device?.name.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesSeverity = severityFilter === 'all' || alert.severity === severityFilter;
         const matchesStatus = statusFilter === 'all' || alert.status === statusFilter;
+        const matchesCategory = categoryFilter === 'all' || alert.category === categoryFilter;
         
-        return matchesSearch && matchesSeverity && matchesStatus;
+        return matchesSearch && matchesSeverity && matchesStatus && matchesCategory;
     });
 
     const getSeverityColor = (severity: string) => {
         switch (severity) {
             case 'critical': return 'text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30';
-            case 'warning': return 'text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/30';
-            case 'info': return 'text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30';
+            case 'high': return 'text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/30';
+            case 'medium': return 'text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/30';
+            case 'low': return 'text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30';
             default: return 'text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-900/30';
         }
     };
@@ -111,20 +114,33 @@ export default function Alerts() {
                     
                     <div className="flex gap-2">
                         <select
+                            value={categoryFilter}
+                            onChange={(e) => setCategoryFilter(e.target.value as 'all' | 'manual' | 'offline' | 'performance' | 'security' | 'maintenance')}
+                            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                        >
+                            <option value="all">All Categories</option>
+                            <option value="manual">Manual</option>
+                            <option value="offline">Offline</option>
+                            <option value="performance">Performance</option>
+                            <option value="security">Security</option>
+                            <option value="maintenance">Maintenance</option>
+                        </select>
+                        
+                        <select
                             value={severityFilter}
-                            onChange={(e) => setSeverityFilter(e.target.value as any)}
+                            onChange={(e) => setSeverityFilter(e.target.value as 'all' | 'low' | 'medium' | 'high' | 'critical')}
                             className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                         >
                             <option value="all">All Severities</option>
                             <option value="critical">Critical</option>
-                            <option value="warning">Warning</option>
-                            <option value="info">Info</option>
-                            <option value="error">Error</option>
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
                         </select>
                         
                         <select
                             value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value as any)}
+                            onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'acknowledged' | 'dismissed')}
                             className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                         >
                             <option value="all">All Status</option>

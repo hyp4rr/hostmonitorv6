@@ -199,24 +199,49 @@ class PingService
 
     /**
      * Update device uptime percentage based on recent history
+     * Uses a 7-day rolling window with weighted average (recent data more important)
      */
     private function updateUptimePercentage(Device $device): void
     {
         try {
-            // Calculate uptime from last 24 hours
-            $onlineCount = MonitoringHistory::where('device_id', $device->id)
-                ->where('checked_at', '>=', now()->subDay())
-                ->where('status', 'online')
-                ->count();
+            // Calculate uptime from last 7 days
+            $history = MonitoringHistory::where('device_id', $device->id)
+                ->where('checked_at', '>=', now()->subDays(7))
+                ->orderBy('checked_at', 'desc')
+                ->get();
 
-            $totalCount = MonitoringHistory::where('device_id', $device->id)
-                ->where('checked_at', '>=', now()->subDay())
-                ->count();
+            $totalCount = $history->count();
 
             if ($totalCount > 0) {
-                $uptimePercentage = round(($onlineCount / $totalCount) * 100, 2);
+                // Use weighted average - recent pings are more important
+                $weightedSum = 0;
+                $totalWeight = 0;
+                
+                foreach ($history as $index => $record) {
+                    // Weight decreases exponentially for older records
+                    // Most recent = weight 1.0, oldest = weight 0.3
+                    $weight = 1.0 - ($index / $totalCount) * 0.7;
+                    $isOnline = $record->status === 'online' ? 1 : 0;
+                    
+                    $weightedSum += $isOnline * $weight;
+                    $totalWeight += $weight;
+                }
+                
+                $uptimePercentage = round(($weightedSum / $totalWeight) * 100, 2);
+                
+                // Ensure uptime is between 0 and 100
+                $uptimePercentage = max(0, min(100, $uptimePercentage));
+                
                 $device->uptime_percentage = $uptimePercentage;
                 $device->saveQuietly();
+                
+                Log::info("Updated uptime for device {$device->id}: {$uptimePercentage}% (based on {$totalCount} checks)");
+            } else {
+                // New device with no history - set to 100% initially
+                if ($device->status === 'online') {
+                    $device->uptime_percentage = 100.00;
+                    $device->saveQuietly();
+                }
             }
         } catch (\Exception $e) {
             Log::error("Failed to update uptime for device {$device->id}: " . $e->getMessage());

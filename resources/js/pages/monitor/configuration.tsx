@@ -14,11 +14,14 @@ import {
     ChevronDown,
     ChevronUp,
     CheckCircle2,
+    RefreshCw,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTranslation } from '@/contexts/i18n-context';
-import { usePage } from '@inertiajs/react';
-import { router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
 import type { CurrentBranch } from '@/types/branch';
 import { PageProps } from '@/types';
 
@@ -167,8 +170,16 @@ export default function Configuration() {
     // Fetch data when entity changes
     useEffect(() => {
         fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedEntity]);
+    }, [selectedEntity, currentBranch?.id]);
+
+    // Auto-refresh data every 30 seconds
+    useEffect(() => {
+        const interval = setInterval(() => {
+            fetchData();
+        }, 30000); // 30 seconds
+
+        return () => clearInterval(interval);
+    }, [selectedEntity, currentBranch?.id]);
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -297,7 +308,7 @@ export default function Configuration() {
             const entityMap: Record<CRUDEntity, string> = {
                 branches: '/api/branches',
                 devices: '/api/devices',
-                alerts: '/api alerts',
+                alerts: '/api/alerts',
                 locations: '/api/locations',
                 users: '/api/users',
                 brands: '/api/brands',
@@ -494,15 +505,26 @@ export default function Configuration() {
                                 </p>
                             </div>
                         </div>
-                        {selectedEntity !== 'history' && (
+                        <div className="flex items-center gap-2">
                             <button
-                                onClick={handleCreate}
-                                className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-500 px-4 py-2 text-sm font-medium text-white shadow-lg transition-all hover:scale-105"
+                                onClick={() => fetchData()}
+                                disabled={isLoading}
+                                className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+                                title="Refresh data"
                             >
-                                <Plus className="size-4" />
-                                Add New
+                                <RefreshCw className={`size-4 ${isLoading ? 'animate-spin' : ''}`} />
+                                Refresh
                             </button>
-                        )}
+                            {selectedEntity !== 'history' && (
+                                <button
+                                    onClick={handleCreate}
+                                    className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-500 px-4 py-2 text-sm font-medium text-white shadow-lg transition-all hover:scale-105"
+                                >
+                                    <Plus className="size-4" />
+                                    Add New
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     {/* Table */}
@@ -980,7 +1002,7 @@ function BranchesTable({
             <thead className="bg-slate-50 dark:bg-slate-900">
                 <tr>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                        ID
+                        #
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                         Name
@@ -1003,10 +1025,10 @@ function BranchesTable({
                 </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                {branches.map((branch) => (
+                {branches.map((branch, index) => (
                     <tr key={branch.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
                         <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
-                            #{branch.id}
+                            #{index + 1}
                         </td>
                         <td className="px-6 py-4">
                             <div className="flex items-center gap-2">
@@ -1141,16 +1163,16 @@ function BrandsTable({
         <table className="w-full">
             <thead className="bg-slate-50 dark:bg-slate-900">
                 <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">ID</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">#</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Name</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Description</th>
                     <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Actions</th>
                 </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                {brands.map((brand) => (
+                {brands.map((brand, index) => (
                     <tr key={brand.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                        <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">#{brand.id}</td>
+                        <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">#{index + 1}</td>
                         <td className="px-6 py-4 text-sm font-semibold text-slate-900 dark:text-white">{brand.name}</td>
                         <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{brand.description || '-'}</td>
                         <td className="px-6 py-4 text-right">
@@ -1193,7 +1215,7 @@ function ModelsTable({
         <table className="w-full">
             <thead className="bg-slate-50 dark:bg-slate-900">
                 <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">ID</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">#</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Name</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Brand</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Description</th>
@@ -1201,9 +1223,9 @@ function ModelsTable({
                 </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                {models.map((model) => (
+                {models.map((model, index) => (
                     <tr key={model.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                        <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">#{model.id}</td>
+                        <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">#{index + 1}</td>
                         <td className="px-6 py-4 text-sm font-semibold text-slate-900 dark:text-white">{model.name}</td>
                         <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{model.brand?.name || '-'}</td>
                         <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{model.description || '-'}</td>
@@ -1376,7 +1398,11 @@ function HistoryView({ activities }: { activities: ActivityLog[] }) {
             {activities.map((activity) => {
                 const isExpanded = expandedId === activity.id;
                 const entityName = activity.details?.device_name || activity.details?.location_name || activity.details?.brand_name || activity.details?.model_name || 'Unknown';
-                const hasChanges = activity.details?.changes && Object.keys(activity.details.changes).length > 0;
+                // Filter out hardware_detail_id from changes
+                const filteredChanges = activity.details?.changes ? 
+                    Object.fromEntries(Object.entries(activity.details.changes).filter(([field]) => field !== 'hardware_detail_id')) : 
+                    {};
+                const hasChanges = Object.keys(filteredChanges).length > 0;
 
                 return (
                     <div
@@ -1424,12 +1450,14 @@ function HistoryView({ activities }: { activities: ActivityLog[] }) {
                                             className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                                         >
                                             {isExpanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
-                                            {isExpanded ? 'Hide' : 'Show'} Changes ({Object.keys(activity.details.changes).length})
+                                            {isExpanded ? 'Hide' : 'Show'} Changes ({Object.keys(filteredChanges).length})
                                         </button>
 
                                         {isExpanded && (
                                             <div className="mt-3 space-y-3 rounded-lg bg-slate-50 p-4 dark:bg-slate-900/50">
-                                                {Object.entries(activity.details.changes).map(([field, value]) => {
+                                                {Object.entries(activity.details.changes)
+                                                    .filter(([field]) => field !== 'hardware_detail_id') // Hide hardware_detail_id changes
+                                                    .map(([field, value]) => {
                                                     // Check if value has old/new structure
                                                     const hasBeforeAfter = typeof value === 'object' && value !== null && 'old' in value && 'new' in value;
                                                     
@@ -1484,20 +1512,68 @@ function EntityForm({
     mode: 'create' | 'edit';
     data: Device | Alert | Location | Branch | UserData | Brand | Model | null;
 }) {
+    const { currentBranch } = usePage<PageProps>().props;
+    
     const [latitude, setLatitude] = useState<string>(() => {
-        if (data && 'latitude' in data && data.latitude) {
-            return String(data.latitude);
+        if (entity === 'locations' && data) {
+            const locationData = data as Location;
+            return locationData.latitude?.toString() || '';
         }
         return '';
     });
-    
     const [longitude, setLongitude] = useState<string>(() => {
-        if (data && 'longitude' in data && data.longitude) {
-            return String(data.longitude);
+        if (entity === 'locations' && data) {
+            const locationData = data as Location;
+            return locationData.longitude?.toString() || '';
         }
         return '';
     });
-    
+
+    // Alert-specific state
+    const [alertDevices, setAlertDevices] = useState<Device[]>([]);
+    const [selectedAlertBranchId, setSelectedAlertBranchId] = useState<number | null>(() => {
+        if (entity === 'alerts' && currentBranch?.id) {
+            return currentBranch.id;
+        }
+        return null;
+    });
+
+    // Fetch branches for alerts form
+    useEffect(() => {
+        if (entity === 'alerts') {
+            fetch('/api/branches', {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' },
+            })
+                .then(res => res.ok ? res.json() : [])
+                .then(data => setBranches(data))
+                .catch(err => console.error('Error loading branches:', err));
+        }
+    }, [entity]);
+
+    // Fetch devices for alert form when branch changes
+    useEffect(() => {
+        if (entity === 'alerts' && selectedAlertBranchId) {
+            fetch(`/api/devices?branch_id=${selectedAlertBranchId}`, {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' },
+            })
+                .then(res => res.ok ? res.json() : [])
+                .then(data => setAlertDevices(data))
+                .catch(err => console.error('Error loading devices:', err));
+        }
+    }, [entity, selectedAlertBranchId]);
+
+    // Fix Leaflet default marker icon
+    useEffect(() => {
+        delete (L.Icon.Default.prototype as any)._getIconUrl;
+        L.Icon.Default.mergeOptions({
+            iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+            iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+        });
+    }, []);
+
     const [branches, setBranches] = useState<Branch[]>([]);
     const [locations, setLocations] = useState<Location[]>([]);
     
@@ -1510,9 +1586,6 @@ function EntityForm({
     
     const [brands, setBrands] = useState<Brand[]>([]);
     const [models, setModels] = useState<Model[]>([]);
-
-    // Get current branch from page props
-    const { currentBranch } = usePage<PageProps>().props;
 
     useEffect(() => {
         // Fetch branches for device/location forms
@@ -1928,9 +2001,88 @@ function EntityForm({
 
     if (entity === 'alerts') {
         const alertData = data as Alert | null;
+
         return (
             <form className="space-y-6">
-                               <div>
+                <div>
+                    <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Alert Information</h4>
+                    <div className="grid gap-4">
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Branch *</label>
+                                <select 
+                                    value={selectedAlertBranchId || ''} 
+                                    onChange={(e) => setSelectedAlertBranchId(e.target.value ? Number(e.target.value) : null)}
+                                    className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" 
+                                    required
+                                    disabled={mode === 'edit'}
+                                >
+                                    <option value="">Select Branch</option>
+                                    {branches.map(branch => (
+                                        <option key={branch.id} value={branch.id}>{branch.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Device *</label>
+                                <select 
+                                    name="device_id" 
+                                    defaultValue={alertData?.device_id || ''} 
+                                    className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                                    disabled={!selectedAlertBranchId || mode === 'edit'}
+                                    required
+                                >
+                                    <option value="">Select Device</option>
+                                    {alertDevices.map(device => (
+                                        <option key={device.id} value={device.id}>
+                                            {device.name} ({device.ip_address})
+                                        </option>
+                                    ))}
+                                </select>
+                                {!selectedAlertBranchId && (
+                                    <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                                        Select a branch first
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Alert Details</h4>
+                    <div className="grid gap-4">
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Category *</label>
+                                <select name="category" defaultValue={alertData?.category || 'manual'} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" required>
+                                    <option value="manual">Manual</option>
+                                    <option value="offline">Offline</option>
+                                    <option value="performance">Performance</option>
+                                    <option value="security">Security</option>
+                                    <option value="maintenance">Maintenance</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Severity</label>
+                                <select name="severity" defaultValue={alertData?.severity || 'medium'} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white">
+                                    <option value="low">Low</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="high">High</option>
+                                    <option value="critical">Critical</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Title</label>
+                            <input type="text" name="title" defaultValue={alertData?.title || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="Alert title" />
+                        </div>
+                        <div>
+                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Message</label>
+                            <textarea name="message" defaultValue={alertData?.message || ''} rows={3} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="Alert message or description" />
+                        </div>
+                    </div>
+                </div>
+                <div>
                     <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Alert Management</h4>
                     <div className="grid gap-4">
                         <div className="grid gap-4 sm:grid-cols-2">
@@ -2031,11 +2183,24 @@ function EntityForm({
                                 />
                             </div>
                         </div>
-                        {latitude && longitude && (
-                            <div className="h-64 overflow-hidden rounded-lg border border-slate-300 dark:border-slate-600">
-                                <iframe src={`https://www.openstreetmap.org/export/embed.html?bbox=${parseFloat(longitude)-0.01}%2C${parseFloat(latitude)-0.01}%2C${parseFloat(longitude)+0.01}%2C${parseFloat(latitude)+0.01}&layer=mapnik&marker=${latitude}%2C${longitude}`} className="size-full" title="Location Map" />
+                        <div>
+                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                                Click on map to set location
+                            </label>
+                            <div className="h-96 overflow-hidden rounded-lg border border-slate-300 dark:border-slate-600">
+                                <LocationMapPicker 
+                                    latitude={latitude ? parseFloat(latitude) : 3.1390} 
+                                    longitude={longitude ? parseFloat(longitude) : 101.6869}
+                                    onLocationSelect={(lat, lng) => {
+                                        setLatitude(lat.toFixed(6));
+                                        setLongitude(lng.toFixed(6));
+                                    }}
+                                />
                             </div>
-                        )}
+                            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                                Click anywhere on the map to set the location coordinates
+                            </p>
+                        </div>
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Description</label>
                             <textarea name="description" defaultValue={locationData?.description || ''} rows={3} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="Additional details about this location" />
@@ -2152,5 +2317,41 @@ function EntityForm({
         <div className="p-8 text-center text-slate-600 dark:text-slate-400">
             Form for {entity} coming soon
         </div>
+    );
+}
+
+// Location Map Picker Component
+function LocationMapPicker({ 
+    latitude, 
+    longitude, 
+    onLocationSelect 
+}: { 
+    latitude: number; 
+    longitude: number; 
+    onLocationSelect: (lat: number, lng: number) => void;
+}) {
+    function MapClickHandler() {
+        useMapEvents({
+            click(e) {
+                onLocationSelect(e.latlng.lat, e.latlng.lng);
+            },
+        });
+        return null;
+    }
+
+    return (
+        <MapContainer
+            center={[latitude, longitude]}
+            zoom={13}
+            style={{ height: '100%', width: '100%' }}
+            scrollWheelZoom={true}
+        >
+            <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <Marker position={[latitude, longitude]} />
+            <MapClickHandler />
+        </MapContainer>
     );
 }

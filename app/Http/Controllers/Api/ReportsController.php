@@ -45,7 +45,7 @@ class ReportsController extends Controller
             // Calculate downtime
             $downtimeMinutes = $device->offline_duration_minutes ?? 0;
             $hours = floor($downtimeMinutes / 60);
-            $minutes = $downtimeMinutes % 60;
+            $minutes = ceil($downtimeMinutes % 60);
             $downtimeStr = $hours > 0 ? "{$hours}h {$minutes}min" : "{$minutes}min";
             
             // Count incidents (state transitions from online to offline only)
@@ -93,34 +93,55 @@ class ReportsController extends Controller
         
         $startDate = $this->getStartDate($dateRange);
         
-        // Get recent monitoring history with status changes
-        $events = MonitoringHistory::join('devices', 'monitoring_history.device_id', '=', 'devices.id')
+        // Get all monitoring history entries
+        $allHistory = MonitoringHistory::join('devices', 'monitoring_history.device_id', '=', 'devices.id')
             ->where('devices.branch_id', $branchId)
-            ->where('devices.status', '!=', 'offline_ack')
             ->where('monitoring_history.checked_at', '>=', $startDate)
-            ->orderBy('monitoring_history.checked_at', 'desc')
-            ->limit($limit)
+            ->orderBy('monitoring_history.device_id', 'asc')
+            ->orderBy('monitoring_history.checked_at', 'asc')
             ->select(
                 'monitoring_history.id',
+                'monitoring_history.device_id',
                 'devices.name as device_name',
                 'devices.ip_address as device_ip',
                 'devices.category',
-                'monitoring_history.status as event_type',
+                'monitoring_history.status',
                 'monitoring_history.checked_at as timestamp',
                 'monitoring_history.response_time'
             )
-            ->get()
+            ->get();
+        
+        // Filter to only status changes
+        $statusChanges = collect();
+        $lastStatus = [];
+        
+        foreach ($allHistory as $entry) {
+            $deviceId = $entry->device_id;
+            $currentStatus = $entry->status;
+            
+            // If this is the first entry for this device or status changed
+            if (!isset($lastStatus[$deviceId]) || $lastStatus[$deviceId] !== $currentStatus) {
+                $statusChanges->push($entry);
+                $lastStatus[$deviceId] = $currentStatus;
+            }
+        }
+        
+        // Get the most recent status changes
+        $events = $statusChanges
+            ->sortByDesc('timestamp')
+            ->take($limit)
             ->map(function ($event) {
                 return [
                     'id' => 'event-' . $event->id,
                     'deviceName' => $event->device_name,
                     'deviceIp' => $event->device_ip,
-                    'eventType' => $event->event_type === 'online' ? 'up' : 'down',
+                    'eventType' => $event->status === 'online' ? 'up' : 'down',
                     'timestamp' => $event->timestamp->toIso8601String(),
                     'category' => ucfirst($event->category),
                     'responseTime' => $event->response_time,
                 ];
-            });
+            })
+            ->values();
         
         return response()->json($events);
     }
@@ -242,7 +263,7 @@ class ReportsController extends Controller
         // Calculate total downtime
         $totalDowntimeMinutes = $devices->sum('offline_duration_minutes') ?? 0;
         $hours = floor($totalDowntimeMinutes / 60);
-        $minutes = round($totalDowntimeMinutes % 60);
+        $minutes = ceil($totalDowntimeMinutes % 60);
         
         return response()->json([
             'avgUptime' => $avgUptime,
