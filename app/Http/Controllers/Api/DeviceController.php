@@ -327,6 +327,34 @@ class DeviceController extends Controller
         }
     }
 
+    /**
+     * Reset all device uptimes to 100%
+     */
+    public function resetUptimes()
+    {
+        try {
+            // Reset device uptime percentages to 100%
+            $updatedCount = Device::query()->update(['uptime_percentage' => 100.00]);
+            
+            // Clear monitoring history to reset report calculations
+            $historyDeletedCount = \App\Models\MonitoringHistory::query()->delete();
+            
+            Log::info('All device uptimes and monitoring history reset', [
+                'devices_updated' => $updatedCount,
+                'history_deleted' => $historyDeletedCount
+            ]);
+            
+            return response()->json([
+                'message' => 'All device uptimes have been reset to 100% and monitoring history cleared',
+                'devices_updated' => $updatedCount,
+                'history_cleared' => $historyDeletedCount
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error resetting device uptimes: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to reset device uptimes'], 500);
+        }
+    }
+
     private function transformDevice($device)
     {
         // Get location data

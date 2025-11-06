@@ -390,7 +390,7 @@ export default function Dashboard() {
                                 </h2>
                             </div>
                         </div>
-                        <div className="divide-y divide-slate-200/50 dark:divide-slate-700/50">
+                        <div className="max-h-[400px] divide-y divide-slate-200/50 overflow-y-auto dark:divide-slate-700/50">
                             {recentActivity.length > 0 ? (
                                 recentActivity.map((activity) => {
                                     const getActionColor = (action: string) => {

@@ -963,7 +963,7 @@ export default function Devices() {
                                         </th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                                <tbody className="divide-y divide-slate-200/50 dark:divide-slate-700/50">
                                     {sortedDevices.map((device) => (
                                         <tr
                                             key={device.id}

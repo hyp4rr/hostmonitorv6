@@ -36,11 +36,8 @@ class ReportsController extends Controller
                 ->orderBy('checked_at', 'asc')
                 ->get();
             
-            $totalChecks = $history->count();
-            $onlineChecks = $history->where('status', 'online')->count();
-            
-            // Calculate uptime percentage
-            $uptimePercentage = $totalChecks > 0 ? ($onlineChecks / $totalChecks) * 100 : $device->uptime_percentage;
+            // Use device's actual uptime percentage (same as device management)
+            $uptimePercentage = $device->uptime_percentage;
             
             // Calculate downtime
             $downtimeMinutes = $device->offline_duration_minutes ?? 0;
@@ -74,7 +71,7 @@ class ReportsController extends Controller
                 'uptime' => round($uptimePercentage, 2),
                 'downtime' => $downtimeStr,
                 'incidents' => $incidents,
-                'category' => ucfirst($device->category),
+                'category' => $this->formatCategory($device->category),
                 'lastIncident' => $lastIncident ? $lastIncident->checked_at->toDateString() : 'Never',
             ];
         });
@@ -137,7 +134,7 @@ class ReportsController extends Controller
                     'deviceIp' => $event->device_ip,
                     'eventType' => $event->status === 'online' ? 'up' : 'down',
                     'timestamp' => $event->timestamp->toIso8601String(),
-                    'category' => ucfirst($event->category),
+                    'category' => $this->formatCategory($event->category),
                     'responseTime' => $event->response_time,
                 ];
             })
@@ -164,7 +161,7 @@ class ReportsController extends Controller
             ->get()
             ->map(function ($stat) {
                 return [
-                    'category' => ucfirst($stat->category),
+                    'category' => $this->formatCategory($stat->category),
                     'total' => $stat->total,
                     'online' => $stat->online,
                     'offline' => $stat->offline,
@@ -221,23 +218,10 @@ class ReportsController extends Controller
         
         $totalDevices = $devices->count();
         
-        // Calculate average uptime from monitoring history
+        // Calculate average uptime from device uptime_percentage (same as device management)
         $avgUptime = 0;
         if ($totalDevices > 0) {
-            $uptimeSum = 0;
-            foreach ($devices as $device) {
-                $history = MonitoringHistory::where('device_id', $device->id)
-                    ->where('checked_at', '>=', $startDate)
-                    ->get();
-                
-                $totalChecks = $history->count();
-                if ($totalChecks > 0) {
-                    $onlineChecks = $history->where('status', 'online')->count();
-                    $uptimeSum += ($onlineChecks / $totalChecks) * 100;
-                } else {
-                    $uptimeSum += $device->uptime_percentage;
-                }
-            }
+            $uptimeSum = $devices->sum('uptime_percentage');
             $avgUptime = round($uptimeSum / $totalDevices, 2);
         }
         
@@ -289,6 +273,19 @@ class ReportsController extends Controller
             '30days' => Carbon::now()->subMonth(),
             '90days' => Carbon::now()->subDays(90),
             default => Carbon::now()->subWeek(),
+        };
+    }
+    
+    /**
+     * Format category name for display
+     */
+    private function formatCategory($category)
+    {
+        return match(strtolower($category)) {
+            'tas' => 'TAS',
+            'cctv' => 'CCTV',
+            'wifi' => 'WiFi',
+            default => ucfirst($category),
         };
     }
 }

@@ -89,15 +89,15 @@ export default function Reports() {
         ? uptimeStats 
         : uptimeStats.filter(stat => stat.category === selectedCategory);
 
-    const categories = ['all', 'Switches', 'Servers', 'Wifi', 'Tas', 'Cctv'];
+    const categories = ['all', 'Switches', 'Servers', 'WiFi', 'TAS', 'CCTV'];
 
     // Calculate category statistics
     const categoryStats = {
         Switches: uptimeStats.filter(s => s.category === 'Switches'),
         Servers: uptimeStats.filter(s => s.category === 'Servers'),
-        Wifi: uptimeStats.filter(s => s.category === 'Wifi'),
-        Tas: uptimeStats.filter(s => s.category === 'Tas'),
-        Cctv: uptimeStats.filter(s => s.category === 'Cctv'),
+        WiFi: uptimeStats.filter(s => s.category === 'WiFi'),
+        TAS: uptimeStats.filter(s => s.category === 'TAS'),
+        CCTV: uptimeStats.filter(s => s.category === 'CCTV'),
     };
 
     const getUptimeClass = (uptime: number) => {
@@ -515,7 +515,7 @@ export default function Reports() {
                         const colors = getUptimeColors(parseFloat(avgUptime));
                         
                         return (
-                            <div key={category} className={`rounded-xl border ${colors.bg} p-4 shadow-md print:shadow-none`}>
+                            <div key={category} className={`rounded-xl border border-slate-200 dark:border-slate-700 ${colors.bg} p-4 shadow-md print:shadow-none`}>
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <h3 className="text-sm font-bold text-slate-900 dark:text-white">{category}</h3>

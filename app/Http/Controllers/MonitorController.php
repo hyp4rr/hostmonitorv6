@@ -226,7 +226,7 @@ class MonitorController extends Controller
             ->get()
             ->map(function ($item) use ($totalDevices) {
                 return [
-                    'type' => ucfirst($item->category),
+                    'type' => $this->formatCategory($item->category),
                     'count' => $item->count,
                     'percentage' => $totalDevices > 0 ? round(($item->count / $totalDevices) * 100, 1) : 0,
                     'color' => $this->getCategoryColor($item->category)
@@ -414,5 +414,18 @@ class MonitorController extends Controller
             'offlineDevices' => $devices->where('status', 'offline')->count(),
             'warningDevices' => $devices->where('status', 'warning')->count(),
         ];
+    }
+    
+    /**
+     * Format category name for display
+     */
+    private function formatCategory($category)
+    {
+        return match(strtolower($category)) {
+            'tas' => 'TAS',
+            'cctv' => 'CCTV',
+            'wifi' => 'WiFi',
+            default => ucfirst($category),
+        };
     }
 }

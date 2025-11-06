@@ -54,6 +54,9 @@ Route::post('/devices/ping-branch', [DeviceController::class, 'pingBranch']);
 // Acknowledge offline
 Route::post('/devices/{id}/acknowledge-offline', [DeviceController::class, 'acknowledgeOffline']);
 
+// Reset all uptimes
+Route::post('/devices/reset-uptimes', [DeviceController::class, 'resetUptimes']);
+
 Route::get('hardware/brands', [BrandController::class, 'index']);
 Route::get('hardware/models', [ModelController::class, 'index']);
 

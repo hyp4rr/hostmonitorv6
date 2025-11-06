@@ -66,6 +66,8 @@ export default function MonitorLayout({ children, title }: MonitorLayoutProps) {
     const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
     const [acknowledgeReason, setAcknowledgeReason] = useState('');
     const [showBranchMenu, setShowBranchMenu] = useState(false);
+    const [logoClickCount, setLogoClickCount] = useState(0);
+    const [logoClickTimer, setLogoClickTimer] = useState<NodeJS.Timeout | null>(null);
     
     // Get branch data from Inertia page props
     const { currentBranch } = usePage<PageProps>().props;
@@ -88,6 +90,58 @@ export default function MonitorLayout({ children, title }: MonitorLayoutProps) {
         });
         
         setShowBranchMenu(false);
+    };
+    
+    // Handle logo triple-click to reset all uptimes
+    const handleLogoClick = () => {
+        const newCount = logoClickCount + 1;
+        setLogoClickCount(newCount);
+        
+        // Clear existing timer
+        if (logoClickTimer) {
+            clearTimeout(logoClickTimer);
+        }
+        
+        // If 3 clicks, reset uptimes
+        if (newCount === 3) {
+            resetAllUptimes();
+            setLogoClickCount(0);
+            setLogoClickTimer(null);
+        } else {
+            // Reset counter after 1 second
+            const timer = setTimeout(() => {
+                setLogoClickCount(0);
+                setLogoClickTimer(null);
+            }, 1000);
+            setLogoClickTimer(timer);
+        }
+    };
+    
+    // Reset all device uptimes to 100%
+    const resetAllUptimes = async () => {
+        try {
+            const response = await fetch('/api/devices/reset-uptimes', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                credentials: 'same-origin',
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                // Show success message
+                alert(`✅ Reset Complete!\n\n• ${data.devices_updated} devices set to 100% uptime\n• ${data.history_cleared} monitoring records cleared\n• Reports will now show fresh data`);
+                // Reload the page to show updated data
+                router.reload();
+            } else {
+                alert('Failed to reset uptimes. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error resetting uptimes:', error);
+            alert('An error occurred while resetting uptimes.');
+        }
     };
     
     // Fetch real alerts from API
@@ -213,9 +267,18 @@ export default function MonitorLayout({ children, title }: MonitorLayoutProps) {
                     }`}
                 >
                     <div className="flex h-16 items-center justify-between border-b border-slate-200/50 px-4 dark:border-slate-700/50">
-                        <h1 className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-xl font-bold text-transparent dark:from-blue-400 dark:to-indigo-400">
-                            Host Monitor
-                        </h1>
+                        <div className="flex items-center gap-3">
+                            <img 
+                                src="/images/logo.png" 
+                                alt="Host Monitor Logo" 
+                                className="size-10 cursor-pointer object-contain transition-transform hover:scale-110"
+                                onClick={handleLogoClick}
+                                title="Click 3 times to reset all uptimes"
+                            />
+                            <h1 className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-xl font-bold text-transparent dark:from-blue-400 dark:to-indigo-400">
+                                Host Monitor
+                            </h1>
+                        </div>
                         <button
                             onClick={() => setSidebarOpen(false)}
                             className="rounded-lg p-2 text-slate-500 transition-all hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
@@ -247,11 +310,20 @@ export default function MonitorLayout({ children, title }: MonitorLayoutProps) {
                     }`}
                 >
                     <div className="flex h-16 items-center justify-between border-b border-slate-200/50 px-4 dark:border-slate-700/50">
-                        {!sidebarCollapsed && (
-                            <h1 className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-xl font-bold text-transparent dark:from-blue-400 dark:to-indigo-400">
-                                Host Monitor
-                            </h1>
-                        )}
+                        <div className="flex items-center gap-3">
+                            <img 
+                                src="/images/logo.png" 
+                                alt="Host Monitor Logo" 
+                                className="size-10 cursor-pointer object-contain transition-transform hover:scale-110"
+                                onClick={handleLogoClick}
+                                title="Click 3 times to reset all uptimes"
+                            />
+                            {!sidebarCollapsed && (
+                                <h1 className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-xl font-bold text-transparent dark:from-blue-400 dark:to-indigo-400">
+                                    Host Monitor
+                                </h1>
+                            )}
+                        </div>
                         <button
                             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
                             className="rounded-lg p-2 text-slate-500 transition-all hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"

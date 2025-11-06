@@ -15,6 +15,7 @@ import {
     ChevronUp,
     CheckCircle2,
     RefreshCw,
+    Search,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTranslation } from '@/contexts/i18n-context';
@@ -24,6 +25,18 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import type { CurrentBranch } from '@/types/branch';
 import { PageProps } from '@/types';
+
+// Helper function to format category display
+const formatCategory = (category: string): string => {
+    const formatted: Record<string, string> = {
+        'tas': 'TAS',
+        'cctv': 'CCTV',
+        'wifi': 'WiFi',
+        'switches': 'Switches',
+        'servers': 'Servers',
+    };
+    return formatted[category.toLowerCase()] || category.charAt(0).toUpperCase() + category.slice(1);
+};
 
 interface Device {
     id: number;
@@ -166,6 +179,20 @@ export default function Configuration() {
     const [models, setModels] = useState<Model[]>([]);
     const [activityHistory, setActivityHistory] = useState<ActivityLog[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+
+    // Filter and search state
+    const [deviceSearchTerm, setDeviceSearchTerm] = useState('');
+    const [deviceStatusFilter, setDeviceStatusFilter] = useState<string>('all');
+    const [deviceCategoryFilter, setDeviceCategoryFilter] = useState<string>('all');
+    const [alertSearchTerm, setAlertSearchTerm] = useState('');
+    const [alertStatusFilter, setAlertStatusFilter] = useState<string>('all');
+    const [alertSeverityFilter, setAlertSeverityFilter] = useState<string>('all');
+
+    // Sorting state
+    const [deviceSortField, setDeviceSortField] = useState<string>('name');
+    const [deviceSortDirection, setDeviceSortDirection] = useState<'asc' | 'desc'>('asc');
+    const [alertSortField, setAlertSortField] = useState<string>('triggered_at');
+    const [alertSortDirection, setAlertSortDirection] = useState<'asc' | 'desc'>('desc');
 
     // Fetch data when entity changes
     useEffect(() => {
@@ -436,6 +463,66 @@ export default function Configuration() {
         return () => window.removeEventListener('error', handleError);
     }, []);
 
+    // Filter and sort devices
+    const filteredDevices = devices.filter(device => {
+        const matchesSearch = deviceSearchTerm === '' || 
+            device.name.toLowerCase().includes(deviceSearchTerm.toLowerCase()) ||
+            device.ip_address.toLowerCase().includes(deviceSearchTerm.toLowerCase()) ||
+            (device.barcode && device.barcode.toLowerCase().includes(deviceSearchTerm.toLowerCase()));
+        
+        const matchesStatus = deviceStatusFilter === 'all' || device.status === deviceStatusFilter;
+        const matchesCategory = deviceCategoryFilter === 'all' || device.category === deviceCategoryFilter;
+        
+        return matchesSearch && matchesStatus && matchesCategory;
+    }).sort((a, b) => {
+        let aVal = a[deviceSortField as keyof Device];
+        let bVal = b[deviceSortField as keyof Device];
+        
+        // Handle null/undefined values
+        if (aVal === null || aVal === undefined) return 1;
+        if (bVal === null || bVal === undefined) return -1;
+        
+        // Convert to string for comparison
+        aVal = String(aVal).toLowerCase();
+        bVal = String(bVal).toLowerCase();
+        
+        if (deviceSortDirection === 'asc') {
+            return aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+        } else {
+            return aVal > bVal ? -1 : aVal < bVal ? 1 : 0;
+        }
+    });
+
+    // Filter and sort alerts
+    const filteredAlerts = alerts.filter(alert => {
+        const matchesSearch = alertSearchTerm === '' || 
+            alert.title.toLowerCase().includes(alertSearchTerm.toLowerCase()) ||
+            alert.message.toLowerCase().includes(alertSearchTerm.toLowerCase()) ||
+            (alert.device?.name && alert.device.name.toLowerCase().includes(alertSearchTerm.toLowerCase()));
+        
+        const matchesStatus = alertStatusFilter === 'all' || alert.status === alertStatusFilter;
+        const matchesSeverity = alertSeverityFilter === 'all' || alert.severity === alertSeverityFilter;
+        
+        return matchesSearch && matchesStatus && matchesSeverity;
+    }).sort((a, b) => {
+        let aVal = a[alertSortField as keyof Alert];
+        let bVal = b[alertSortField as keyof Alert];
+        
+        // Handle null/undefined values
+        if (aVal === null || aVal === undefined) return 1;
+        if (bVal === null || bVal === undefined) return -1;
+        
+        // Convert to string for comparison
+        aVal = String(aVal).toLowerCase();
+        bVal = String(bVal).toLowerCase();
+        
+        if (alertSortDirection === 'asc') {
+            return aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+        } else {
+            return aVal > bVal ? -1 : aVal < bVal ? 1 : 0;
+        }
+    });
+
     // Main configuration interface
     return (
         <MonitorLayout title={t('config.title')}>
@@ -544,19 +631,127 @@ export default function Configuration() {
                                     />
                                 )}
                                 {selectedEntity === 'devices' && (
-                                    <DevicesTable
-                                        devices={devices}
-                                        onEdit={handleEdit}
-                                        onDelete={handleDelete}
-                                        onAcknowledgeOffline={handleAcknowledgeOffline}
-                                    />
+                                    <>
+                                        {/* Device Filters */}
+                                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                            <div className="relative flex-1">
+                                                <Search className="absolute left-3 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+                                                <input
+                                                    type="text"
+                                                    placeholder="Search devices by name, IP, or barcode..."
+                                                    value={deviceSearchTerm}
+                                                    onChange={(e) => setDeviceSearchTerm(e.target.value)}
+                                                    className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                                />
+                                            </div>
+                                            
+                                            <div className="flex gap-2">
+                                                <select
+                                                    value={deviceCategoryFilter}
+                                                    onChange={(e) => setDeviceCategoryFilter(e.target.value)}
+                                                    className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                                >
+                                                    <option value="all">All Categories</option>
+                                                    <option value="switches">Switches</option>
+                                                    <option value="servers">Servers</option>
+                                                    <option value="wifi">WiFi</option>
+                                                    <option value="tas">TAS</option>
+                                                    <option value="cctv">CCTV</option>
+                                                </select>
+                                                
+                                                <select
+                                                    value={deviceStatusFilter}
+                                                    onChange={(e) => setDeviceStatusFilter(e.target.value)}
+                                                    className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                                >
+                                                    <option value="all">All Status</option>
+                                                    <option value="online">Online</option>
+                                                    <option value="warning">Warning</option>
+                                                    <option value="offline">Offline</option>
+                                                    <option value="offline_ack">Acknowledged</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <DevicesTable
+                                            devices={filteredDevices}
+                                            onEdit={handleEdit}
+                                            onDelete={handleDelete}
+                                            onAcknowledgeOffline={handleAcknowledgeOffline}
+                                            sortField={deviceSortField}
+                                            sortDirection={deviceSortDirection}
+                                            onSort={(field) => {
+                                                if (deviceSortField === field) {
+                                                    setDeviceSortDirection(deviceSortDirection === 'asc' ? 'desc' : 'asc');
+                                                } else {
+                                                    setDeviceSortField(field);
+                                                    setDeviceSortDirection('asc');
+                                                }
+                                            }}
+                                        />
+                                        <div className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                                            Showing {filteredDevices.length} of {devices.length} devices
+                                        </div>
+                                    </>
                                 )}
                                 {selectedEntity === 'alerts' && (
-                                    <AlertsTable
-                                        alerts={alerts}
-                                        onEdit={handleEdit}
-                                        onDelete={handleDelete}
-                                    />
+                                    <>
+                                        {/* Alert Filters */}
+                                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                            <div className="relative flex-1">
+                                                <Search className="absolute left-3 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+                                                <input
+                                                    type="text"
+                                                    placeholder="Search alerts..."
+                                                    value={alertSearchTerm}
+                                                    onChange={(e) => setAlertSearchTerm(e.target.value)}
+                                                    className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                                />
+                                            </div>
+                                            
+                                            <div className="flex gap-2">
+                                                <select
+                                                    value={alertSeverityFilter}
+                                                    onChange={(e) => setAlertSeverityFilter(e.target.value)}
+                                                    className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                                >
+                                                    <option value="all">All Severities</option>
+                                                    <option value="critical">Critical</option>
+                                                    <option value="high">High</option>
+                                                    <option value="medium">Medium</option>
+                                                    <option value="low">Low</option>
+                                                </select>
+                                                
+                                                <select
+                                                    value={alertStatusFilter}
+                                                    onChange={(e) => setAlertStatusFilter(e.target.value)}
+                                                    className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                                >
+                                                    <option value="all">All Status</option>
+                                                    <option value="active">Active</option>
+                                                    <option value="acknowledged">Acknowledged</option>
+                                                    <option value="resolved">Resolved</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <AlertsTable
+                                            alerts={filteredAlerts}
+                                            onEdit={handleEdit}
+                                            onDelete={handleDelete}
+                                            sortField={alertSortField}
+                                            sortDirection={alertSortDirection}
+                                            onSort={(field) => {
+                                                if (alertSortField === field) {
+                                                    setAlertSortDirection(alertSortDirection === 'asc' ? 'desc' : 'asc');
+                                                } else {
+                                                    setAlertSortField(field);
+                                                    setAlertSortDirection('asc');
+                                                }
+                                            }}
+                                        />
+                                        <div className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                                            Showing {filteredAlerts.length} of {alerts.length} alerts
+                                        </div>
+                                    </>
                                 )}
                                 {selectedEntity === 'locations' && (
                                     <LocationsTable
@@ -690,11 +885,17 @@ function DevicesTable({
     onEdit,
     onDelete,
     onAcknowledgeOffline,
+    sortField,
+    sortDirection,
+    onSort,
 }: {
     devices: Device[];
     onEdit: (device: Device) => void;
     onDelete: (device: Device) => void;
     onAcknowledgeOffline: (device: Device) => void;
+    sortField: string;
+    sortDirection: 'asc' | 'desc';
+    onSort: (field: string) => void;
 }) {
     if (devices.length === 0) {
         return (
@@ -712,10 +913,58 @@ function DevicesTable({
         <table className="w-full">
             <thead className="bg-slate-50 dark:bg-slate-900">
                 <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">IP Address</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Category</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Status</th>
+                    <th
+                        onClick={() => onSort('name')}
+                        className="cursor-pointer px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                    >
+                        <div className="flex items-center gap-1">
+                            Name
+                            {sortField === 'name' && (
+                                <span className="text-blue-600 dark:text-blue-400">
+                                    {sortDirection === 'asc' ? '↑' : '↓'}
+                                </span>
+                            )}
+                        </div>
+                    </th>
+                    <th
+                        onClick={() => onSort('ip_address')}
+                        className="cursor-pointer px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                    >
+                        <div className="flex items-center gap-1">
+                            IP Address
+                            {sortField === 'ip_address' && (
+                                <span className="text-blue-600 dark:text-blue-400">
+                                    {sortDirection === 'asc' ? '↑' : '↓'}
+                                </span>
+                            )}
+                        </div>
+                    </th>
+                    <th
+                        onClick={() => onSort('category')}
+                        className="cursor-pointer px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                    >
+                        <div className="flex items-center gap-1">
+                            Category
+                            {sortField === 'category' && (
+                                <span className="text-blue-600 dark:text-blue-400">
+                                    {sortDirection === 'asc' ? '↑' : '↓'}
+                                </span>
+                            )}
+                        </div>
+                    </th>
+                    <th
+                        onClick={() => onSort('status')}
+                        className="cursor-pointer px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                    >
+                        <div className="flex items-center gap-1">
+                            Status
+                            {sortField === 'status' && (
+                                <span className="text-blue-600 dark:text-blue-400">
+                                    {sortDirection === 'asc' ? '↑' : '↓'}
+                                </span>
+                            )}
+                        </div>
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Branch</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Location</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Brand/Model</th>
@@ -733,7 +982,7 @@ function DevicesTable({
                         </td>
                         <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
                             <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium dark:bg-slate-700">
-                                {device.category}
+                                {formatCategory(device.category)}
                             </span>
                         </td>
                         <td className="px-6 py-4">
@@ -826,10 +1075,16 @@ function AlertsTable({
     alerts,
     onEdit,
     onDelete,
+    sortField,
+    sortDirection,
+    onSort,
 }: {
     alerts: Alert[];
     onEdit: (alert: Alert) => void;
     onDelete: (alert: Alert) => void;
+    sortField: string;
+    sortDirection: 'asc' | 'desc';
+    onSort: (field: string) => void;
 }) {
     if (alerts.length === 0) {
         return (
@@ -845,9 +1100,45 @@ function AlertsTable({
             <thead className="bg-slate-50 dark:bg-slate-900">
                 <tr>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Device</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Title</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Severity</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Status</th>
+                    <th
+                        onClick={() => onSort('title')}
+                        className="cursor-pointer px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                    >
+                        <div className="flex items-center gap-1">
+                            Title
+                            {sortField === 'title' && (
+                                <span className="text-blue-600 dark:text-blue-400">
+                                    {sortDirection === 'asc' ? '↑' : '↓'}
+                                </span>
+                            )}
+                        </div>
+                    </th>
+                    <th
+                        onClick={() => onSort('severity')}
+                        className="cursor-pointer px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                    >
+                        <div className="flex items-center gap-1">
+                            Severity
+                            {sortField === 'severity' && (
+                                <span className="text-blue-600 dark:text-blue-400">
+                                    {sortDirection === 'asc' ? '↑' : '↓'}
+                                </span>
+                            )}
+                        </div>
+                    </th>
+                    <th
+                        onClick={() => onSort('status')}
+                        className="cursor-pointer px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                    >
+                        <div className="flex items-center gap-1">
+                            Status
+                            {sortField === 'status' && (
+                                <span className="text-blue-600 dark:text-blue-400">
+                                    {sortDirection === 'asc' ? '↑' : '↓'}
+                                </span>
+                            )}
+                        </div>
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Acknowledged</th>
                     <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Actions</th>
                 </tr>
@@ -1519,12 +1810,20 @@ function EntityForm({
             const locationData = data as Location;
             return locationData.latitude?.toString() || '';
         }
+        // Default to UTHM Parit Raja coordinates when creating new location
+        if (entity === 'locations' && mode === 'create') {
+            return '1.8655';
+        }
         return '';
     });
     const [longitude, setLongitude] = useState<string>(() => {
         if (entity === 'locations' && data) {
             const locationData = data as Location;
             return locationData.longitude?.toString() || '';
+        }
+        // Default to UTHM Parit Raja coordinates when creating new location
+        if (entity === 'locations' && mode === 'create') {
+            return '103.0850';
         }
         return '';
     });

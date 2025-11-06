@@ -789,7 +789,7 @@ export default function Maps() {
                                                 </div>
                                                 
                                                 {isSelected && (
-                                                    <div className="mt-3 space-y-1 border-t border-slate-200/50 pt-3 dark:border-slate-700/50">
+                                                    <div className="mt-3 max-h-[280px] space-y-1 overflow-y-auto border-t border-slate-200/50 pt-3 dark:border-slate-700/50">
                                                         {location.devices.map((device, deviceIdx) => (
                                                             <div key={deviceIdx} className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs dark:bg-slate-900">
                                                                 <Server className="size-3 text-blue-600 dark:text-blue-400" />

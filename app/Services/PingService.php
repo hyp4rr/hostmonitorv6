@@ -147,24 +147,18 @@ class PingService
     }
 
     /**
-     * Ping multiple devices
+     * Ping multiple devices (optimized with parallel execution)
      */
     public function pingMultipleDevices(array $deviceIds): array
     {
-        $results = [];
+        $devices = Device::whereIn('id', $deviceIds)->get();
         
-        foreach ($deviceIds as $deviceId) {
-            $device = Device::find($deviceId);
-            if ($device) {
-                $results[] = $this->pingDevice($device);
-            }
-        }
-
-        return $results;
+        // Use parallel pinging for better performance
+        return $this->pingDevicesInParallel($devices);
     }
 
     /**
-     * Ping all devices in a branch
+     * Ping all devices in a branch (optimized with parallel execution)
      */
     public function pingBranchDevices(int $branchId): array
     {
@@ -172,11 +166,141 @@ class PingService
             ->where('is_active', true)
             ->get();
 
-        $results = [];
-        foreach ($devices as $device) {
-            $results[] = $this->pingDevice($device);
-        }
+        // Use parallel pinging for better performance
+        return $this->pingDevicesInParallel($devices);
+    }
 
+    /**
+     * Ping multiple devices in parallel for faster execution
+     */
+    private function pingDevicesInParallel($devices): array
+    {
+        $results = [];
+        $processes = [];
+        $deviceMap = [];
+        
+        $isWindows = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
+        
+        // Start all ping processes in parallel
+        foreach ($devices as $device) {
+            // Skip acknowledged offline devices
+            if ($device->status === 'offline_ack') {
+                $results[] = [
+                    'device_id' => $device->id,
+                    'status' => 'offline_ack',
+                    'response_time' => null,
+                    'message' => 'Device is acknowledged as offline, skipping ping'
+                ];
+                continue;
+            }
+            
+            $startTime = microtime(true);
+            
+            // Build ping command with shorter timeout for speed
+            if ($isWindows) {
+                $command = sprintf('ping -n 1 -w 500 %s 2>&1', escapeshellarg($device->ip_address));
+            } else {
+                $command = sprintf('ping -c 1 -W 1 %s 2>&1', escapeshellarg($device->ip_address));
+            }
+            
+            // Start process in background
+            $descriptors = [
+                0 => ['pipe', 'r'],
+                1 => ['pipe', 'w'],
+                2 => ['pipe', 'w']
+            ];
+            
+            $process = proc_open($command, $descriptors, $pipes);
+            
+            if (is_resource($process)) {
+                // Set non-blocking mode for faster reading
+                stream_set_blocking($pipes[1], false);
+                stream_set_blocking($pipes[2], false);
+                
+                $processes[] = [
+                    'process' => $process,
+                    'pipes' => $pipes,
+                    'device' => $device,
+                    'start_time' => $startTime
+                ];
+                
+                $deviceMap[$device->id] = count($processes) - 1;
+            }
+        }
+        
+        // Collect results from all processes
+        foreach ($processes as $procData) {
+            $output = stream_get_contents($procData['pipes'][1]);
+            fclose($procData['pipes'][0]);
+            fclose($procData['pipes'][1]);
+            fclose($procData['pipes'][2]);
+            
+            $returnCode = proc_close($procData['process']);
+            $device = $procData['device'];
+            $endTime = microtime(true);
+            
+            $responseTime = round(($endTime - $procData['start_time']) * 1000, 2);
+            $status = 'offline';
+            
+            if ($returnCode === 0) {
+                $status = 'online';
+                
+                // Extract actual ping time
+                if ($isWindows) {
+                    if (preg_match('/time[=<](\d+)ms/i', $output, $matches)) {
+                        $responseTime = (float)$matches[1];
+                    }
+                } else {
+                    if (preg_match('/time=([\d.]+)\s*ms/i', $output, $matches)) {
+                        $responseTime = (float)$matches[1];
+                    }
+                }
+            }
+            
+            // Update device status
+            $oldStatus = $device->status;
+            $device->status = $status;
+            $device->response_time = $responseTime;
+            $device->last_ping = now();
+            
+            // Track offline duration
+            if ($status === 'offline') {
+                if ($oldStatus !== 'offline' && $oldStatus !== 'offline_ack') {
+                    $device->offline_since = now();
+                    $device->offline_duration_minutes = 0;
+                    $device->offline_alert_sent = false;
+                } elseif ($device->offline_since) {
+                    $device->offline_duration_minutes = abs(now()->diffInMinutes($device->offline_since));
+                    
+                    // Create alert if offline for more than 2 minutes
+                    if ($device->offline_duration_minutes >= 2 && !$device->offline_alert_sent) {
+                        $this->createOfflineAlert($device);
+                        $device->offline_alert_sent = true;
+                    }
+                }
+            } else {
+                // Device is back online
+                if ($oldStatus === 'offline' || $oldStatus === 'offline_ack') {
+                    $device->offline_since = null;
+                    $device->offline_duration_minutes = null;
+                    $device->offline_alert_sent = false;
+                }
+            }
+            
+            $device->save();
+            
+            // Log monitoring history
+            $this->logMonitoringHistory($device, $status, $responseTime);
+            
+            $results[] = [
+                'device_id' => $device->id,
+                'status' => $status,
+                'response_time' => $responseTime,
+                'old_status' => $oldStatus,
+                'status_changed' => ($oldStatus !== $status)
+            ];
+        }
+        
         return $results;
     }
 
@@ -267,7 +391,7 @@ class PingService
                     'category' => $device->category,
                     'severity' => 'high',
                     'title' => "Device Offline: {$device->name}",
-                    'message' => "Device {$device->name} ({$device->ip_address}) has been offline for {$device->offline_duration_minutes} minutes.",
+                    'message' => "Device {$device->name} ({$device->ip_address}) has been offline for " . round($device->offline_duration_minutes) . " minutes.",
                     'status' => 'active',
                     'triggered_at' => now(),
                 ]);
