@@ -1,0 +1,11 @@
+location,name,ip_address,status,response_time
+A5,WiFi AP Floor 1-1,10.8.10.1,online,5
+A5,WiFi AP Floor 1-2,10.8.10.2,online,5
+A5,WiFi AP Floor 2-1,10.8.10.3,online,6
+A5,WiFi AP Floor 2-2,10.8.10.4,online,6
+A5,WiFi AP Floor 3-1,10.8.10.5,online,7
+A5,WiFi AP Floor 3-2,10.8.10.6,online,7
+A5,WiFi AP Lobby,10.8.10.10,online,4
+A5,WiFi AP Conference Room,10.8.10.11,online,4
+A5,WiFi AP Library,10.8.10.12,online,5
+A5,WiFi AP Cafeteria,10.8.10.13,online,5

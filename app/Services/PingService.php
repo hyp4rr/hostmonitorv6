@@ -292,6 +292,9 @@ class PingService
             // Log monitoring history
             $this->logMonitoringHistory($device, $status, $responseTime);
             
+            // Update uptime percentage
+            $this->updateUptimePercentage($device);
+            
             $results[] = [
                 'device_id' => $device->id,
                 'status' => $status,

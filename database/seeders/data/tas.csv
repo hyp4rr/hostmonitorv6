@@ -1,0 +1,11 @@
+location,name,ip_address,status,response_time
+A5,TAS Main Entrance,10.8.20.1,online,10
+A5,TAS Building A,10.8.20.2,online,12
+A5,TAS Building B,10.8.20.3,online,11
+A5,TAS Building C,10.8.20.4,online,13
+A5,TAS Staff Area,10.8.20.5,online,10
+A5,TAS Parking Gate 1,10.8.20.6,online,15
+A5,TAS Parking Gate 2,10.8.20.7,online,14
+A5,TAS Server Room,10.8.20.8,online,8
+A5,TAS Admin Office,10.8.20.9,online,9
+A5,TAS Security Post,10.8.20.10,online,11

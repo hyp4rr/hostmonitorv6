@@ -11,24 +11,31 @@ use App\Services\ActivityLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Cache;
 
 class DeviceController extends Controller
 {
     public function index(Request $request)
     {
         try {
-            $query = Device::with(['branch', 'location', 'hardwareDetail.brand', 'hardwareDetail.hardwareModel']);
+            $branchId = $request->input('branch_id', 'all');
+            $cacheKey = "devices.list.branch.{$branchId}";
             
-            // Filter by branch if provided
-            if ($request->has('branch_id')) {
-                $query->where('branch_id', $request->branch_id);
-            }
-            
-            $devices = $query->orderBy('name', 'asc')->get();
-            
-            // Transform the data to match frontend expectations
-            $transformedDevices = $devices->map(function ($device) {
-                return $this->transformDevice($device);
+            // Cache for 5 minutes (300 seconds)
+            $transformedDevices = Cache::remember($cacheKey, 300, function () use ($request) {
+                $query = Device::with(['branch', 'location', 'hardwareDetail.brand', 'hardwareDetail.hardwareModel']);
+                
+                // Filter by branch if provided
+                if ($request->has('branch_id')) {
+                    $query->where('branch_id', $request->branch_id);
+                }
+                
+                $devices = $query->orderBy('name', 'asc')->get();
+                
+                // Transform the data to match frontend expectations
+                return $devices->map(function ($device) {
+                    return $this->transformDevice($device);
+                });
             });
             
             return response()->json($transformedDevices);
@@ -91,6 +98,10 @@ class DeviceController extends Controller
             // Log activity
             $activityLog = new ActivityLogService();
             $activityLog->logDeviceCreated($device->id, $device->name, $device->branch_id);
+            
+            // Clear device cache
+            Cache::forget("devices.list.branch.{$device->branch_id}");
+            Cache::forget("devices.list.branch.all");
             
             return response()->json($this->transformDevice($device), 201);
         } catch (\Exception $e) {
@@ -164,6 +175,10 @@ class DeviceController extends Controller
                 $activityLog->logDeviceUpdated($device->id, $device->name, $changes, $device->branch_id);
             }
 
+            // Clear device cache
+            Cache::forget("devices.list.branch.{$device->branch_id}");
+            Cache::forget("devices.list.branch.all");
+
             return response()->json($this->transformDevice($device));
         } catch (\Exception $e) {
             Log::error('Error updating device: ' . $e->getMessage());
@@ -185,6 +200,10 @@ class DeviceController extends Controller
             // Log activity
             $activityLog = new ActivityLogService();
             $activityLog->logDeviceDeleted($id, $deviceName, $branchId);
+
+            // Clear device cache
+            Cache::forget("devices.list.branch.{$branchId}");
+            Cache::forget("devices.list.branch.all");
 
             return response()->json(['message' => 'Device deleted successfully']);
         } catch (\Exception $e) {

@@ -1,0 +1,11 @@
+location,name,ip_address,status,response_time
+A5,Switch Core 1,10.8.2.1,online,1
+A5,Switch Core 2,10.8.2.2,online,1
+A5,Switch Distribution 1,10.8.2.10,online,2
+A5,Switch Distribution 2,10.8.2.11,online,2
+A5,Switch Access 1,10.8.2.20,online,3
+A5,Switch Access 2,10.8.2.21,online,3
+A5,Switch Access 3,10.8.2.22,online,3
+A5,Switch Access 4,10.8.2.23,online,3
+A5,Switch Access 5,10.8.2.24,online,3
+A5,Switch Access 6,10.8.2.25,online,3
