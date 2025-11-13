@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Device;
+use App\Services\DeviceUptimeService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -29,19 +30,12 @@ class UpdateDeviceUptime extends Command
     {
         $this->info('Updating device uptime...');
 
-        // Increment uptime for online devices (status = 'online')
-        $onlineUpdated = DB::table('devices')
-            ->where('status', 'online')
-            ->increment('uptime_minutes', 1);
+        $uptimeService = new DeviceUptimeService();
+        
+        // Update all device uptimes using the service
+        $uptimeService->updateAllDeviceUptimes();
 
-        // Reset uptime to 0 for offline devices (status = 'offline' or 'offline_ack')
-        $offlineUpdated = DB::table('devices')
-            ->whereIn('status', ['offline', 'offline_ack'])
-            ->update(['uptime_minutes' => 0]);
-
-        $this->info("Updated {$onlineUpdated} online devices (incremented uptime)");
-        $this->info("Reset {$offlineUpdated} offline devices (uptime set to 0)");
-        $this->info('Device uptime update completed.');
+        $this->info('Device uptime update completed with proper percentage calculations.');
 
         return Command::SUCCESS;
     }

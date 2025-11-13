@@ -63,12 +63,22 @@ export default function Reports() {
     const [alertSummary, setAlertSummary] = useState<any>(null);
     const [summary, setSummary] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [allDevices, setAllDevices] = useState<any[]>([]);
 
     // Fetch real data from API
     useEffect(() => {
         if (!currentBranch?.id) return;
         
         setIsLoading(true);
+        
+        // Fetch devices for calculations
+        fetch(`/api/devices?branch_id=${currentBranch.id}&per_page=10000&include_inactive=true`)
+            .then(res => res.ok ? res.json() : { data: [] })
+            .then(responseData => {
+                const devices = responseData.data || responseData;
+                setAllDevices(devices);
+            })
+            .catch(err => console.error('Error fetching devices:', err));
         
         // Fetch summary
         fetch(`/api/reports/summary?branch_id=${currentBranch.id}&date_range=${dateRange}`)

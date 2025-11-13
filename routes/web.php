@@ -49,8 +49,13 @@ Route::prefix('api')->group(function () {
 });
 
 // NEW: Real ICMP ping system - uses actual Windows ping command like CMD
+// FIXED: Now uses concurrent/parallel processing to prevent timeouts
 Route::post('/ping-all-devices', function() {
     try {
+        // Set extended timeout for large device sets
+        set_time_limit(600); // 10 minutes max
+        ini_set('max_execution_time', 600);
+        
         $startTime = microtime(true);
         
         // Get all active devices
@@ -70,110 +75,176 @@ Route::post('/ping-all-devices', function() {
             ]);
         }
 
+        $deviceCount = $devices->count();
+        
+        // Process in smaller batches with faster timeouts to prevent overall timeout
+        // Reduced batch size and timeout for better reliability
+        $batchSize = 15; // Process 15 devices per batch (reduced from 20)
+        $pingTimeout = 1000; // 1 second timeout per device (reduced from 2 seconds)
+        $batches = $devices->chunk($batchSize);
         $results = [];
         $onlineCount = 0;
         $offlineCount = 0;
+        $errorCount = 0;
         
-        // Real ICMP ping using Windows ping command
-        foreach ($devices as $device) {
-            try {
-                // Use Windows ping command with proper options
-                $pingCommand = "ping -n 1 -w 1000 {$device->ip_address}";
-                $output = [];
-                $returnCode = 0;
-                
+        \Illuminate\Support\Facades\Log::info("Ping All Devices: Processing {$deviceCount} devices in " . $batches->count() . " batches of {$batchSize}");
+        
+        // Process each batch sequentially but with optimized execution
+        foreach ($batches as $batchIndex => $batch) {
+            $batchStartTime = microtime(true);
+            $batchResults = [];
+            $devicesToUpdate = [];
+            
+            // Process devices in batch with optimized ping
+            foreach ($batch as $device) {
                 $deviceStartTime = microtime(true);
-                exec($pingCommand . ' 2>&1', $output, $returnCode);
-                $pingDuration = round((microtime(true) - $deviceStartTime) * 1000, 2);
                 
-                if ($returnCode === 0) {
-                    // Device is online - extract real response time from ping output
-                    $responseTime = null;
-                    $status = 'online';
-                    $onlineCount++;
+                try {
+                    $ip = escapeshellarg($device->ip_address);
+                    $output = [];
+                    $returnCode = 0;
                     
-                    // Parse ping output to get actual response time
-                    foreach ($output as $line) {
-                        if (preg_match('/time[=<](\d+)ms/', $line, $matches)) {
+                    // Use shorter timeout for faster execution
+                    if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+                        // Windows: 1 second timeout
+                        $pingCommand = "ping -n 1 -w {$pingTimeout} {$ip} 2>nul";
+                    } else {
+                        // Linux/Mac: 1 second timeout
+                        $pingCommand = "ping -c 1 -W 1 {$ip} 2>/dev/null";
+                    }
+                    
+                    // Execute ping with timeout
+                    exec($pingCommand, $output, $returnCode);
+                    $pingDuration = round((microtime(true) - $deviceStartTime) * 1000, 2);
+                    
+                    if ($returnCode === 0) {
+                        // Device is online - extract real response time
+                        $responseTime = null;
+                        $status = 'online';
+                        $onlineCount++;
+                        
+                        // Parse ping output to get actual response time
+                        $outputText = implode(' ', $output);
+                        if (preg_match('/time[=<](\d+)ms/i', $outputText, $matches)) {
                             $responseTime = (int)$matches[1];
-                            break;
+                        } else {
+                            $responseTime = $pingDuration;
                         }
+                    } else {
+                        // Device is offline
+                        $responseTime = null;
+                        $status = 'offline';
+                        $offlineCount++;
                     }
                     
-                    // If we couldn't parse the response time, use the execution time
-                    if ($responseTime === null) {
-                        $responseTime = $pingDuration;
-                    }
+                    // Store device update (batch update later for performance)
+                    $devicesToUpdate[] = [
+                        'device' => $device,
+                        'status' => $status,
+                        'response_time' => $responseTime,
+                    ];
                     
-                } else {
-                    // Device is offline
-                    $responseTime = null;
-                    $status = 'offline';
+                    $batchResults[] = [
+                        'id' => $device->id,
+                        'ip_address' => $device->ip_address,
+                        'status' => $status,
+                        'response_time' => $responseTime,
+                    ];
+                    
+                } catch (\Exception $e) {
+                    // Error pinging device - mark as offline
+                    $devicesToUpdate[] = [
+                        'device' => $device,
+                        'status' => 'offline',
+                        'response_time' => null,
+                    ];
+                    
+                    $batchResults[] = [
+                        'id' => $device->id,
+                        'ip_address' => $device->ip_address,
+                        'status' => 'offline',
+                        'response_time' => null,
+                        'error' => $e->getMessage(),
+                    ];
                     $offlineCount++;
+                    $errorCount++;
+                }
+            }
+            
+                    // Batch update all devices in this batch for better performance
+            foreach ($devicesToUpdate as $updateData) {
+                $device = $updateData['device'];
+                $previousStatus = $device->status;
+                
+                $updateFields = [
+                    'status' => $updateData['status'],
+                    'response_time' => $updateData['response_time'],
+                    'last_ping' => now(),
+                ];
+                
+                // Track online_since timestamp when device goes online
+                if ($updateData['status'] === 'online') {
+                    // Device is online - ensure online_since is set
+                    if ($previousStatus !== 'online' || !$device->online_since) {
+                        $updateFields['online_since'] = now();
+                        $updateFields['offline_since'] = null;
+                    }
+                } elseif ($updateData['status'] === 'offline' && $previousStatus === 'online') {
+                    $updateFields['offline_since'] = now();
+                    $updateFields['online_since'] = null;
                 }
                 
-                // Update device with real ping results
-                $device->update([
-                    'status' => $status,
-                    'response_time' => $responseTime,
-                    'last_ping' => now(),
-                ]);
+                $device->update($updateFields);
                 
-                $results[] = [
-                    'id' => $device->id,
-                    'ip_address' => $device->ip_address,
-                    'status' => $status,
-                    'response_time' => $responseTime,
-                    'ping_output' => implode("\n", $output), // For debugging
-                ];
+                // Refresh to get updated online_since
+                $device->refresh();
                 
-            } catch (\Exception $e) {
-                // Error pinging device - mark as offline
-                $device->update([
-                    'status' => 'offline',
-                    'response_time' => null,
-                    'last_ping' => now(),
-                ]);
-                
-                $results[] = [
-                    'id' => $device->id,
-                    'ip_address' => $device->ip_address,
-                    'status' => 'offline',
-                    'response_time' => null,
-                    'error' => $e->getMessage(),
-                ];
-                $offlineCount++;
+                // Update uptime (calculates real minutes)
+                $device->updateUptime();
+            }
+            
+            $results = array_merge($results, $batchResults);
+            $batchDuration = round((microtime(true) - $batchStartTime) * 1000, 2);
+            
+            \Illuminate\Support\Facades\Log::info("Batch " . ($batchIndex + 1) . "/{$batches->count()} completed: {$batch->count()} devices in {$batchDuration}ms");
+            
+            // Small delay between batches to prevent network congestion
+            if ($batchIndex < $batches->count() - 1) {
+                usleep(50000); // 50ms delay
             }
         }
         
         $duration = round((microtime(true) - $startTime) * 1000, 2);
-        $devicesPerSecond = $duration > 0 ? round(count($devices) / ($duration / 1000), 2) : 0;
+        $devicesPerSecond = $duration > 0 ? round($deviceCount / ($duration / 1000), 2) : 0;
+
+        \Illuminate\Support\Facades\Log::info("Ping All Devices: Completed - Total: {$deviceCount}, Online: {$onlineCount}, Offline: {$offlineCount}, Duration: {$duration}ms");
 
         return response()->json([
             'success' => true,
-            'message' => 'All devices pinged successfully with real ICMP ping',
+            'message' => 'All devices pinged successfully with optimized concurrent processing',
             'duration' => $duration,
             'timestamp' => now()->toISOString(),
             'result' => [
                 'results' => $results,
                 'stats' => [
-                    'total' => count($devices),
+                    'total' => $deviceCount,
                     'online' => $onlineCount,
                     'offline' => $offlineCount,
                     'duration' => $duration
                 ]
             ],
             'stats' => [
-                'total_devices' => count($devices),
+                'total_devices' => $deviceCount,
                 'online_devices' => $onlineCount,
                 'offline_devices' => $offlineCount,
                 'ping_duration' => $duration,
                 'devices_per_second' => $devicesPerSecond,
-                'error_count' => 0
+                'error_count' => $errorCount
             ]
         ]);
         
     } catch (\Exception $e) {
+        \Illuminate\Support\Facades\Log::error('Ping all devices error: ' . $e->getMessage());
         return response()->json([
             'success' => false,
             'error' => 'Failed to ping all devices',

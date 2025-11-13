@@ -257,9 +257,16 @@ export default function Configuration() {
     const [deviceSearchTerm, setDeviceSearchTerm] = useState('');
     const [deviceStatusFilter, setDeviceStatusFilter] = useState<string>('all');
     const [deviceCategoryFilter, setDeviceCategoryFilter] = useState<string>('all');
+    const [deviceActiveFilter, setDeviceActiveFilter] = useState<string>('all'); // all, active, inactive
     const [alertSearchTerm, setAlertSearchTerm] = useState('');
     const [alertStatusFilter, setAlertStatusFilter] = useState<string>('all');
     const [alertSeverityFilter, setAlertSeverityFilter] = useState<string>('all');
+    const [locationSearchTerm, setLocationSearchTerm] = useState('');
+    const [branchSearchTerm, setBranchSearchTerm] = useState('');
+    const [branchActiveFilter, setBranchActiveFilter] = useState<string>('all');
+    const [userSearchTerm, setUserSearchTerm] = useState('');
+    const [brandSearchTerm, setBrandSearchTerm] = useState('');
+    const [modelSearchTerm, setModelSearchTerm] = useState('');
 
     // Sorting state
     const [deviceSortField, setDeviceSortField] = useState<string>('name');
@@ -278,6 +285,14 @@ export default function Configuration() {
     useEffect(() => {
         fetchData();
     }, [currentPage, perPage]);
+    
+    // Fetch data when device filters or sorting change (for backend filtering/sorting)
+    useEffect(() => {
+        if (selectedEntity === 'devices') {
+            setCurrentPage(1); // Reset to page 1 when filters or sorting change
+            fetchData();
+        }
+    }, [deviceSearchTerm, deviceStatusFilter, deviceCategoryFilter, deviceActiveFilter, deviceSortField, deviceSortDirection]);
 
     // Auto-refresh data every 30 seconds
     useEffect(() => {
@@ -319,6 +334,35 @@ export default function Configuration() {
             if (['devices', 'alerts', 'locations', 'users'].includes(selectedEntity)) {
                 params.append('page', currentPage.toString());
                 params.append('per_page', perPage.toString());
+            }
+            
+            // For devices in configuration panel, include inactive devices and pass filters
+            if (selectedEntity === 'devices') {
+                params.append('include_inactive', 'true');
+                
+                // Pass search filter to backend
+                if (deviceSearchTerm) {
+                    params.append('search', deviceSearchTerm);
+                }
+                
+                // Pass category filter to backend
+                if (deviceCategoryFilter !== 'all') {
+                    params.append('category', deviceCategoryFilter);
+                }
+                
+                // Pass status filter to backend
+                if (deviceStatusFilter !== 'all') {
+                    params.append('status', deviceStatusFilter);
+                }
+                
+                // Pass active filter to backend
+                if (deviceActiveFilter !== 'all') {
+                    params.append('active_filter', deviceActiveFilter);
+                }
+                
+                // Pass sort parameters to backend
+                params.append('sort_by', deviceSortField);
+                params.append('sort_order', deviceSortDirection);
             }
             
             if (params.toString()) {
@@ -633,16 +677,77 @@ export default function Configuration() {
         }
     };
 
+    // Filter other entities
+    const filteredDevices = devices.filter(device => {
+        const matchesSearch = deviceSearchTerm === '' || 
+            device.name.toLowerCase().includes(deviceSearchTerm.toLowerCase()) ||
+            device.ip_address.toLowerCase().includes(deviceSearchTerm.toLowerCase()) ||
+            (device.mac_address && device.mac_address.toLowerCase().includes(deviceSearchTerm.toLowerCase())) ||
+            (device.barcode && device.barcode.toLowerCase().includes(deviceSearchTerm.toLowerCase())) ||
+            (device.serial_number && device.serial_number.toLowerCase().includes(deviceSearchTerm.toLowerCase()));
+        
+        const matchesStatus = deviceStatusFilter === 'all' || 
+            (deviceStatusFilter === 'online' && device.status === 'online') ||
+            (deviceStatusFilter === 'warning' && device.status === 'warning') ||
+            (deviceStatusFilter === 'offline' && device.status === 'offline' && !device.offline_acknowledged) ||
+            (deviceStatusFilter === 'offline_ack' && device.status === 'offline' && device.offline_acknowledged);
+        
+        const matchesCategory = deviceCategoryFilter === 'all' || device.type === deviceCategoryFilter;
+        
+        const matchesActive = deviceActiveFilter === 'all' || 
+            (deviceActiveFilter === 'active' && device.is_active) ||
+            (deviceActiveFilter === 'inactive' && !device.is_active);
+        
+        return matchesSearch && matchesStatus && matchesCategory && matchesActive;
+    });
+
+    const filteredLocations = locations.filter(location => 
+        locationSearchTerm === '' || 
+        location.name.toLowerCase().includes(locationSearchTerm.toLowerCase()) ||
+        (location.description && location.description.toLowerCase().includes(locationSearchTerm.toLowerCase()))
+    );
+    
+    const filteredBranches = branches.filter(branch => {
+        const matchesSearch = branchSearchTerm === '' || 
+            branch.name.toLowerCase().includes(branchSearchTerm.toLowerCase()) ||
+            branch.code.toLowerCase().includes(branchSearchTerm.toLowerCase()) ||
+            (branch.description && branch.description.toLowerCase().includes(branchSearchTerm.toLowerCase()));
+        const matchesActive = branchActiveFilter === 'all' || 
+            (branchActiveFilter === 'active' && branch.is_active) ||
+            (branchActiveFilter === 'inactive' && !branch.is_active);
+        return matchesSearch && matchesActive;
+    });
+    
+    const filteredUsers = users.filter(user => 
+        userSearchTerm === '' || 
+        user.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+        (user.role && user.role.toLowerCase().includes(userSearchTerm.toLowerCase()))
+    );
+    
+    const filteredBrands = brands.filter(brand => 
+        brandSearchTerm === '' || 
+        brand.name.toLowerCase().includes(brandSearchTerm.toLowerCase()) ||
+        (brand.description && brand.description.toLowerCase().includes(brandSearchTerm.toLowerCase()))
+    );
+    
+    const filteredModels = models.filter(model => 
+        modelSearchTerm === '' || 
+        model.name.toLowerCase().includes(modelSearchTerm.toLowerCase()) ||
+        (model.description && model.description.toLowerCase().includes(modelSearchTerm.toLowerCase())) ||
+        (model.brand?.name && model.brand.name.toLowerCase().includes(modelSearchTerm.toLowerCase()))
+    );
+
     // Get current data based on selected entity
     const getCurrentData = () => {
         switch (selectedEntity) {
-            case 'branches': return branches;
+            case 'branches': return filteredBranches;
             case 'devices': return filteredDevices;
             case 'alerts': return filteredAlerts;
-            case 'locations': return locations;
-            case 'users': return users;
-            case 'brands': return brands;
-            case 'models': return models;
+            case 'locations': return filteredLocations;
+            case 'users': return filteredUsers;
+            case 'brands': return filteredBrands;
+            case 'models': return filteredModels;
             case 'history': return activityHistory;
             default: return [];
         }
@@ -720,35 +825,9 @@ export default function Configuration() {
         }
     }, [showModal, selectedEntity]);
 
-    // Filter and sort devices
-    const filteredDevices = devices.filter(device => {
-        const matchesSearch = deviceSearchTerm === '' || 
-            device.name.toLowerCase().includes(deviceSearchTerm.toLowerCase()) ||
-            device.ip_address.toLowerCase().includes(deviceSearchTerm.toLowerCase()) ||
-            (device.barcode && device.barcode.toLowerCase().includes(deviceSearchTerm.toLowerCase()));
-        
-        const matchesStatus = deviceStatusFilter === 'all' || device.status === deviceStatusFilter;
-        const matchesCategory = deviceCategoryFilter === 'all' || device.category === deviceCategoryFilter;
-        
-        return matchesSearch && matchesStatus && matchesCategory;
-    }).sort((a, b) => {
-        let aVal = a[deviceSortField as keyof Device];
-        let bVal = b[deviceSortField as keyof Device];
-        
-        // Handle null/undefined values
-        if (aVal === null || aVal === undefined) return 1;
-        if (bVal === null || bVal === undefined) return -1;
-        
-        // Convert to string for comparison
-        aVal = String(aVal).toLowerCase();
-        bVal = String(bVal).toLowerCase();
-        
-        if (deviceSortDirection === 'asc') {
-            return aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
-        } else {
-            return aVal > bVal ? -1 : aVal < bVal ? 1 : 0;
-        }
-    });
+    // Note: For devices, filtering and sorting are now done on the backend
+    // The devices array already contains filtered and sorted results for the current page
+    // Frontend filtering is removed for devices to enable global filtering across all pages
 
     // Filter and sort alerts
     const filteredAlerts = alerts.filter(alert => {
@@ -902,58 +981,149 @@ export default function Configuration() {
                         ) : (
                             <>
                                 {selectedEntity === 'branches' && (
-                                    <BranchesTable
-                                        branches={branches}
-                                        onEdit={handleEdit}
-                                        onDelete={handleDelete}
-                                        selectedIds={selectedIds}
-                                        onToggleSelection={toggleSelection}
-                                    />
+                                    <>
+                                        {/* Branch Filters */}
+                                        <div className="border-b border-slate-200/50 bg-gradient-to-r from-slate-50 to-slate-100 p-4 dark:border-slate-700/50 dark:from-slate-900/50 dark:to-slate-800/50">
+                                            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                                                <div className="relative flex-1">
+                                                    <Search className="absolute left-3 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Search by name, code, or description..."
+                                                        value={branchSearchTerm}
+                                                        onChange={(e) => setBranchSearchTerm(e.target.value)}
+                                                        className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm font-medium text-slate-900 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400"
+                                                    />
+                                                </div>
+                                                
+                                                <div className="flex flex-wrap gap-2">
+                                                    <select
+                                                        value={branchActiveFilter}
+                                                        onChange={(e) => setBranchActiveFilter(e.target.value)}
+                                                        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+                                                    >
+                                                        <option value="all">All Branches</option>
+                                                        <option value="active">Active Only</option>
+                                                        <option value="inactive">Inactive Only</option>
+                                                    </select>
+                                                    
+                                                    {(branchSearchTerm || branchActiveFilter !== 'all') && (
+                                                        <button
+                                                            onClick={() => {
+                                                                setBranchSearchTerm('');
+                                                                setBranchActiveFilter('all');
+                                                            }}
+                                                            className="flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 shadow-sm transition-all hover:bg-red-100 dark:border-red-700 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
+                                                        >
+                                                            <X className="size-4" />
+                                                            Clear Filters
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="mt-3 text-xs font-medium text-slate-600 dark:text-slate-400">
+                                                Showing {filteredBranches.length} of {branches.length} branch(es)
+                                                {filteredBranches.length !== branches.length && (
+                                                    <span className="ml-2 text-blue-600 dark:text-blue-400">
+                                                        ({branches.length - filteredBranches.length} hidden by filters)
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <BranchesTable
+                                            branches={filteredBranches}
+                                            onEdit={handleEdit}
+                                            onDelete={handleDelete}
+                                            selectedIds={selectedIds}
+                                            onToggleSelection={toggleSelection}
+                                        />
+                                    </>
                                 )}
                                 {selectedEntity === 'devices' && (
                                     <>
-                                        {/* Device Filters */}
-                                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                                            <div className="relative flex-1">
-                                                <Search className="absolute left-3 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
-                                                <input
-                                                    type="text"
-                                                    placeholder="Search devices by name, IP, or barcode..."
-                                                    value={deviceSearchTerm}
-                                                    onChange={(e) => setDeviceSearchTerm(e.target.value)}
-                                                    className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                                                />
+                                        {/* Device Filters - Enhanced */}
+                                        <div className="border-b border-slate-200/50 bg-gradient-to-r from-slate-50 to-slate-100 p-4 dark:border-slate-700/50 dark:from-slate-900/50 dark:to-slate-800/50">
+                                            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                                                {/* Search Bar */}
+                                                <div className="relative flex-1">
+                                                    <Search className="absolute left-3 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Search by name, IP, MAC, barcode, or serial number..."
+                                                        value={deviceSearchTerm}
+                                                        onChange={(e) => setDeviceSearchTerm(e.target.value)}
+                                                        className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm font-medium text-slate-900 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400"
+                                                    />
+                                                </div>
+                                                
+                                                {/* Filter Buttons */}
+                                                <div className="flex flex-wrap gap-2">
+                                                    <select
+                                                        value={deviceCategoryFilter}
+                                                        onChange={(e) => setDeviceCategoryFilter(e.target.value)}
+                                                        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+                                                    >
+                                                        <option value="all">All Categories</option>
+                                                        <option value="switches">Switches</option>
+                                                        <option value="servers">Servers</option>
+                                                        <option value="wifi">WiFi</option>
+                                                        <option value="tas">TAS</option>
+                                                        <option value="cctv">CCTV</option>
+                                                    </select>
+                                                    
+                                                    <select
+                                                        value={deviceStatusFilter}
+                                                        onChange={(e) => setDeviceStatusFilter(e.target.value)}
+                                                        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+                                                    >
+                                                        <option value="all">All Status</option>
+                                                        <option value="online">Online</option>
+                                                        <option value="warning">Warning</option>
+                                                        <option value="offline">Offline</option>
+                                                        <option value="offline_ack">Acknowledged</option>
+                                                    </select>
+                                                    
+                                                    <select
+                                                        value={deviceActiveFilter}
+                                                        onChange={(e) => setDeviceActiveFilter(e.target.value)}
+                                                        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+                                                    >
+                                                        <option value="all">All Devices</option>
+                                                        <option value="active">Active Only</option>
+                                                        <option value="inactive">Inactive Only</option>
+                                                    </select>
+                                                    
+                                                    {/* Clear Filters Button */}
+                                                    {(deviceSearchTerm || deviceStatusFilter !== 'all' || deviceCategoryFilter !== 'all' || deviceActiveFilter !== 'all') && (
+                                                        <button
+                                                            onClick={() => {
+                                                                setDeviceSearchTerm('');
+                                                                setDeviceStatusFilter('all');
+                                                                setDeviceCategoryFilter('all');
+                                                                setDeviceActiveFilter('all');
+                                                            }}
+                                                            className="flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 shadow-sm transition-all hover:bg-red-100 dark:border-red-700 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
+                                                        >
+                                                            <X className="size-4" />
+                                                            Clear Filters
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
                                             
-                                            <div className="flex gap-2">
-                                                <select
-                                                    value={deviceCategoryFilter}
-                                                    onChange={(e) => setDeviceCategoryFilter(e.target.value)}
-                                                    className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                                                >
-                                                    <option value="all">All Categories</option>
-                                                    <option value="switches">Switches</option>
-                                                    <option value="servers">Servers</option>
-                                                    <option value="wifi">WiFi</option>
-                                                    <option value="tas">TAS</option>
-                                                    <option value="cctv">CCTV</option>
-                                                </select>
-                                                
-                                                <select
-                                                    value={deviceStatusFilter}
-                                                    onChange={(e) => setDeviceStatusFilter(e.target.value)}
-                                                    className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                                                >
-                                                    <option value="all">All Status</option>
-                                                    <option value="online">Online</option>
-                                                    <option value="warning">Warning</option>
-                                                    <option value="offline">Offline</option>
-                                                    <option value="offline_ack">Acknowledged</option>
-                                                </select>
+                                            {/* Results Count */}
+                                            <div className="mt-3 text-xs font-medium text-slate-600 dark:text-slate-400">
+                                                Showing {devices.length} device(s) on this page
+                                                {totalItems > 0 && (
+                                                    <span className="ml-2 text-blue-600 dark:text-blue-400">
+                                                        (Total: {totalItems} device(s) matching filters across all pages)
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                         <DevicesTable
-                                            devices={filteredDevices}
+                                            devices={devices}
                                             onView={handleViewDevice}
                                             onEdit={handleEdit}
                                             onDelete={handleDelete}
@@ -984,42 +1154,67 @@ export default function Configuration() {
                                 )}
                                 {selectedEntity === 'alerts' && (
                                     <>
-                                        {/* Alert Filters */}
-                                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                                            <div className="relative flex-1">
-                                                <Search className="absolute left-3 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
-                                                <input
-                                                    type="text"
-                                                    placeholder="Search alerts..."
-                                                    value={alertSearchTerm}
-                                                    onChange={(e) => setAlertSearchTerm(e.target.value)}
-                                                    className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                                                />
+                                        {/* Alert Filters - Enhanced */}
+                                        <div className="border-b border-slate-200/50 bg-gradient-to-r from-slate-50 to-slate-100 p-4 dark:border-slate-700/50 dark:from-slate-900/50 dark:to-slate-800/50">
+                                            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                                                <div className="relative flex-1">
+                                                    <Search className="absolute left-3 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Search by title, message, or device name..."
+                                                        value={alertSearchTerm}
+                                                        onChange={(e) => setAlertSearchTerm(e.target.value)}
+                                                        className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm font-medium text-slate-900 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400"
+                                                    />
+                                                </div>
+                                                
+                                                <div className="flex flex-wrap gap-2">
+                                                    <select
+                                                        value={alertSeverityFilter}
+                                                        onChange={(e) => setAlertSeverityFilter(e.target.value)}
+                                                        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+                                                    >
+                                                        <option value="all">All Severities</option>
+                                                        <option value="critical">Critical</option>
+                                                        <option value="high">High</option>
+                                                        <option value="medium">Medium</option>
+                                                        <option value="low">Low</option>
+                                                    </select>
+                                                    
+                                                    <select
+                                                        value={alertStatusFilter}
+                                                        onChange={(e) => setAlertStatusFilter(e.target.value)}
+                                                        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+                                                    >
+                                                        <option value="all">All Status</option>
+                                                        <option value="active">Active</option>
+                                                        <option value="acknowledged">Acknowledged</option>
+                                                        <option value="resolved">Resolved</option>
+                                                    </select>
+                                                    
+                                                    {(alertSearchTerm || alertStatusFilter !== 'all' || alertSeverityFilter !== 'all') && (
+                                                        <button
+                                                            onClick={() => {
+                                                                setAlertSearchTerm('');
+                                                                setAlertStatusFilter('all');
+                                                                setAlertSeverityFilter('all');
+                                                            }}
+                                                            className="flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 shadow-sm transition-all hover:bg-red-100 dark:border-red-700 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
+                                                        >
+                                                            <X className="size-4" />
+                                                            Clear Filters
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
                                             
-                                            <div className="flex gap-2">
-                                                <select
-                                                    value={alertSeverityFilter}
-                                                    onChange={(e) => setAlertSeverityFilter(e.target.value)}
-                                                    className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                                                >
-                                                    <option value="all">All Severities</option>
-                                                    <option value="critical">Critical</option>
-                                                    <option value="high">High</option>
-                                                    <option value="medium">Medium</option>
-                                                    <option value="low">Low</option>
-                                                </select>
-                                                
-                                                <select
-                                                    value={alertStatusFilter}
-                                                    onChange={(e) => setAlertStatusFilter(e.target.value)}
-                                                    className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                                                >
-                                                    <option value="all">All Status</option>
-                                                    <option value="active">Active</option>
-                                                    <option value="acknowledged">Acknowledged</option>
-                                                    <option value="resolved">Resolved</option>
-                                                </select>
+                                            <div className="mt-3 text-xs font-medium text-slate-600 dark:text-slate-400">
+                                                Showing {filteredAlerts.length} of {alerts.length} alert(s)
+                                                {filteredAlerts.length !== alerts.length && (
+                                                    <span className="ml-2 text-blue-600 dark:text-blue-400">
+                                                        ({alerts.length - filteredAlerts.length} hidden by filters)
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                         <AlertsTable
@@ -1050,40 +1245,184 @@ export default function Configuration() {
                                     </>
                                 )}
                                 {selectedEntity === 'locations' && (
-                                    <LocationsTable
-                                        locations={locations}
-                                        onEdit={handleEdit}
-                                        onDelete={handleDelete}
-                                        selectedIds={selectedIds}
-                                        onToggleSelection={toggleSelection}
-                                    />
+                                    <>
+                                        {/* Location Filters */}
+                                        <div className="border-b border-slate-200/50 bg-gradient-to-r from-slate-50 to-slate-100 p-4 dark:border-slate-700/50 dark:from-slate-900/50 dark:to-slate-800/50">
+                                            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                                                <div className="relative flex-1">
+                                                    <Search className="absolute left-3 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Search by name or description..."
+                                                        value={locationSearchTerm}
+                                                        onChange={(e) => setLocationSearchTerm(e.target.value)}
+                                                        className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm font-medium text-slate-900 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400"
+                                                    />
+                                                </div>
+                                                
+                                                {locationSearchTerm && (
+                                                    <button
+                                                        onClick={() => setLocationSearchTerm('')}
+                                                        className="flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 shadow-sm transition-all hover:bg-red-100 dark:border-red-700 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
+                                                    >
+                                                        <X className="size-4" />
+                                                        Clear Search
+                                                    </button>
+                                                )}
+                                            </div>
+                                            
+                                            <div className="mt-3 text-xs font-medium text-slate-600 dark:text-slate-400">
+                                                Showing {filteredLocations.length} of {locations.length} location(s)
+                                                {filteredLocations.length !== locations.length && (
+                                                    <span className="ml-2 text-blue-600 dark:text-blue-400">
+                                                        ({locations.length - filteredLocations.length} hidden by filters)
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <LocationsTable
+                                            locations={filteredLocations}
+                                            onEdit={handleEdit}
+                                            onDelete={handleDelete}
+                                            selectedIds={selectedIds}
+                                            onToggleSelection={toggleSelection}
+                                        />
+                                    </>
                                 )}
                                 {selectedEntity === 'users' && (
-                                    <UsersTable
-                                        users={users}
+                                    <>
+                                        {/* User Filters */}
+                                        <div className="border-b border-slate-200/50 bg-gradient-to-r from-slate-50 to-slate-100 p-4 dark:border-slate-700/50 dark:from-slate-900/50 dark:to-slate-800/50">
+                                            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                                                <div className="relative flex-1">
+                                                    <Search className="absolute left-3 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Search by name, email, or role..."
+                                                        value={userSearchTerm}
+                                                        onChange={(e) => setUserSearchTerm(e.target.value)}
+                                                        className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm font-medium text-slate-900 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400"
+                                                    />
+                                                </div>
+                                                
+                                                {userSearchTerm && (
+                                                    <button
+                                                        onClick={() => setUserSearchTerm('')}
+                                                        className="flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 shadow-sm transition-all hover:bg-red-100 dark:border-red-700 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
+                                                    >
+                                                        <X className="size-4" />
+                                                        Clear Search
+                                                    </button>
+                                                )}
+                                            </div>
+                                            
+                                            <div className="mt-3 text-xs font-medium text-slate-600 dark:text-slate-400">
+                                                Showing {filteredUsers.length} of {users.length} user(s)
+                                                {filteredUsers.length !== users.length && (
+                                                    <span className="ml-2 text-blue-600 dark:text-blue-400">
+                                                        ({users.length - filteredUsers.length} hidden by filters)
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <UsersTable
+                                            users={filteredUsers}
                                         onEdit={handleEdit}
                                         onDelete={handleDelete}
                                         selectedIds={selectedIds}
                                         onToggleSelection={toggleSelection}
                                     />
+                                    </>
                                 )}
                                 {selectedEntity === 'brands' && (
-                                    <BrandsTable
-                                        brands={brands}
+                                    <>
+                                        {/* Brand Filters */}
+                                        <div className="border-b border-slate-200/50 bg-gradient-to-r from-slate-50 to-slate-100 p-4 dark:border-slate-700/50 dark:from-slate-900/50 dark:to-slate-800/50">
+                                            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                                                <div className="relative flex-1">
+                                                    <Search className="absolute left-3 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Search by name or description..."
+                                                        value={brandSearchTerm}
+                                                        onChange={(e) => setBrandSearchTerm(e.target.value)}
+                                                        className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm font-medium text-slate-900 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400"
+                                                    />
+                                                </div>
+                                                
+                                                {brandSearchTerm && (
+                                                    <button
+                                                        onClick={() => setBrandSearchTerm('')}
+                                                        className="flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 shadow-sm transition-all hover:bg-red-100 dark:border-red-700 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
+                                                    >
+                                                        <X className="size-4" />
+                                                        Clear Search
+                                                    </button>
+                                                )}
+                                            </div>
+                                            
+                                            <div className="mt-3 text-xs font-medium text-slate-600 dark:text-slate-400">
+                                                Showing {filteredBrands.length} of {brands.length} brand(s)
+                                                {filteredBrands.length !== brands.length && (
+                                                    <span className="ml-2 text-blue-600 dark:text-blue-400">
+                                                        ({brands.length - filteredBrands.length} hidden by filters)
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <BrandsTable
+                                            brands={filteredBrands}
                                         onEdit={handleEdit}
                                         onDelete={handleDelete}
                                         selectedIds={selectedIds}
                                         onToggleSelection={toggleSelection}
                                     />
+                                    </>
                                 )}
                                 {selectedEntity === 'models' && (
-                                    <ModelsTable
-                                        models={models}
+                                    <>
+                                        {/* Model Filters */}
+                                        <div className="border-b border-slate-200/50 bg-gradient-to-r from-slate-50 to-slate-100 p-4 dark:border-slate-700/50 dark:from-slate-900/50 dark:to-slate-800/50">
+                                            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                                                <div className="relative flex-1">
+                                                    <Search className="absolute left-3 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Search by name, description, or brand..."
+                                                        value={modelSearchTerm}
+                                                        onChange={(e) => setModelSearchTerm(e.target.value)}
+                                                        className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm font-medium text-slate-900 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400"
+                                                    />
+                                                </div>
+                                                
+                                                {modelSearchTerm && (
+                                                    <button
+                                                        onClick={() => setModelSearchTerm('')}
+                                                        className="flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 shadow-sm transition-all hover:bg-red-100 dark:border-red-700 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
+                                                    >
+                                                        <X className="size-4" />
+                                                        Clear Search
+                                                    </button>
+                                                )}
+                                            </div>
+                                            
+                                            <div className="mt-3 text-xs font-medium text-slate-600 dark:text-slate-400">
+                                                Showing {filteredModels.length} of {models.length} model(s)
+                                                {filteredModels.length !== models.length && (
+                                                    <span className="ml-2 text-blue-600 dark:text-blue-400">
+                                                        ({models.length - filteredModels.length} hidden by filters)
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <ModelsTable
+                                            models={filteredModels}
                                         onEdit={handleEdit}
                                         onDelete={handleDelete}
                                         selectedIds={selectedIds}
                                         onToggleSelection={toggleSelection}
                                     />
+                                    </>
                                 )}
                                 {selectedEntity === 'history' && (
                                     <HistoryView activities={activityHistory} />
@@ -1674,31 +2013,32 @@ function DevicesTable({
     }
 
     return (
-        <table className="w-full">
-            <thead className="bg-slate-50 dark:bg-slate-900">
-                <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 w-12">
-                        <input
-                            type="checkbox"
-                            checked={selectedIds.length === devices.length && devices.length > 0}
-                            onChange={() => {
-                                if (selectedIds.length === devices.length) {
-                                    devices.forEach(d => onToggleSelection(d.id));
-                                } else {
-                                    devices.forEach(d => {
-                                        if (!selectedIds.includes(d.id)) {
-                                            onToggleSelection(d.id);
-                                        }
-                                    });
-                                }
-                            }}
-                            className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
-                        />
-                    </th>
-                    <th
-                        onClick={() => onSort('name')}
-                        className="cursor-pointer px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-                    >
+        <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+            <table className="w-full min-w-[1200px]">
+                <thead className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-b-2 border-slate-200 dark:border-slate-700">
+                    <tr>
+                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 w-12">
+                            <input
+                                type="checkbox"
+                                checked={selectedIds.length === devices.length && devices.length > 0}
+                                onChange={() => {
+                                    if (selectedIds.length === devices.length) {
+                                        devices.forEach(d => onToggleSelection(d.id));
+                                    } else {
+                                        devices.forEach(d => {
+                                            if (!selectedIds.includes(d.id)) {
+                                                onToggleSelection(d.id);
+                                            }
+                                        });
+                                    }
+                                }}
+                                className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                            />
+                        </th>
+                        <th
+                            onClick={() => onSort('name')}
+                            className="cursor-pointer px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
+                        >
                         <div className="flex items-center gap-1">
                             Name
                             {sortField === 'name' && (
@@ -1747,15 +2087,21 @@ function DevicesTable({
                             )}
                         </div>
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Active</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Branch</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Location</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Brand/Model</th>
                     <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Actions</th>
                 </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
                 {devices.map((device) => (
-                    <tr key={device.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                    <tr 
+                        key={device.id} 
+                        className={`transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50 ${
+                            !device.is_active ? 'opacity-60 bg-slate-50/50 dark:bg-slate-800/50' : ''
+                        }`}
+                    >
                         <td className="px-6 py-4">
                             <input
                                 type="checkbox"
@@ -1783,6 +2129,25 @@ function DevicesTable({
                                 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
                             }`}>
                                 {device.status}
+                            </span>
+                        </td>
+                        <td className="px-6 py-4">
+                            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                                device.is_active 
+                                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' 
+                                    : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
+                            }`}>
+                                {device.is_active ? (
+                                    <>
+                                        <CheckCircle2 className="size-3" />
+                                        Active
+                                    </>
+                                ) : (
+                                    <>
+                                        <X className="size-3" />
+                                        Inactive
+                                    </>
+                                )}
                             </span>
                         </td>
                         <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
@@ -1871,6 +2236,7 @@ function DevicesTable({
                 ))}
             </tbody>
         </table>
+        </div>
     );
 }
 
@@ -1904,28 +2270,29 @@ function AlertsTable({
     }
 
     return (
-        <table className="w-full">
-            <thead className="bg-slate-50 dark:bg-slate-900">
-                <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 w-12">
-                        <input
-                            type="checkbox"
-                            checked={selectedIds.length === alerts.length && alerts.length > 0}
-                            onChange={() => {
-                                if (selectedIds.length === alerts.length) {
-                                    alerts.forEach(a => onToggleSelection(a.id));
-                                } else {
-                                    alerts.forEach(a => {
-                                        if (!selectedIds.includes(a.id)) {
-                                            onToggleSelection(a.id);
-                                        }
-                                    });
-                                }
-                            }}
-                            className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
-                        />
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Device</th>
+        <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+            <table className="w-full min-w-[1000px]">
+                <thead className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-b-2 border-slate-200 dark:border-slate-700">
+                    <tr>
+                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 w-12">
+                            <input
+                                type="checkbox"
+                                checked={selectedIds.length === alerts.length && alerts.length > 0}
+                                onChange={() => {
+                                    if (selectedIds.length === alerts.length) {
+                                        alerts.forEach(a => onToggleSelection(a.id));
+                                    } else {
+                                        alerts.forEach(a => {
+                                            if (!selectedIds.includes(a.id)) {
+                                                onToggleSelection(a.id);
+                                            }
+                                        });
+                                    }
+                                }}
+                                className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                            />
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Device</th>
                     <th
                         onClick={() => onSort('title')}
                         className="cursor-pointer px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
@@ -1969,9 +2336,9 @@ function AlertsTable({
                     <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Actions</th>
                 </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
                 {alerts.map((alert) => (
-                    <tr key={alert.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                    <tr key={alert.id} className="transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50">
                         <td className="px-6 py-4">
                             <input
                                 type="checkbox"
@@ -2022,6 +2389,7 @@ function AlertsTable({
                 ))}
             </tbody>
         </table>
+        </div>
     );
 }
 
@@ -2052,27 +2420,28 @@ function LocationsTable({
     }
 
     return (
-        <table className="w-full">
-            <thead className="bg-slate-50 dark:bg-slate-900">
-                <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 w-12">
-                        <input
-                            type="checkbox"
-                            checked={selectedIds.length === locations.length && locations.length > 0}
-                            onChange={() => {
-                                if (selectedIds.length === locations.length) {
-                                    locations.forEach(l => onToggleSelection(l.id));
-                                } else {
-                                    locations.forEach(l => {
-                                        if (!selectedIds.includes(l.id)) {
-                                            onToggleSelection(l.id);
-                                        }
-                                    });
-                                }
-                            }}
-                            className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
-                        />
-                    </th>
+        <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+            <table className="w-full min-w-[800px]">
+                <thead className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-b-2 border-slate-200 dark:border-slate-700">
+                    <tr>
+                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 w-12">
+                            <input
+                                type="checkbox"
+                                checked={selectedIds.length === locations.length && locations.length > 0}
+                                onChange={() => {
+                                    if (selectedIds.length === locations.length) {
+                                        locations.forEach(l => onToggleSelection(l.id));
+                                    } else {
+                                        locations.forEach(l => {
+                                            if (!selectedIds.includes(l.id)) {
+                                                onToggleSelection(l.id);
+                                            }
+                                        });
+                                    }
+                                }}
+                                className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                            />
+                        </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                         Location Name
                     </th>
@@ -2087,9 +2456,9 @@ function LocationsTable({
                     </th>
                 </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
                 {locations.map((location) => (
-                    <tr key={location.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                    <tr key={location.id} className="transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50">
                         <td className="px-6 py-4">
                             <input
                                 type="checkbox"
@@ -2127,6 +2496,7 @@ function LocationsTable({
                 ))}
             </tbody>
         </table>
+        </div>
     );
 }
 
@@ -2157,27 +2527,28 @@ function BranchesTable({
     }
 
     return (
-        <table className="w-full">
-            <thead className="bg-slate-50 dark:bg-slate-900">
-                <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 w-12">
-                        <input
-                            type="checkbox"
-                            checked={selectedIds.length === branches.length && branches.length > 0}
-                            onChange={() => {
-                                if (selectedIds.length === branches.length) {
-                                    branches.forEach(b => onToggleSelection(b.id));
-                                } else {
-                                    branches.forEach(b => {
-                                        if (!selectedIds.includes(b.id)) {
-                                            onToggleSelection(b.id);
-                                        }
-                                    });
-                                }
-                            }}
-                            className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
-                        />
-                    </th>
+        <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+            <table className="w-full min-w-[900px]">
+                <thead className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-b-2 border-slate-200 dark:border-slate-700">
+                    <tr>
+                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 w-12">
+                            <input
+                                type="checkbox"
+                                checked={selectedIds.length === branches.length && branches.length > 0}
+                                onChange={() => {
+                                    if (selectedIds.length === branches.length) {
+                                        branches.forEach(b => onToggleSelection(b.id));
+                                    } else {
+                                        branches.forEach(b => {
+                                            if (!selectedIds.includes(b.id)) {
+                                                onToggleSelection(b.id);
+                                            }
+                                        });
+                                    }
+                                }}
+                                className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                            />
+                        </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                         #
                     </th>
@@ -2194,16 +2565,21 @@ function BranchesTable({
                         Address
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                        Status
+                        Active
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                         Actions
                     </th>
                 </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
                 {branches.map((branch, index) => (
-                    <tr key={branch.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                    <tr 
+                        key={branch.id} 
+                        className={`transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50 ${
+                            !branch.is_active ? 'opacity-60 bg-slate-50/50 dark:bg-slate-800/50' : ''
+                        }`}
+                    >
                         <td className="px-6 py-4">
                             <input
                                 type="checkbox"
@@ -2237,15 +2613,22 @@ function BranchesTable({
                             {branch.address || '-'}
                         </td>
                         <td className="px-6 py-4">
-                            <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium ${
-                                branch.is_active
-                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                                    : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                                branch.is_active 
+                                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' 
+                                    : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
                             }`}>
-                                <div className={`size-1.5 rounded-full ${
-                                    branch.is_active ? 'bg-green-500' : 'bg-red-500'
-                                }`} />
-                                {branch.is_active ? 'Active' : 'Inactive'}
+                                {branch.is_active ? (
+                                    <>
+                                        <CheckCircle2 className="size-3" />
+                                        Active
+                                    </>
+                                ) : (
+                                    <>
+                                        <X className="size-3" />
+                                        Inactive
+                                    </>
+                                )}
                             </span>
                         </td>
                         <td className="px-6 py-4 text-right">
@@ -2270,6 +2653,7 @@ function BranchesTable({
                 ))}
             </tbody>
         </table>
+        </div>
     );
 }
 
@@ -2297,27 +2681,28 @@ function UsersTable({
     }
 
     return (
-        <table className="w-full">
-            <thead className="bg-slate-50 dark:bg-slate-900">
-                <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 w-12">
-                        <input
-                            type="checkbox"
-                            checked={selectedIds.length === users.length && users.length > 0}
-                            onChange={() => {
-                                if (selectedIds.length === users.length) {
-                                    users.forEach(u => onToggleSelection(u.id));
-                                } else {
-                                    users.forEach(u => {
-                                        if (!selectedIds.includes(u.id)) {
-                                            onToggleSelection(u.id);
-                                        }
-                                    });
-                                }
-                            }}
-                            className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
-                        />
-                    </th>
+        <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+            <table className="w-full min-w-[800px]">
+                <thead className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-b-2 border-slate-200 dark:border-slate-700">
+                    <tr>
+                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 w-12">
+                            <input
+                                type="checkbox"
+                                checked={selectedIds.length === users.length && users.length > 0}
+                                onChange={() => {
+                                    if (selectedIds.length === users.length) {
+                                        users.forEach(u => onToggleSelection(u.id));
+                                    } else {
+                                        users.forEach(u => {
+                                            if (!selectedIds.includes(u.id)) {
+                                                onToggleSelection(u.id);
+                                            }
+                                        });
+                                    }
+                                }}
+                                className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                            />
+                        </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Name</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Email</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Role</th>
@@ -2325,9 +2710,9 @@ function UsersTable({
                     <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Actions</th>
                 </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
                 {users.map((user) => (
-                    <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                    <tr key={user.id} className="transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50">
                         <td className="px-6 py-4">
                             <input
                                 type="checkbox"
@@ -2362,6 +2747,7 @@ function UsersTable({
                 ))}
             </tbody>
         </table>
+        </div>
     );
 }
 
@@ -2389,36 +2775,37 @@ function BrandsTable({
     }
 
     return (
-        <table className="w-full">
-            <thead className="bg-slate-50 dark:bg-slate-900">
-                <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 w-12">
-                        <input
-                            type="checkbox"
-                            checked={selectedIds.length === brands.length && brands.length > 0}
-                            onChange={() => {
-                                if (selectedIds.length === brands.length) {
-                                    brands.forEach(b => onToggleSelection(b.id));
-                                } else {
-                                    brands.forEach(b => {
-                                        if (!selectedIds.includes(b.id)) {
-                                            onToggleSelection(b.id);
-                                        }
-                                    });
-                                }
-                            }}
-                            className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
-                        />
-                    </th>
+        <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+            <table className="w-full min-w-[700px]">
+                <thead className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-b-2 border-slate-200 dark:border-slate-700">
+                    <tr>
+                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 w-12">
+                            <input
+                                type="checkbox"
+                                checked={selectedIds.length === brands.length && brands.length > 0}
+                                onChange={() => {
+                                    if (selectedIds.length === brands.length) {
+                                        brands.forEach(b => onToggleSelection(b.id));
+                                    } else {
+                                        brands.forEach(b => {
+                                            if (!selectedIds.includes(b.id)) {
+                                                onToggleSelection(b.id);
+                                            }
+                                        });
+                                    }
+                                }}
+                                className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                            />
+                        </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">#</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Name</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Description</th>
                     <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Actions</th>
                 </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
                 {brands.map((brand, index) => (
-                    <tr key={brand.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                    <tr key={brand.id} className="transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50">
                         <td className="px-6 py-4">
                             <input
                                 type="checkbox"
@@ -2444,6 +2831,7 @@ function BrandsTable({
                 ))}
             </tbody>
         </table>
+        </div>
     );
 }
 
@@ -2471,27 +2859,28 @@ function ModelsTable({
     }
 
     return (
-        <table className="w-full">
-            <thead className="bg-slate-50 dark:bg-slate-900">
-                <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 w-12">
-                        <input
-                            type="checkbox"
-                            checked={selectedIds.length === models.length && models.length > 0}
-                            onChange={() => {
-                                if (selectedIds.length === models.length) {
-                                    models.forEach(m => onToggleSelection(m.id));
-                                } else {
-                                    models.forEach(m => {
-                                        if (!selectedIds.includes(m.id)) {
-                                            onToggleSelection(m.id);
-                                        }
-                                    });
-                                }
-                            }}
-                            className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
-                        />
-                    </th>
+        <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+            <table className="w-full min-w-[800px]">
+                <thead className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-b-2 border-slate-200 dark:border-slate-700">
+                    <tr>
+                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 w-12">
+                            <input
+                                type="checkbox"
+                                checked={selectedIds.length === models.length && models.length > 0}
+                                onChange={() => {
+                                    if (selectedIds.length === models.length) {
+                                        models.forEach(m => onToggleSelection(m.id));
+                                    } else {
+                                        models.forEach(m => {
+                                            if (!selectedIds.includes(m.id)) {
+                                                onToggleSelection(m.id);
+                                            }
+                                        });
+                                    }
+                                }}
+                                className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                            />
+                        </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">#</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Name</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Brand</th>
@@ -2499,9 +2888,9 @@ function ModelsTable({
                     <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Actions</th>
                 </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
                 {models.map((model, index) => (
-                    <tr key={model.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                    <tr key={model.id} className="transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50">
                         <td className="px-6 py-4">
                             <input
                                 type="checkbox"
@@ -2528,6 +2917,7 @@ function ModelsTable({
                 ))}
             </tbody>
         </table>
+        </div>
     );
 }
 

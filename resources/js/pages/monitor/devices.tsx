@@ -294,6 +294,7 @@ export default function Devices() {
                 headers: {
                     'Accept': 'application/json',
                 },
+                cache: 'no-cache', // Prevent browser caching
             });
             
             console.log('API Response status:', response.status);
@@ -305,6 +306,13 @@ export default function Devices() {
                 // Check if response has pagination data
                 if (responseData.pagination) {
                     console.log('Setting devices from paginated response:', responseData.data?.length || 0);
+                    // Log uptime_minutes for debugging - check first few devices
+                    if (responseData.data && responseData.data.length > 0) {
+                        const sampleDevices = responseData.data.slice(0, 3);
+                        sampleDevices.forEach((device: Device) => {
+                            console.log(`Device ${device.name}: uptime_minutes = ${device.uptime_minutes} (type: ${typeof device.uptime_minutes})`);
+                        });
+                    }
                     setAllDevices(responseData.data || []);
                     setTotalItems(responseData.pagination.total);
                     setTotalPages(responseData.pagination.last_page);
@@ -312,7 +320,8 @@ export default function Devices() {
                     // Fallback for non-paginated response
                     const devices = responseData.data || responseData;
                     console.log('Setting devices from fallback response:', devices.length);
-                    setAllDevices(devices.filter((device: Device) => device.status !== 'offline_ack'));
+                    // Don't filter out offline_ack devices - let the status filter handle it
+                    setAllDevices(devices);
                 }
             }
         } catch (error) {
@@ -378,6 +387,16 @@ export default function Devices() {
     useEffect(() => {
         console.log('Component mounted, forcing fetchDevices');
         fetchDevices();
+    }, [fetchDevices]);
+    
+    // Auto-refresh devices every 30 seconds to get updated uptime
+    useEffect(() => {
+        const interval = setInterval(() => {
+            console.log('Auto-refreshing devices for uptime update...');
+            fetchDevices();
+        }, 30000); // Refresh every 30 seconds
+        
+        return () => clearInterval(interval);
     }, [fetchDevices]);
     
     // Ping all devices function
@@ -796,7 +815,7 @@ export default function Devices() {
                     {/* Filters Row */}
                     <div className="flex flex-wrap items-center gap-2">
                         {/* Status Filters */}
-                        {(['all', 'online', 'warning', 'offline'] as const).map((status) => (
+                        {(['all', 'online', 'warning', 'offline', 'offline_ack'] as const).map((status) => (
                             <button
                                 key={status}
                                 onClick={() => setStatusFilter(status)}
@@ -807,6 +826,7 @@ export default function Devices() {
                                 }`}
                             >
                                 {status === 'all' ? t('devices.all') : 
+                                 status === 'offline_ack' ? 'Acknowledged' :
                                  status.charAt(0).toUpperCase() + status.slice(1)}
                             </button>
                         ))}

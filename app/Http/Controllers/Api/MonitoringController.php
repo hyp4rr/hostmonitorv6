@@ -68,8 +68,9 @@ class MonitoringController extends Controller
             
             // Get all active devices
             $devices = Device::where('is_active', true)->get();
+            $deviceCount = $devices->count();
             
-            Log::info("Ping All Devices: Starting ultra-fast ping for " . $devices->count() . " devices");
+            Log::info("Ping All Devices: Starting optimized ping for {$deviceCount} devices");
             
             if ($devices->isEmpty()) {
                 return response()->json([
@@ -84,14 +85,38 @@ class MonitoringController extends Controller
                     ]
                 ]);
             }
+            
+            // Check if device count is too large for web request
+            if ($deviceCount > 500) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Too many devices ({$deviceCount}). Please use the scheduled monitoring or ping by category instead.",
+                    'stats' => [
+                        'total_devices' => $deviceCount,
+                        'max_allowed' => 500,
+                        'suggestion' => 'Use scheduled monitoring or ping by category for large device sets'
+                    ]
+                ], 429); // Too Many Requests
+            }
 
-            // Use ultra-fast multi-process ping approach
-            $results = $this->ultraFastPingAll($devices);
+            // Use optimized batch ping approach with better timeout handling
+            // Reduced batch size and timeout to prevent web server timeouts
+            $maxDevices = 15; // Reduced to 15 for better reliability
+            $totalDevices = $devices->count();
+            
+            Log::info("Ping All Devices: Starting optimized ping for {$totalDevices} devices (batch size: {$maxDevices})");
+            
+            if ($totalDevices > $maxDevices) {
+                // Process in batches to prevent timeout
+                $results = $this->batchPingDevices($devices, $maxDevices);
+            } else {
+                $results = $this->fastPingAll($devices);
+            }
             
             $duration = round((microtime(true) - $startTime) * 1000, 2);
-            $devicesPerSecond = $duration > 0 ? round(count($devices) / ($duration / 1000), 2) : 0;
+            $devicesPerSecond = $duration > 0 ? round($totalDevices / ($duration / 1000), 2) : 0;
 
-            Log::info("Ping All Devices: Ultra-fast completed - Total: {$devices->count()}, Online: {$results['online']}, Offline: {$results['offline']}, Duration: {$duration}ms");
+            Log::info("Ping All Devices: Completed - Total: {$totalDevices}, Online: {$results['online']}, Offline: {$results['offline']}, Duration: {$duration}ms, Speed: {$devicesPerSecond} devices/sec");
 
             // Update monitoring cache
             Cache::put('monitoring.last_check', now(), 300);
@@ -103,7 +128,7 @@ class MonitoringController extends Controller
                 'duration' => $duration,
                 'timestamp' => now()->toISOString(),
                 'result' => [
-                    'results' => $results['details'],
+                    'results' => $results['results'] ?? $results['details'] ?? [],
                     'stats' => [
                         'total' => count($devices),
                         'online' => $results['online'],
@@ -117,7 +142,7 @@ class MonitoringController extends Controller
                     'offline_devices' => $results['offline'],
                     'ping_duration' => $duration,
                     'devices_per_second' => $devicesPerSecond,
-                    'error_count' => $results['errors']
+                    'error_count' => $results['errors'] ?? 0
                 ]
             ]);
 
@@ -132,7 +157,166 @@ class MonitoringController extends Controller
     }
     
     /**
-     * Ultra-fast parallel ping implementation
+     * Fast ping implementation for smaller device sets
+     */
+    public function fastPingAll($devices)
+    {
+        $onlineCount = 0;
+        $offlineCount = 0;
+        $results = [];
+        
+        foreach ($devices as $device) {
+            $result = $this->pingSingleDeviceFast($device);
+            
+            if ($result['status'] === 'online') {
+                $onlineCount++;
+            } else {
+                $offlineCount++;
+            }
+            
+            $results[] = $result;
+        }
+        
+        // Batch update all devices at once for better performance
+        $this->batchUpdateDevices($results);
+        
+        return [
+            'online' => $onlineCount,
+            'offline' => $offlineCount,
+            'results' => $results
+        ];
+    }
+
+    /**
+     * Batch update devices to improve performance
+     */
+    private function batchUpdateDevices($results)
+    {
+        foreach ($results as $result) {
+            if (isset($result['device'])) {
+                $device = $result['device'];
+                $previousStatus = $device->status;
+                $device->status = $result['status'];
+                $device->response_time = $result['response_time'];
+                $device->last_ping = now();
+                
+                // Track online_since timestamp when device goes online
+                if ($result['status'] === 'online' && $previousStatus !== 'online') {
+                    $device->online_since = now();
+                    $device->offline_since = null;
+                } elseif ($result['status'] === 'offline' && $previousStatus === 'online') {
+                    $device->offline_since = now();
+                    $device->online_since = null;
+                }
+                
+                // Update uptime based on new status (calculates real minutes)
+                $device->updateUptime();
+                
+                // Record monitoring history
+                $device->recordMonitoringHistory();
+                
+                $device->save();
+            }
+        }
+    }
+
+    /**
+     * Batch ping devices to prevent timeout
+     */
+    private function batchPingDevices($devices, $batchSize = 15)
+    {
+        $totalOnline = 0;
+        $totalOffline = 0;
+        $allResults = [];
+        $processedCount = 0;
+        $totalDevices = $devices->count();
+        
+        $batches = $devices->chunk($batchSize);
+        $batchCount = $batches->count();
+        
+        Log::info("Batch Ping: Processing {$totalDevices} devices in {$batchCount} batches of {$batchSize}");
+        
+        foreach ($batches as $index => $batch) {
+            $batchStartTime = microtime(true);
+            $batchResults = $this->fastPingAll($batch);
+            $batchDuration = round((microtime(true) - $batchStartTime) * 1000, 2);
+            
+            $totalOnline += $batchResults['online'];
+            $totalOffline += $batchResults['offline'];
+            $allResults = array_merge($allResults, $batchResults['results']);
+            
+            $processedCount += $batch->count();
+            $progress = round(($processedCount / $totalDevices) * 100, 1);
+            
+            Log::info("Batch " . ($index + 1) . "/{$batchCount} completed: {$batch->count()} devices, {$batchResults['online']} online, {$batchResults['offline']} offline, {$batchDuration}ms ({$progress}% complete)");
+            
+            // Very small delay between batches to prevent overwhelming
+            usleep(50000); // 0.05 second delay
+        }
+        
+        return [
+            'online' => $totalOnline,
+            'offline' => $totalOffline,
+            'results' => $allResults
+        ];
+    }
+
+    /**
+     * Fast single device ping with optimized timeout
+     */
+    private function pingSingleDeviceFast($device)
+    {
+        $timeout = 1000; // 1 second timeout (increased from 500ms for reliability)
+        $startTime = microtime(true);
+        
+        // Use optimized ping command with timeout
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            // Windows - use 1 second timeout
+            $command = "ping -n 1 -w " . $timeout . " " . escapeshellarg($device->ip_address) . " 2>nul";
+            $output = [];
+            $returnCode = 0;
+            exec($command, $output, $returnCode);
+            $isOnline = ($returnCode === 0);
+        } else {
+            // Linux/Mac - use 1 second timeout
+            $command = "ping -c 1 -W 1 " . escapeshellarg($device->ip_address) . " 2>/dev/null";
+            $output = [];
+            $returnCode = 0;
+            exec($command, $output, $returnCode);
+            $isOnline = ($returnCode === 0);
+        }
+        
+        $pingDuration = round((microtime(true) - $startTime) * 1000, 2);
+        
+        if ($isOnline) {
+            // Parse response time from output
+            $outputText = implode(' ', $output);
+            $responseTime = null;
+            if (preg_match('/time[=<](\d+)ms/i', $outputText, $matches)) {
+                $responseTime = (int)$matches[1];
+            } else {
+                $responseTime = $pingDuration;
+            }
+        } else {
+            $responseTime = null;
+        }
+        
+        $status = $isOnline ? 'online' : 'offline';
+        
+        // Batch database updates for better performance
+        // Don't update each device individually, collect and update later
+        
+        return [
+            'id' => $device->id,
+            'device' => $device, // Keep device reference for batch update
+            'ip_address' => $device->ip_address,
+            'status' => $status,
+            'response_time' => $responseTime,
+        ];
+    }
+
+    /**
+     * Ultra-fast parallel ping implementation (deprecated - use fastPingAll instead)
      */
     private function ultraFastPingAll($devices)
     {
@@ -178,11 +362,17 @@ class MonitoringController extends Controller
                         // Update device in database
                         $device = Device::find($deviceId);
                         if ($device) {
-                            $device->update([
-                                'status' => 'online',
-                                'response_time' => rand(1, 50), // Simulated response time
-                                'last_ping' => now(),
-                            ]);
+                            $device->status = 'online';
+                            $device->response_time = rand(1, 50); // Simulated response time
+                            $device->last_ping = now();
+                            
+                            // Update uptime based on new status
+                            $device->updateUptime();
+                            
+                            // Record monitoring history
+                            $device->recordMonitoringHistory();
+                            
+                            $device->save();
                             
                             $results[] = [
                                 'id' => $deviceId,
@@ -202,11 +392,17 @@ class MonitoringController extends Controller
                         // Update device in database
                         $device = Device::find($deviceId);
                         if ($device) {
-                            $device->update([
-                                'status' => 'offline',
-                                'response_time' => null,
-                                'last_ping' => now(),
-                            ]);
+                            $device->status = 'offline';
+                            $device->response_time = null;
+                            $device->last_ping = now();
+                            
+                            // Update uptime based on new status
+                            $device->updateUptime();
+                            
+                            // Record monitoring history
+                            $device->recordMonitoringHistory();
+                            
+                            $device->save();
                             
                             $results[] = [
                                 'id' => $deviceId,
@@ -260,6 +456,19 @@ class MonitoringController extends Controller
             }
             
             $duration = round((microtime(true) - $startTime) * 1000, 2);
+
+            // Update device status and response time
+            $device->status = $result['status'];
+            $device->response_time = $result['response_time'];
+            $device->last_ping = now();
+            
+            // Update uptime based on new status
+            $device->updateUptime();
+            
+            // Record monitoring history
+            $device->recordMonitoringHistory();
+            
+            $device->save();
 
             // Get device's recent ping history
             $recentHistory = \App\Models\MonitoringHistory::where('device_id', $id)

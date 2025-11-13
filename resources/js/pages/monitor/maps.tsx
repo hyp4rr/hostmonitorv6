@@ -85,16 +85,30 @@ export default function Maps() {
     useEffect(() => {
         if (!currentBranch?.id) return;
         
-        fetch(`/api/devices?branch_id=${currentBranch.id}&per_page=10000`, {
+        fetch(`/api/devices?branch_id=${currentBranch.id}&per_page=10000&include_inactive=true`, {
             credentials: 'same-origin',
             headers: { 'Accept': 'application/json' },
+            cache: 'no-cache', // Ensure fresh data
         })
         .then(res => res.ok ? res.json() : { data: [] })
         .then(responseData => {
             const devices = responseData.data || responseData;
-            setRealDevices(devices.filter((device: any) => device.status !== 'offline_ack'));
+            console.log('Maps: Loaded devices:', devices.length, 'Sample device:', devices[0]);
+            // Include all active devices (including offline_ack for display, but we'll handle them in status calculation)
+            const activeDevices = devices.filter((device: any) => device.is_active !== false);
+            console.log('Maps: Active devices:', activeDevices.length);
+            console.log('Maps: Device statuses:', {
+                online: activeDevices.filter((d: any) => d.status === 'online').length,
+                offline: activeDevices.filter((d: any) => d.status === 'offline').length,
+                warning: activeDevices.filter((d: any) => d.status === 'warning').length,
+                offline_ack: activeDevices.filter((d: any) => d.status === 'offline_ack').length,
+            });
+            setRealDevices(activeDevices);
         })
-        .catch(err => console.error('Error loading devices:', err));
+        .catch(err => {
+            console.error('Error loading devices:', err);
+            setRealDevices([]);
+        });
     }, [currentBranch?.id]);
     
     // Group devices by location coordinates
@@ -126,24 +140,34 @@ export default function Maps() {
             // No devices = offline
             status = 'offline';
         } else {
-            const onlineCount = locationDevices.filter(d => d.status === 'online').length;
-            const offlineCount = locationDevices.filter(d => d.status === 'offline' || d.status === 'offline_ack').length;
+            // Filter out offline_ack devices for status calculation (they're acknowledged, so don't count as offline)
+            const activeDevices = locationDevices.filter(d => d.status !== 'offline_ack');
+            const onlineCount = activeDevices.filter(d => d.status === 'online').length;
+            const offlineCount = activeDevices.filter(d => d.status === 'offline').length;
+            const warningCount = activeDevices.filter(d => d.status === 'warning').length;
             
-            if (offlineCount === locationDevices.length) {
-                // All devices offline = offline
+            if (activeDevices.length === 0) {
+                // Only offline_ack devices = show as offline but with different styling
                 status = 'offline';
-            } else if (onlineCount === locationDevices.length) {
-                // All devices online = online
+            } else if (offlineCount === activeDevices.length) {
+                // All active devices offline = offline
+                status = 'offline';
+            } else if (onlineCount === activeDevices.length) {
+                // All active devices online = online
                 status = 'online';
-            } else {
-                // Some online, some offline = warning
+            } else if (warningCount > 0 || (onlineCount > 0 && offlineCount > 0)) {
+                // Some online, some offline, or warnings = warning
                 status = 'warning';
+            } else {
+                // Default to online if we have active devices
+                status = 'online';
             }
         }
 
-        // Calculate average uptime percentage
-        const avgUptime = locationDevices.length > 0
-            ? (locationDevices.reduce((sum, d) => sum + (d.uptime_percentage || 0), 0) / locationDevices.length).toFixed(1)
+        // Calculate average uptime percentage (only for active devices, exclude offline_ack)
+        const activeDevicesForUptime = locationDevices.filter(d => d.status !== 'offline_ack');
+        const avgUptime = activeDevicesForUptime.length > 0
+            ? (activeDevicesForUptime.reduce((sum, d) => sum + (d.uptime_percentage || 0), 0) / activeDevicesForUptime.length).toFixed(1)
             : '0.0';
 
         deviceLocations.push({
@@ -163,17 +187,29 @@ export default function Maps() {
     realDevices.forEach(device => {
         // Only show if device has no location_id but has coordinates
         if (!device.location_id && device.latitude && device.longitude) {
+            // Determine status - properly handle offline_ack
+            let deviceStatus: 'online' | 'warning' | 'offline' = 'offline';
+            if (device.status === 'online') {
+                deviceStatus = 'online';
+            } else if (device.status === 'warning') {
+                deviceStatus = 'warning';
+            } else if (device.status === 'offline_ack') {
+                // Acknowledged devices show as offline but are handled separately
+                deviceStatus = 'offline';
+            } else if (device.status === 'offline') {
+                deviceStatus = 'offline';
+            }
+            
             deviceLocations.push({
                 lat: device.latitude,
                 lng: device.longitude,
                 name: device.name,
-                status: device.status === 'online' ? 'online' : 
-                        device.status === 'warning' ? 'warning' : 'offline',
+                status: deviceStatus,
                 count: 1,
                 devices: [device.name],
-                category: device.category.charAt(0).toUpperCase() + device.category.slice(1),
+                category: device.category ? device.category.charAt(0).toUpperCase() + device.category.slice(1) : 'Device',
                 ip: device.ip_address,
-                uptime: `${device.uptime_percentage}%`,
+                uptime: `${device.uptime_percentage || 0}%`,
             });
         }
     });
@@ -359,37 +395,76 @@ export default function Maps() {
         filteredLocations.forEach((location) => {
             const color = getStatusColor(location.status);
             const icon = createPulsingIcon(color, location.count);
+            
+            // Find the location in dbLocations to get devices
+            const dbLocation = dbLocations.find(loc => 
+                Math.abs(loc.latitude - location.lat) < 0.0001 && 
+                Math.abs(loc.longitude - location.lng) < 0.0001
+            );
+            
+            // Get device details for popup
+            const locationDevicesForPopup = dbLocation 
+                ? realDevices.filter(d => d.location_id === dbLocation.id)
+                : realDevices.filter(d => 
+                    !d.location_id && 
+                    d.latitude && d.longitude &&
+                    Math.abs(d.latitude - location.lat) < 0.0001 && 
+                    Math.abs(d.longitude - location.lng) < 0.0001
+                );
+            
+            const deviceListHtml = locationDevicesForPopup.length > 0 
+                ? locationDevicesForPopup.slice(0, 5).map((d: any) => {
+                    const deviceStatusColor = d.status === 'online' ? '#10b981' : 
+                                             d.status === 'warning' ? '#f59e0b' : '#ef4444';
+                    const deviceStatusLabel = d.status === 'online' ? 'Online' : 
+                                             d.status === 'warning' ? 'Warning' : 
+                                             d.status === 'offline_ack' ? 'Acknowledged' : 'Offline';
+                    return `
+                        <div style="display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #e2e8f0;">
+                            <div style="width: 10px; height: 10px; background: ${deviceStatusColor}; border-radius: 50%; box-shadow: 0 0 4px ${deviceStatusColor};"></div>
+                            <span style="font-weight: 500; color: #1e293b; flex: 1;">${d.name || 'Unknown'}</span>
+                            <span style="font-size: 10px; color: ${deviceStatusColor}; font-weight: 600; text-transform: capitalize;">${deviceStatusLabel}</span>
+                        </div>
+                    `;
+                }).join('') + (locationDevicesForPopup.length > 5 ? `<div style="padding: 6px 0; color: #64748b; font-size: 11px; font-weight: 500;">+${locationDevicesForPopup.length - 5} more device${locationDevicesForPopup.length - 5 !== 1 ? 's' : ''}</div>` : '')
+                : '<div style="color: #64748b; font-size: 12px; padding: 8px 0;">No devices assigned to this location</div>';
 
             const marker = L.marker([location.lat, location.lng], { icon })
                 .addTo(mapRef.current!)
                 .bindPopup(`
-                    <div style="padding: 12px; min-width: 250px; font-family: system-ui, -apple-system, sans-serif;">
-                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                            <div style="width: 12px; height: 12px; background: ${color}; border-radius: 50%; box-shadow: 0 0 8px ${color};"></div>
-                            <h3 style="margin: 0; font-weight: bold; color: #1e293b; font-size: 16px;">${location.name}</h3>
+                    <div style="padding: 14px; min-width: 280px; max-width: 340px; font-family: system-ui, -apple-system, sans-serif;">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 2px solid #e2e8f0;">
+                            <div style="width: 14px; height: 14px; background: ${color}; border-radius: 50%; box-shadow: 0 0 10px ${color};"></div>
+                            <h3 style="margin: 0; font-weight: bold; color: #1e293b; font-size: 17px;">${location.name}</h3>
                         </div>
                         
-                        <div style="display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 12px 0; font-size: 12px;">
-                            <span style="color: #64748b; font-weight: 500;">Category:</span>
-                            <span style="color: #1e293b; font-weight: 600;">${location.category}</span>
-                            
+                        <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; margin-bottom: 12px; font-size: 12px;">
                             <span style="color: #64748b; font-weight: 500;">Status:</span>
-                            <span style="color: ${color}; font-weight: 600; text-transform: capitalize;">${location.status}</span>
+                            <span style="color: ${color}; font-weight: 600; text-transform: capitalize; font-size: 13px;">${location.status}</span>
                             
                             <span style="color: #64748b; font-weight: 500;">Devices:</span>
                             <span style="color: #1e293b; font-weight: 600;">${location.count} device${location.count !== 1 ? 's' : ''}</span>
                             
+                            <span style="color: #64748b; font-weight: 500;">Avg Uptime:</span>
+                            <span style="color: #10b981; font-weight: 600; font-size: 13px;">${location.uptime}</span>
+                            
                             ${location.ip ? `
                                 <span style="color: #64748b; font-weight: 500;">Primary IP:</span>
-                                <span style="color: #1e293b; font-weight: 600;">${location.ip}</span>
+                                <span style="color: #1e293b; font-weight: 600; font-family: monospace; font-size: 11px;">${location.ip}</span>
                             ` : ''}
-                            
-                            <span style="color: #64748b; font-weight: 500;">Avg Uptime:</span>
-                            <span style="color: #10b981; font-weight: 600;">${location.uptime}</span>
                         </div>
+                        
+                        ${locationDevicesForPopup.length > 0 ? `
+                            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e2e8f0;">
+                                <div style="font-weight: 600; color: #1e293b; margin-bottom: 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Device List</div>
+                                <div style="max-height: 200px; overflow-y: auto; font-size: 12px;">
+                                    ${deviceListHtml}
+                                </div>
+                            </div>
+                        ` : ''}
                     </div>
                 `, {
-                    maxWidth: 300,
+                    maxWidth: 360,
                     className: 'custom-popup'
                 });
 
@@ -687,7 +762,7 @@ export default function Maps() {
                 <div className={`transition-all ${isFullscreen ? 'fixed inset-0 z-50 bg-slate-900/95 p-4' : 'grid gap-6 lg:grid-cols-3'}`}>
                     {/* Map Section */}
                     <div className={`${isFullscreen ? 'h-full' : 'lg:col-span-2'}`}>
-                        <div className={`rounded-2xl border border-slate-200/50 bg-gradient-to-br from-white to-slate-50/50 shadow-2xl backdrop-blur-sm dark:border-slate-700/50 dark:from-slate-800 dark:to-slate-900/50 ${isFullscreen ? 'h-full' : ''}`} style={{ height: isFullscreen ? '100%' : '600px' }}>
+                        <div className={`rounded-2xl border border-slate-200/50 bg-gradient-to-br from-white to-slate-50/50 shadow-2xl backdrop-blur-sm dark:border-slate-700/50 dark:from-slate-800 dark:to-slate-900/50 ${isFullscreen ? 'h-full' : ''}`} style={{ height: isFullscreen ? '100%' : '650px' }}>
                             <div className="flex items-center justify-between border-b border-slate-200/50 p-4 dark:border-slate-700/50">
                                 <div className="flex items-center gap-3">
                                     <div className="rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 p-2 shadow-lg">
@@ -736,7 +811,7 @@ export default function Maps() {
                             <div 
                                 ref={mapContainerRef}
                                 className="relative overflow-hidden rounded-b-2xl" 
-                                style={{ height: isFullscreen ? 'calc(100% - 73px)' : '524px' }}
+                                style={{ height: isFullscreen ? 'calc(100% - 73px)' : '624px' }}
                             />
                         </div>
                     </div>

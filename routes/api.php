@@ -52,6 +52,7 @@ Route::post('/devices/{id}/acknowledge-offline', [DeviceController::class, 'ackn
 
 // Reset all uptimes
 Route::post('/devices/reset-uptimes', [DeviceController::class, 'resetUptimes']);
+Route::post('/devices/refresh-uptimes', [DeviceController::class, 'refreshUptimes']);
 
 Route::get('hardware/brands', [BrandController::class, 'index']);
 Route::get('hardware/models', [ModelController::class, 'index']);

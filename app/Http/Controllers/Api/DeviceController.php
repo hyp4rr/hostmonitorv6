@@ -8,6 +8,7 @@ use App\Models\Device;
 use App\Models\HardwareDetail;
 use App\Services\PingService;
 use App\Services\ActivityLogService;
+use App\Services\DeviceUptimeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -15,6 +16,13 @@ use Illuminate\Support\Facades\Cache;
 
 class DeviceController extends Controller
 {
+    private $uptimeService;
+
+    public function __construct(DeviceUptimeService $uptimeService)
+    {
+        $this->uptimeService = $uptimeService;
+    }
+
     /**
      * Clear all device cache to force fresh data from database
      */
@@ -45,13 +53,25 @@ class DeviceController extends Controller
             $status = $request->input('status');
             $sortBy = $request->input('sort_by', 'name'); // Default sort by name
             $sortOrder = $request->input('sort_order', 'asc'); // Default ascending
+            $includeInactive = $request->input('include_inactive', false); // For configuration panel
+            $search = $request->input('search'); // Global search term
+            $activeFilter = $request->input('active_filter', 'all'); // all, active, inactive
             
-            $cacheKey = "devices.list.branch.{$branchId}.page.{$page}.per.{$perPage}.cat.{$category}.status.{$status}.sort.{$sortBy}.{$sortOrder}";
+            $cacheKey = "devices.list.branch.{$branchId}.page.{$page}.per.{$perPage}.cat.{$category}.status.{$status}.sort.{$sortBy}.{$sortOrder}.inactive.{$includeInactive}.search.{$search}.active.{$activeFilter}";
             
-            // Cache for 5 minutes (300 seconds)
-            $result = Cache::remember($cacheKey, 300, function () use ($request, $perPage, $category, $status, $sortBy, $sortOrder) {
-                $query = Device::with(['branch', 'location', 'hardwareDetail.brand', 'hardwareDetail.hardwareModel', 'managedBy'])
-                    ->where('is_active', true);
+            // Cache for 30 seconds (reduced from 5 minutes) since uptime updates frequently
+            $result = Cache::remember($cacheKey, 30, function () use ($request, $perPage, $category, $status, $sortBy, $sortOrder, $includeInactive, $search, $activeFilter) {
+                $query = Device::with(['branch', 'location', 'hardwareDetail.brand', 'hardwareDetail.hardwareModel', 'managedBy']);
+                
+                // Filter by is_active based on active_filter parameter
+                if ($activeFilter === 'active') {
+                    $query->where('is_active', true);
+                } elseif ($activeFilter === 'inactive') {
+                    $query->where('is_active', false);
+                } elseif (!$includeInactive) {
+                    // Default: only show active if include_inactive is not requested
+                    $query->where('is_active', true);
+                }
                 
                 // Filter by branch if provided
                 if ($request->has('branch_id') && $request->branch_id !== 'all') {
@@ -59,13 +79,24 @@ class DeviceController extends Controller
                 }
                 
                 // Filter by category if provided
-                if ($category) {
+                if ($category && $category !== 'all') {
                     $query->where('category', $category);
                 }
                 
                 // Filter by status if provided
-                if ($status) {
+                if ($status && $status !== 'all') {
                     $query->where('status', $status);
+                }
+                
+                // Global search filter
+                if ($search) {
+                    $query->where(function($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%")
+                          ->orWhere('ip_address', 'like', "%{$search}%")
+                          ->orWhere('barcode', 'like', "%{$search}%")
+                          ->orWhere('mac_address', 'like', "%{$search}%")
+                          ->orWhere('serial_number', 'like', "%{$search}%");
+                    });
                 }
                 
                 // Apply sorting
@@ -123,8 +154,8 @@ class DeviceController extends Controller
             
             $cacheKey = "devices.stats.branch.{$branchId}";
             
-            // Cache for 2 minutes (120 seconds)
-            $stats = Cache::remember($cacheKey, 120, function () use ($request, $branchId) {
+            // Cache for 30 seconds (reduced from 2 minutes) since stats update frequently
+            $stats = Cache::remember($cacheKey, 30, function () use ($request, $branchId) {
                 $query = Device::where('is_active', true);
                 
                 // Filter by branch if provided
@@ -408,31 +439,42 @@ class DeviceController extends Controller
     }
 
     /**
+     * Refresh all device uptimes based on monitoring history
+     */
+    public function refreshUptimes()
+    {
+        try {
+            $this->uptimeService->updateAllDeviceUptimes();
+            
+            // Clear device cache to force fresh data
+            Cache::flush();
+            
+            Log::info('All device uptimes refreshed successfully');
+            
+            return response()->json([
+                'message' => 'All device uptimes have been refreshed based on monitoring history'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error refreshing device uptimes: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to refresh device uptimes'], 500);
+        }
+    }
+
+    /**
      * Reset all device uptimes to 100% and clear downtime
      */
     public function resetUptimes()
     {
         try {
-            // Reset device uptime percentages to 100% and clear downtime tracking
-            $updatedCount = Device::query()->update([
-                'uptime_percentage' => 100.00,
-                'offline_duration_minutes' => 0,
-                'offline_since' => null,
-                'offline_alert_sent' => false
-            ]);
+            $this->uptimeService->resetAllUptimes();
             
-            // Clear monitoring history to reset report calculations
-            $historyDeletedCount = \App\Models\MonitoringHistory::query()->delete();
+            // Clear device cache to force fresh data
+            Cache::flush();
             
-            Log::info('All device uptimes, downtime, and monitoring history reset', [
-                'devices_updated' => $updatedCount,
-                'history_deleted' => $historyDeletedCount
-            ]);
+            Log::info('All device uptimes, downtime, and monitoring history reset');
             
             return response()->json([
-                'message' => 'All device uptimes have been reset to 100%, downtime cleared, and monitoring history cleared',
-                'devices_updated' => $updatedCount,
-                'history_cleared' => $historyDeletedCount
+                'message' => 'All device uptimes have been reset to 100%, downtime cleared, and monitoring history cleared'
             ]);
         } catch (\Exception $e) {
             Log::error('Error resetting device uptimes: ' . $e->getMessage());
@@ -490,8 +532,8 @@ class DeviceController extends Controller
             'longitude' => $longitude,
             'brand' => $brand,
             'model' => $model,
-            'uptime_percentage' => $device->uptime_percentage ?? 0,
-            'uptime_minutes' => $device->uptime_minutes ?? 0,
+            'uptime_percentage' => $device->getCalculatedUptimePercentage(),
+            'uptime_minutes' => (int) ($device->uptime_minutes ?? 0), // Ensure it's an integer
             'is_active' => $device->is_active,
             'response_time' => $device->response_time,
             'last_check' => $device->last_ping,
