@@ -58,8 +58,10 @@ Route::post('/ping-all-devices', function() {
         
         $startTime = microtime(true);
         
-        // Get all active devices
-        $devices = \App\Models\Device::where('is_active', true)->get();
+        // Get all active devices, excluding offline acknowledged devices
+        $devices = \App\Models\Device::where('is_active', true)
+            ->where('status', '!=', 'offline_ack')
+            ->get();
         
         if ($devices->isEmpty()) {
             return response()->json([
@@ -77,67 +79,82 @@ Route::post('/ping-all-devices', function() {
 
         $deviceCount = $devices->count();
         
-        // Process in smaller batches with faster timeouts to prevent overall timeout
-        // Reduced batch size and timeout for better reliability
-        $batchSize = 15; // Process 15 devices per batch (reduced from 20)
-        $pingTimeout = 1000; // 1 second timeout per device (reduced from 2 seconds)
-        $batches = $devices->chunk($batchSize);
+        // Optimized for 5000+ devices: Use parallel processing with larger batches
+        $batchSize = 200; // Process 200 devices per batch in parallel
+        $pingTimeout = 500; // 500ms timeout per device (increased for slower networks)
+        $maxConcurrent = 200; // Maximum concurrent pings per batch
+        
+        \Illuminate\Support\Facades\Log::info("Ping All Devices: Processing {$deviceCount} devices with parallel batches of {$batchSize}");
+        
         $results = [];
         $onlineCount = 0;
         $offlineCount = 0;
         $errorCount = 0;
         
-        \Illuminate\Support\Facades\Log::info("Ping All Devices: Processing {$deviceCount} devices in " . $batches->count() . " batches of {$batchSize}");
+        // Process in parallel batches
+        $batches = $devices->chunk($batchSize);
+        $totalBatches = $batches->count();
         
-        // Process each batch sequentially but with optimized execution
         foreach ($batches as $batchIndex => $batch) {
             $batchStartTime = microtime(true);
             $batchResults = [];
             $devicesToUpdate = [];
             
-            // Process devices in batch with optimized ping
+            // Use parallel processing for this batch
+            $processes = [];
+            $deviceMap = [];
+            
+            // Start all ping processes in parallel
             foreach ($batch as $device) {
-                $deviceStartTime = microtime(true);
+                $ip = escapeshellarg($device->ip_address);
+                $deviceMap[$device->id] = $device;
                 
-                try {
-                    $ip = escapeshellarg($device->ip_address);
+                if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+                    // Windows: -w is timeout in milliseconds
+                    $pingCommand = "ping -n 1 -w {$pingTimeout} {$ip} 2>nul";
+                } else {
+                    // Linux/Mac: -W is timeout in seconds (convert ms to seconds)
+                    $timeoutSeconds = round($pingTimeout / 1000, 1);
+                    $pingCommand = "ping -c 1 -W {$timeoutSeconds} {$ip} 2>/dev/null";
+                }
+                
+                // Use proc_open for non-blocking parallel execution
+                $descriptorspec = [
+                    0 => ['pipe', 'r'],
+                    1 => ['pipe', 'w'],
+                    2 => ['pipe', 'w']
+                ];
+                
+                $process = @proc_open($pingCommand, $descriptorspec, $pipes);
+                
+                if (is_resource($process)) {
+                    // Set pipes to non-blocking
+                    stream_set_blocking($pipes[1], false);
+                    stream_set_blocking($pipes[2], false);
+                    
+                    $processes[] = [
+                        'process' => $process,
+                        'pipes' => $pipes,
+                        'device_id' => $device->id,
+                        'start_time' => microtime(true),
+                        'command' => $pingCommand
+                    ];
+                } else {
+                    // Fallback to exec if proc_open fails
                     $output = [];
-                    $returnCode = 0;
-                    
-                    // Use shorter timeout for faster execution
-                    if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-                        // Windows: 1 second timeout
-                        $pingCommand = "ping -n 1 -w {$pingTimeout} {$ip} 2>nul";
-                    } else {
-                        // Linux/Mac: 1 second timeout
-                        $pingCommand = "ping -c 1 -W 1 {$ip} 2>/dev/null";
-                    }
-                    
-                    // Execute ping with timeout
+                    $returnCode = 1;
                     exec($pingCommand, $output, $returnCode);
-                    $pingDuration = round((microtime(true) - $deviceStartTime) * 1000, 2);
+                    
+                    $status = ($returnCode === 0) ? 'online' : 'offline';
+                    $responseTime = null;
                     
                     if ($returnCode === 0) {
-                        // Device is online - extract real response time
-                        $responseTime = null;
-                        $status = 'online';
-                        $onlineCount++;
-                        
-                        // Parse ping output to get actual response time
                         $outputText = implode(' ', $output);
                         if (preg_match('/time[=<](\d+)ms/i', $outputText, $matches)) {
                             $responseTime = (int)$matches[1];
-                        } else {
-                            $responseTime = $pingDuration;
                         }
-                    } else {
-                        // Device is offline
-                        $responseTime = null;
-                        $status = 'offline';
-                        $offlineCount++;
                     }
                     
-                    // Store device update (batch update later for performance)
                     $devicesToUpdate[] = [
                         'device' => $device,
                         'status' => $status,
@@ -150,31 +167,137 @@ Route::post('/ping-all-devices', function() {
                         'status' => $status,
                         'response_time' => $responseTime,
                     ];
-                    
-                } catch (\Exception $e) {
-                    // Error pinging device - mark as offline
-                    $devicesToUpdate[] = [
-                        'device' => $device,
-                        'status' => 'offline',
-                        'response_time' => null,
-                    ];
-                    
-                    $batchResults[] = [
-                        'id' => $device->id,
-                        'ip_address' => $device->ip_address,
-                        'status' => 'offline',
-                        'response_time' => null,
-                        'error' => $e->getMessage(),
-                    ];
-                    $offlineCount++;
-                    $errorCount++;
                 }
             }
             
-                    // Batch update all devices in this batch for better performance
+            // Wait for all processes to complete (with timeout)
+            // Increased wait time to allow for network congestion and slower devices
+            $maxWaitTime = 1.5; // 1.5 seconds max wait (allows for slower network responses)
+            $startWait = microtime(true);
+            
+            while (!empty($processes) && (microtime(true) - $startWait) < $maxWaitTime) {
+                foreach ($processes as $key => $proc) {
+                    $status = proc_get_status($proc['process']);
+                    
+                    if (!$status['running']) {
+                        // Process finished
+                        $device = $deviceMap[$proc['device_id']];
+                        $output = stream_get_contents($proc['pipes'][1]);
+                        $error = stream_get_contents($proc['pipes'][2]);
+                        
+                        // Close pipes
+                        fclose($proc['pipes'][0]);
+                        fclose($proc['pipes'][1]);
+                        fclose($proc['pipes'][2]);
+                        proc_close($proc['process']);
+                        
+                        $returnCode = $status['exitcode'];
+                        $isOnline = ($returnCode === 0);
+                        $responseTime = null;
+                        
+                        if ($isOnline) {
+                            if (preg_match('/time[=<](\d+)ms/i', $output, $matches)) {
+                                $responseTime = (int)$matches[1];
+                            }
+                        }
+                        
+                        $status = $isOnline ? 'online' : 'offline';
+                        
+                        $devicesToUpdate[] = [
+                            'device' => $device,
+                            'status' => $status,
+                            'response_time' => $responseTime,
+                        ];
+                        
+                        $batchResults[] = [
+                            'id' => $device->id,
+                            'ip_address' => $device->ip_address,
+                            'status' => $status,
+                            'response_time' => $responseTime,
+                        ];
+                        
+                        unset($processes[$key]);
+                    }
+                }
+                
+                // Small sleep to prevent CPU spinning
+                if (!empty($processes)) {
+                    usleep(1000); // 1ms
+                }
+            }
+            
+            // Clean up any remaining processes (only after waiting the full timeout)
+            // Check one more time if processes finished (might have completed during cleanup)
+            foreach ($processes as $proc) {
+                $status = proc_get_status($proc['process']);
+                
+                if (!$status['running']) {
+                    // Process finished, get the result
+                    $device = $deviceMap[$proc['device_id']];
+                    $output = stream_get_contents($proc['pipes'][1]);
+                    $error = stream_get_contents($proc['pipes'][2]);
+                    
+                    fclose($proc['pipes'][0]);
+                    fclose($proc['pipes'][1]);
+                    fclose($proc['pipes'][2]);
+                    proc_close($proc['process']);
+                    
+                    $returnCode = $status['exitcode'];
+                    $isOnline = ($returnCode === 0);
+                    $responseTime = null;
+                    
+                    if ($isOnline) {
+                        if (preg_match('/time[=<](\d+)ms/i', $output, $matches)) {
+                            $responseTime = (int)$matches[1];
+                        }
+                    }
+                    
+                    $devicesToUpdate[] = [
+                        'device' => $device,
+                        'status' => $isOnline ? 'online' : 'offline',
+                        'response_time' => $responseTime,
+                    ];
+                    
+                    $batchResults[] = [
+                        'id' => $device->id,
+                        'ip_address' => $device->ip_address,
+                        'status' => $isOnline ? 'online' : 'offline',
+                        'response_time' => $responseTime,
+                    ];
+                } else {
+                    // Process still running - terminate it and mark as offline
+                    proc_terminate($proc['process']);
+                    fclose($proc['pipes'][0]);
+                    fclose($proc['pipes'][1]);
+                    fclose($proc['pipes'][2]);
+                    proc_close($proc['process']);
+                    
+                    $device = $deviceMap[$proc['device_id']];
+                    $devicesToUpdate[] = [
+                        'device' => $device,
+                        'status' => 'offline',
+                        'response_time' => null,
+                    ];
+                    
+                    $batchResults[] = [
+                        'id' => $device->id,
+                        'ip_address' => $device->ip_address,
+                        'status' => 'offline',
+                        'response_time' => null,
+                    ];
+                }
+            }
+            
+            // Batch update all devices in this batch
             foreach ($devicesToUpdate as $updateData) {
                 $device = $updateData['device'];
                 $previousStatus = $device->status;
+                
+                if ($updateData['status'] === 'online') {
+                    $onlineCount++;
+                } else {
+                    $offlineCount++;
+                }
                 
                 $updateFields = [
                     'status' => $updateData['status'],
@@ -182,9 +305,7 @@ Route::post('/ping-all-devices', function() {
                     'last_ping' => now(),
                 ];
                 
-                // Track online_since timestamp when device goes online
                 if ($updateData['status'] === 'online') {
-                    // Device is online - ensure online_since is set
                     if ($previousStatus !== 'online' || !$device->online_since) {
                         $updateFields['online_since'] = now();
                         $updateFields['offline_since'] = null;
@@ -195,23 +316,14 @@ Route::post('/ping-all-devices', function() {
                 }
                 
                 $device->update($updateFields);
-                
-                // Refresh to get updated online_since
                 $device->refresh();
-                
-                // Update uptime (calculates real minutes)
                 $device->updateUptime();
             }
             
             $results = array_merge($results, $batchResults);
             $batchDuration = round((microtime(true) - $batchStartTime) * 1000, 2);
             
-            \Illuminate\Support\Facades\Log::info("Batch " . ($batchIndex + 1) . "/{$batches->count()} completed: {$batch->count()} devices in {$batchDuration}ms");
-            
-            // Small delay between batches to prevent network congestion
-            if ($batchIndex < $batches->count() - 1) {
-                usleep(50000); // 50ms delay
-            }
+            \Illuminate\Support\Facades\Log::info("Batch " . ($batchIndex + 1) . "/{$totalBatches} completed: {$batch->count()} devices in {$batchDuration}ms");
         }
         
         $duration = round((microtime(true) - $startTime) * 1000, 2);

@@ -28,8 +28,10 @@ class FastPingService
     {
         $startTime = microtime(true);
         
-        // Get all active devices
-        $devices = Device::where('is_active', true)->get();
+        // Get all active devices, excluding offline acknowledged devices
+        $devices = Device::where('is_active', true)
+            ->where('status', '!=', 'offline_ack')
+            ->get();
         
         if ($devices->isEmpty()) {
             return [

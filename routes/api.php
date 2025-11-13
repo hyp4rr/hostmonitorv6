@@ -49,6 +49,8 @@ Route::delete('alerts/{alert}', [AlertController::class, 'destroy']);
 
 // Acknowledge offline
 Route::post('/devices/{id}/acknowledge-offline', [DeviceController::class, 'acknowledgeOffline']);
+Route::post('/devices/bulk-acknowledge-offline', [DeviceController::class, 'bulkAcknowledgeOffline']);
+Route::post('/devices/bulk-update', [DeviceController::class, 'bulkUpdate']);
 
 // Reset all uptimes
 Route::post('/devices/reset-uptimes', [DeviceController::class, 'resetUptimes']);

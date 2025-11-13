@@ -282,6 +282,31 @@ export default function Devices() {
                 params.append('status', statusFilter);
             }
             
+            // Add search filter
+            if (searchQuery) {
+                params.append('search', searchQuery);
+            }
+            
+            // Add location filter
+            if (locationFilter !== 'all') {
+                params.append('location', locationFilter);
+            }
+            
+            // Add brand filter
+            if (brandFilter !== 'all') {
+                params.append('brand', brandFilter);
+            }
+            
+            // Add model filter
+            if (modelFilter !== 'all') {
+                params.append('model', modelFilter);
+            }
+            
+            // Add managed_by filter
+            if (managedByFilter !== 'all') {
+                params.append('managed_by', managedByFilter);
+            }
+            
             // Add sorting params
             params.append('sort_by', sortField);
             params.append('sort_order', sortOrder);
@@ -329,7 +354,7 @@ export default function Devices() {
         } finally {
             setIsLoadingDevices(false);
         }
-    }, [currentPage, perPage, selectedCategory, statusFilter, sortField, sortOrder]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [currentPage, perPage, selectedCategory, statusFilter, searchQuery, locationFilter, brandFilter, modelFilter, managedByFilter, sortField, sortOrder, currentBranch?.id]); // eslint-disable-line react-hooks/exhaustive-deps
     
     // Fetch category counts separately
     const fetchCategoryCounts = useCallback(async () => {
@@ -541,10 +566,10 @@ export default function Devices() {
         }
     };
     
-    // Reset to page 1 when category, status filter, or sort changes
+    // Reset to page 1 when filters or sort changes
     useEffect(() => {
         setCurrentPage(1);
-    }, [selectedCategory, statusFilter, sortField, sortOrder]);
+    }, [selectedCategory, statusFilter, searchQuery, locationFilter, brandFilter, modelFilter, managedByFilter, sortField, sortOrder]);
 
     // Prevent body scroll when modal is open
     useEffect(() => {
@@ -561,85 +586,24 @@ export default function Devices() {
 
 
 
-    let filteredDevices = selectedCategory === 'all' 
-        ? allDevices 
-        : allDevices.filter(d => d.category === selectedCategory);
+    // Devices are already filtered by the backend API
+    // No need for client-side filtering - just use the devices from API
+    const filteredDevices = allDevices;
 
-    // Apply search filter
-    if (searchQuery) {
-        filteredDevices = filteredDevices.filter(d => 
-            d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            d.ip_address.includes(searchQuery)
-        );
-    }
-
-    // Apply status filter
-    if (statusFilter !== 'all') {
-        filteredDevices = filteredDevices.filter(d => d.status === statusFilter);
-    }
-
-    // Get unique locations from current branch (fallback to device data if API fails)
+    // Get unique locations from availableLocations (loaded from API)
     const uniqueLocations = availableLocations.length > 0 
         ? availableLocations 
-        : Array.from(new Set(allDevices.map(d => d.location).filter(Boolean))).map((loc, idx) => ({
-            id: idx,
-            name: loc
-        }));
+        : [];
 
-    // Get unique brands - use hardware_detail when available
+    // Get unique brands from availableBrands (loaded from API)
     const uniqueBrands = availableBrands.length > 0 
         ? availableBrands 
-        : Array.from(new Set(
-            allDevices
-                .map(d => d.hardware_detail?.brand?.name || d.brand)
-                .filter(Boolean)
-          )).map((brand, idx) => ({
-            id: idx,
-            name: brand
-        }));
+        : [];
 
     // Filter models based on selected brand
     const filteredModelsForDropdown = brandFilter !== 'all'
         ? availableModels.filter(m => m.brand_id === parseInt(brandFilter))
         : availableModels;
-
-    // Apply location filter
-    if (locationFilter !== 'all') {
-        filteredDevices = filteredDevices.filter(d => d.location === locationFilter);
-    }
-
-    // Apply brand filter - handle both API brands and fallback brands
-    if (brandFilter !== 'all') {
-        const selectedBrandName = uniqueBrands.find(b => String(b.id) === brandFilter)?.name;
-        if (selectedBrandName) {
-            filteredDevices = filteredDevices.filter(d => {
-                // Check both virtual attribute and hardware_detail
-                return d.brand === selectedBrandName || 
-                       d.hardware_detail?.brand?.name === selectedBrandName;
-            });
-        }
-    }
-
-    // Apply model filter - handle both API models and fallback models
-    if (modelFilter !== 'all') {
-        const selectedModelName = availableModels.find(m => String(m.id) === modelFilter)?.name;
-        if (selectedModelName) {
-            filteredDevices = filteredDevices.filter(d => {
-                // Check both virtual attribute and hardware_detail
-                return d.model === selectedModelName ||
-                       d.hardware_detail?.hardware_model?.name === selectedModelName;
-            });
-        }
-    }
-
-    // Apply managed by filter
-    if (managedByFilter !== 'all') {
-        if (managedByFilter === 'unassigned') {
-            filteredDevices = filteredDevices.filter(d => !d.managed_by);
-        } else {
-            filteredDevices = filteredDevices.filter(d => String(d.managed_by) === managedByFilter);
-        }
-    }
 
     // Sorting function
     const handleSort = (field: SortField) => {
@@ -872,7 +836,7 @@ export default function Devices() {
                                     >
                                         <option value="all">All Locations ({uniqueLocations.length})</option>
                                         {uniqueLocations.map((location) => (
-                                            <option key={location.id} value={location.name}>
+                                            <option key={location.id} value={location.id}>
                                                 {location.name}
                                             </option>
                                         ))}
@@ -969,7 +933,7 @@ export default function Devices() {
                                     </span>
                                     {locationFilter !== 'all' && (
                                         <span className="flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                                            Location: {uniqueLocations.find(l => l.name === locationFilter)?.name || locationFilter}
+                                            Location: {uniqueLocations.find(l => String(l.id) === locationFilter || l.name === locationFilter)?.name || locationFilter}
                                             <button
                                                 onClick={() => setLocationFilter('all')}
                                                 className="hover:text-blue-900 dark:hover:text-blue-100"
@@ -1106,7 +1070,7 @@ export default function Devices() {
                             {t('devices.noDevices')}
                         </h3>
                         <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                            {searchQuery || statusFilter !== 'all' || selectedCategory !== 'all'
+                            {searchQuery || statusFilter !== 'all' || selectedCategory !== 'all' || locationFilter !== 'all' || brandFilter !== 'all' || modelFilter !== 'all' || managedByFilter !== 'all'
                                 ? t('devices.tryAdjustingFilters')
                                 : t('devices.noDevicesConfigured')}
                         </p>
@@ -1121,7 +1085,12 @@ export default function Devices() {
                                 {categories.find(c => c.id === selectedCategory)?.name || 'All Devices'}
                             </h2>
                             <p className="text-sm text-slate-600 dark:text-slate-400">
-                                {filteredDevices.length} device{filteredDevices.length !== 1 ? 's' : ''} found
+                                Showing {filteredDevices.length} device{filteredDevices.length !== 1 ? 's' : ''} on this page
+                                {totalItems > 0 && (
+                                    <span className="ml-2 text-blue-600 dark:text-blue-400">
+                                        (Total: {totalItems} device{totalItems !== 1 ? 's' : ''} matching filters across all pages)
+                                    </span>
+                                )}
                             </p>
                         </div>
                         <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
@@ -1185,7 +1154,12 @@ export default function Devices() {
                                         {categories.find(c => c.id === selectedCategory)?.name || 'All Devices'}
                                     </h2>
                                     <p className="text-sm text-slate-600 dark:text-slate-400">
-                                        {sortedDevices.length} device{sortedDevices.length !== 1 ? 's' : ''} found
+                                        Showing {sortedDevices.length} device{sortedDevices.length !== 1 ? 's' : ''} on this page
+                                        {totalItems > 0 && (
+                                            <span className="ml-2 text-blue-600 dark:text-blue-400">
+                                                (Total: {totalItems} device{totalItems !== 1 ? 's' : ''} matching filters across all pages)
+                                            </span>
+                                        )}
                                     </p>
                                 </div>
                             </div>

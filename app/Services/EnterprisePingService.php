@@ -89,8 +89,9 @@ class EnterprisePingService
     {
         Log::info("Using large-scale monitoring strategy", ['monitoring_id' => $monitoringId]);
 
-        // Process devices in chunks for memory efficiency
+        // Process devices in chunks for memory efficiency, excluding offline acknowledged devices
         $chunks = Device::where('is_active', true)
+            ->where('status', '!=', 'offline_ack')
             ->orderBy('id') // Consistent ordering for distributed processing
             ->chunk($this->batchSize, function ($devices) use ($monitoringId) {
                 $this->processDeviceChunk($devices, $monitoringId);
@@ -108,6 +109,7 @@ class EnterprisePingService
         Log::info("Using medium-scale monitoring strategy", ['monitoring_id' => $monitoringId]);
 
         $devices = Device::where('is_active', true)
+            ->where('status', '!=', 'offline_ack')
             ->orderBy('id')
             ->get();
 
@@ -121,7 +123,9 @@ class EnterprisePingService
     {
         Log::info("Using small-scale monitoring strategy", ['monitoring_id' => $monitoringId]);
 
-        $devices = Device::where('is_active', true)->get();
+        $devices = Device::where('is_active', true)
+            ->where('status', '!=', 'offline_ack')
+            ->get();
         return $this->processBatchDevices($devices, $monitoringId);
     }
 

@@ -56,11 +56,15 @@ class DeviceController extends Controller
             $includeInactive = $request->input('include_inactive', false); // For configuration panel
             $search = $request->input('search'); // Global search term
             $activeFilter = $request->input('active_filter', 'all'); // all, active, inactive
+            $locationFilter = $request->input('location'); // Location filter (location name or ID)
+            $brandFilter = $request->input('brand'); // Brand filter (brand ID)
+            $modelFilter = $request->input('model'); // Model filter (model ID)
+            $managedByFilter = $request->input('managed_by'); // Managed by filter (user ID or 'unassigned')
             
-            $cacheKey = "devices.list.branch.{$branchId}.page.{$page}.per.{$perPage}.cat.{$category}.status.{$status}.sort.{$sortBy}.{$sortOrder}.inactive.{$includeInactive}.search.{$search}.active.{$activeFilter}";
+            $cacheKey = "devices.list.branch.{$branchId}.page.{$page}.per.{$perPage}.cat.{$category}.status.{$status}.sort.{$sortBy}.{$sortOrder}.inactive.{$includeInactive}.search.{$search}.active.{$activeFilter}.loc.{$locationFilter}.brand.{$brandFilter}.model.{$modelFilter}.mgr.{$managedByFilter}";
             
             // Cache for 30 seconds (reduced from 5 minutes) since uptime updates frequently
-            $result = Cache::remember($cacheKey, 30, function () use ($request, $perPage, $category, $status, $sortBy, $sortOrder, $includeInactive, $search, $activeFilter) {
+            $result = Cache::remember($cacheKey, 30, function () use ($request, $perPage, $category, $status, $sortBy, $sortOrder, $includeInactive, $search, $activeFilter, $locationFilter, $brandFilter, $modelFilter, $managedByFilter) {
                 $query = Device::with(['branch', 'location', 'hardwareDetail.brand', 'hardwareDetail.hardwareModel', 'managedBy']);
                 
                 // Filter by is_active based on active_filter parameter
@@ -97,6 +101,49 @@ class DeviceController extends Controller
                           ->orWhere('mac_address', 'like', "%{$search}%")
                           ->orWhere('serial_number', 'like', "%{$search}%");
                     });
+                }
+                
+                // Filter by location
+                if ($locationFilter && $locationFilter !== 'all') {
+                    // Try to match by location ID first, then by name
+                    if (is_numeric($locationFilter)) {
+                        $query->where('location_id', $locationFilter);
+                    } else {
+                        $query->whereHas('location', function($q) use ($locationFilter) {
+                            $q->where('name', 'like', "%{$locationFilter}%");
+                        });
+                    }
+                }
+                
+                // Filter by brand
+                if ($brandFilter && $brandFilter !== 'all') {
+                    $query->whereHas('hardwareDetail.brand', function($q) use ($brandFilter) {
+                        if (is_numeric($brandFilter)) {
+                            $q->where('brands.id', $brandFilter);
+                        } else {
+                            $q->where('brands.name', 'like', "%{$brandFilter}%");
+                        }
+                    });
+                }
+                
+                // Filter by model
+                if ($modelFilter && $modelFilter !== 'all') {
+                    $query->whereHas('hardwareDetail.hardwareModel', function($q) use ($modelFilter) {
+                        if (is_numeric($modelFilter)) {
+                            $q->where('hardware_models.id', $modelFilter);
+                        } else {
+                            $q->where('hardware_models.name', 'like', "%{$modelFilter}%");
+                        }
+                    });
+                }
+                
+                // Filter by managed_by
+                if ($managedByFilter && $managedByFilter !== 'all') {
+                    if ($managedByFilter === 'unassigned') {
+                        $query->whereNull('managed_by');
+                    } else {
+                        $query->where('managed_by', $managedByFilter);
+                    }
                 }
                 
                 // Apply sorting
@@ -435,6 +482,202 @@ class DeviceController extends Controller
         } catch (\Exception $e) {
             Log::error('Error acknowledging offline device: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to acknowledge offline device'], 500);
+        }
+    }
+
+    /**
+     * Bulk acknowledge offline devices
+     */
+    public function bulkAcknowledgeOffline(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'device_ids' => 'required|array|min:1',
+                'device_ids.*' => 'required|integer|exists:devices,id',
+                'reason' => 'required|string|max:500',
+                'acknowledged_by' => 'required|string|max:255',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'error' => 'Validation failed',
+                    'messages' => $validator->errors()
+                ], 422);
+            }
+
+            $deviceIds = $request->device_ids;
+            $reason = $request->reason;
+            $acknowledgedBy = $request->acknowledged_by;
+
+            $devices = Device::whereIn('id', $deviceIds)
+                ->where('status', 'offline')
+                ->get();
+
+            if ($devices->isEmpty()) {
+                return response()->json([
+                    'error' => 'No offline devices found in the selected devices'
+                ], 404);
+            }
+
+            $updatedCount = 0;
+            $branchIds = [];
+            $activityLog = new ActivityLogService();
+
+            foreach ($devices as $device) {
+                $device->status = 'offline_ack';
+                $device->offline_reason = $reason;
+                $device->offline_acknowledged_by = $acknowledgedBy;
+                $device->offline_acknowledged_at = now();
+                $device->save();
+
+                $branchIds[] = $device->branch_id;
+
+                // Log activity
+                $activityLog->log(
+                    'updated',
+                    'device',
+                    $device->id,
+                    [
+                        'device_name' => $device->name,
+                        'changes' => [
+                            'status' => [
+                                'old' => 'offline',
+                                'new' => 'offline_ack'
+                            ],
+                            'offline_reason' => [
+                                'old' => null,
+                                'new' => $reason
+                            ]
+                        ]
+                    ],
+                    $device->branch_id
+                );
+
+                $updatedCount++;
+            }
+
+            // Clear device cache for all affected branches
+            foreach (array_unique($branchIds) as $branchId) {
+                $this->clearDeviceCache($branchId);
+            }
+
+            return response()->json([
+                'message' => "Successfully acknowledged {$updatedCount} offline device(s)",
+                'acknowledged_count' => $updatedCount,
+                'total_selected' => count($deviceIds)
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error bulk acknowledging offline devices: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to acknowledge offline devices'], 500);
+        }
+    }
+
+    /**
+     * Bulk update devices
+     */
+    public function bulkUpdate(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'device_ids' => 'required|array|min:1',
+                'device_ids.*' => 'required|integer|exists:devices,id',
+                'status' => 'sometimes|string|in:online,offline,warning,maintenance',
+                'category' => 'sometimes|string|in:switches,servers,wifi,tas,cctv',
+                'branch_id' => 'sometimes|integer|exists:branches,id',
+                'location_id' => 'sometimes|nullable|integer|exists:locations,id',
+                'is_active' => 'sometimes|boolean',
+                'managed_by' => 'sometimes|nullable|integer|exists:users,id',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'error' => 'Validation failed',
+                    'messages' => $validator->errors()
+                ], 422);
+            }
+
+            $deviceIds = $request->device_ids;
+            $updateData = $request->only(['status', 'category', 'branch_id', 'location_id', 'is_active', 'managed_by']);
+
+            // Handle managed_by: 0 means null (not assigned)
+            if (isset($updateData['managed_by']) && $updateData['managed_by'] == 0) {
+                $updateData['managed_by'] = null;
+            }
+
+            // Remove null values (but keep false for is_active)
+            $updateData = array_filter($updateData, function($value, $key) {
+                if ($key === 'is_active') {
+                    return true; // Keep false values for is_active
+                }
+                return $value !== null && $value !== '';
+            }, ARRAY_FILTER_USE_BOTH);
+
+            if (empty($updateData)) {
+                return response()->json([
+                    'error' => 'No fields to update'
+                ], 422);
+            }
+
+            $devices = Device::whereIn('id', $deviceIds)->get();
+
+            if ($devices->isEmpty()) {
+                return response()->json([
+                    'error' => 'No devices found'
+                ], 404);
+            }
+
+            $updatedCount = 0;
+            $branchIds = [];
+            $activityLog = new ActivityLogService();
+
+            foreach ($devices as $device) {
+                $oldValues = [];
+                $newValues = [];
+
+                foreach ($updateData as $field => $value) {
+                    $oldValues[$field] = $device->$field;
+                    $device->$field = $value;
+                    $newValues[$field] = $value;
+                }
+
+                $device->save();
+                $branchIds[] = $device->branch_id;
+                $updatedCount++;
+
+                // Log activity
+                $changes = [];
+                foreach ($updateData as $field => $value) {
+                    $changes[$field] = [
+                        'old' => $oldValues[$field],
+                        'new' => $value
+                    ];
+                }
+
+                $activityLog->log(
+                    'updated',
+                    'device',
+                    $device->id,
+                    [
+                        'device_name' => $device->name,
+                        'changes' => $changes
+                    ],
+                    $device->branch_id
+                );
+            }
+
+            // Clear device cache for all affected branches
+            foreach (array_unique($branchIds) as $branchId) {
+                $this->clearDeviceCache($branchId);
+            }
+
+            return response()->json([
+                'message' => "Successfully updated {$updatedCount} device(s)",
+                'updated_count' => $updatedCount,
+                'total_selected' => count($deviceIds)
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error bulk updating devices: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to update devices'], 500);
         }
     }
 

@@ -66,8 +66,10 @@ class MonitoringController extends Controller
             Cache::forget('ping.lock');
             Cache::forget('bulk_ping.lock');
             
-            // Get all active devices
-            $devices = Device::where('is_active', true)->get();
+            // Get all active devices, excluding offline acknowledged devices
+            $devices = Device::where('is_active', true)
+                ->where('status', '!=', 'offline_ack')
+                ->get();
             $deviceCount = $devices->count();
             
             Log::info("Ping All Devices: Starting optimized ping for {$deviceCount} devices");
@@ -86,32 +88,15 @@ class MonitoringController extends Controller
                 ]);
             }
             
-            // Check if device count is too large for web request
-            if ($deviceCount > 500) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "Too many devices ({$deviceCount}). Please use the scheduled monitoring or ping by category instead.",
-                    'stats' => [
-                        'total_devices' => $deviceCount,
-                        'max_allowed' => 500,
-                        'suggestion' => 'Use scheduled monitoring or ping by category for large device sets'
-                    ]
-                ], 429); // Too Many Requests
-            }
-
-            // Use optimized batch ping approach with better timeout handling
-            // Reduced batch size and timeout to prevent web server timeouts
-            $maxDevices = 15; // Reduced to 15 for better reliability
+            // Optimized for large device sets (5000+ devices)
+            // Use parallel processing with larger batches
             $totalDevices = $devices->count();
+            $batchSize = 200; // Process 200 devices per batch in parallel
             
-            Log::info("Ping All Devices: Starting optimized ping for {$totalDevices} devices (batch size: {$maxDevices})");
+            Log::info("Ping All Devices: Starting optimized parallel ping for {$totalDevices} devices (batch size: {$batchSize})");
             
-            if ($totalDevices > $maxDevices) {
-                // Process in batches to prevent timeout
-                $results = $this->batchPingDevices($devices, $maxDevices);
-            } else {
-                $results = $this->fastPingAll($devices);
-            }
+            // Use optimized parallel batch processing
+            $results = $this->parallelBatchPingDevices($devices, $batchSize);
             
             $duration = round((microtime(true) - $startTime) * 1000, 2);
             $devicesPerSecond = $duration > 0 ? round($totalDevices / ($duration / 1000), 2) : 0;
@@ -221,24 +206,25 @@ class MonitoringController extends Controller
     }
 
     /**
-     * Batch ping devices to prevent timeout
+     * Parallel batch ping devices - optimized for 5000+ devices
      */
-    private function batchPingDevices($devices, $batchSize = 15)
+    private function parallelBatchPingDevices($devices, $batchSize = 200)
     {
         $totalOnline = 0;
         $totalOffline = 0;
         $allResults = [];
         $processedCount = 0;
         $totalDevices = $devices->count();
+        $pingTimeout = 500; // 500ms timeout per device (increased for slower networks)
         
         $batches = $devices->chunk($batchSize);
         $batchCount = $batches->count();
         
-        Log::info("Batch Ping: Processing {$totalDevices} devices in {$batchCount} batches of {$batchSize}");
+        Log::info("Parallel Batch Ping: Processing {$totalDevices} devices in {$batchCount} batches of {$batchSize}");
         
         foreach ($batches as $index => $batch) {
             $batchStartTime = microtime(true);
-            $batchResults = $this->fastPingAll($batch);
+            $batchResults = $this->parallelPingBatch($batch, $pingTimeout);
             $batchDuration = round((microtime(true) - $batchStartTime) * 1000, 2);
             
             $totalOnline += $batchResults['online'];
@@ -249,9 +235,6 @@ class MonitoringController extends Controller
             $progress = round(($processedCount / $totalDevices) * 100, 1);
             
             Log::info("Batch " . ($index + 1) . "/{$batchCount} completed: {$batch->count()} devices, {$batchResults['online']} online, {$batchResults['offline']} offline, {$batchDuration}ms ({$progress}% complete)");
-            
-            // Very small delay between batches to prevent overwhelming
-            usleep(50000); // 0.05 second delay
         }
         
         return [
@@ -260,26 +243,225 @@ class MonitoringController extends Controller
             'results' => $allResults
         ];
     }
+    
+    /**
+     * Ping a batch of devices in parallel using proc_open
+     */
+    private function parallelPingBatch($devices, $timeout = 300)
+    {
+        $onlineCount = 0;
+        $offlineCount = 0;
+        $results = [];
+        $processes = [];
+        $deviceMap = [];
+        
+        // Start all ping processes in parallel
+        foreach ($devices as $device) {
+            $ip = escapeshellarg($device->ip_address);
+            $deviceMap[$device->id] = $device;
+            
+            if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+                // Windows: -w is timeout in milliseconds
+                $pingCommand = "ping -n 1 -w {$timeout} {$ip} 2>nul";
+            } else {
+                // Linux/Mac: -W is timeout in seconds (convert ms to seconds)
+                $timeoutSeconds = round($timeout / 1000, 1);
+                $pingCommand = "ping -c 1 -W {$timeoutSeconds} {$ip} 2>/dev/null";
+            }
+            
+            $descriptorspec = [
+                0 => ['pipe', 'r'],
+                1 => ['pipe', 'w'],
+                2 => ['pipe', 'w']
+            ];
+            
+            $process = @proc_open($pingCommand, $descriptorspec, $pipes);
+            
+            if (is_resource($process)) {
+                stream_set_blocking($pipes[1], false);
+                stream_set_blocking($pipes[2], false);
+                
+                $processes[] = [
+                    'process' => $process,
+                    'pipes' => $pipes,
+                    'device_id' => $device->id,
+                    'start_time' => microtime(true)
+                ];
+            } else {
+                // Fallback to exec
+                $output = [];
+                $returnCode = 1;
+                exec($pingCommand, $output, $returnCode);
+                
+                $status = ($returnCode === 0) ? 'online' : 'offline';
+                $responseTime = null;
+                
+                if ($returnCode === 0) {
+                    $outputText = implode(' ', $output);
+                    if (preg_match('/time[=<](\d+)ms/i', $outputText, $matches)) {
+                        $responseTime = (int)$matches[1];
+                    }
+                }
+                
+                if ($status === 'online') {
+                    $onlineCount++;
+                } else {
+                    $offlineCount++;
+                }
+                
+                $results[] = [
+                    'id' => $device->id,
+                    'device' => $device,
+                    'ip_address' => $device->ip_address,
+                    'status' => $status,
+                    'response_time' => $responseTime,
+                ];
+            }
+        }
+        
+        // Wait for all processes with timeout
+        // Increased wait time to allow for network congestion and slower devices
+        // Wait time = ping timeout (500ms) + buffer (1000ms) = 1500ms total
+        $maxWaitTime = 1.5; // 1.5 seconds max wait (allows for slower network responses)
+        $startWait = microtime(true);
+        
+        while (!empty($processes) && (microtime(true) - $startWait) < $maxWaitTime) {
+            foreach ($processes as $key => $proc) {
+                $status = proc_get_status($proc['process']);
+                
+                if (!$status['running']) {
+                    $device = $deviceMap[$proc['device_id']];
+                    $output = stream_get_contents($proc['pipes'][1]);
+                    
+                    fclose($proc['pipes'][0]);
+                    fclose($proc['pipes'][1]);
+                    fclose($proc['pipes'][2]);
+                    proc_close($proc['process']);
+                    
+                    $returnCode = $status['exitcode'];
+                    $isOnline = ($returnCode === 0);
+                    $responseTime = null;
+                    
+                    if ($isOnline) {
+                        if (preg_match('/time[=<](\d+)ms/i', $output, $matches)) {
+                            $responseTime = (int)$matches[1];
+                        }
+                        $onlineCount++;
+                    } else {
+                        $offlineCount++;
+                    }
+                    
+                    $results[] = [
+                        'id' => $device->id,
+                        'device' => $device,
+                        'ip_address' => $device->ip_address,
+                        'status' => $isOnline ? 'online' : 'offline',
+                        'response_time' => $responseTime,
+                    ];
+                    
+                    unset($processes[$key]);
+                }
+            }
+            
+            if (!empty($processes)) {
+                usleep(1000); // 1ms sleep
+            }
+        }
+        
+        // Clean up remaining processes (only after waiting the full timeout)
+        // Check one more time if processes finished (might have completed during cleanup)
+        foreach ($processes as $proc) {
+            $status = proc_get_status($proc['process']);
+            
+            if (!$status['running']) {
+                // Process finished, get the result
+                $device = $deviceMap[$proc['device_id']];
+                $output = stream_get_contents($proc['pipes'][1]);
+                
+                fclose($proc['pipes'][0]);
+                fclose($proc['pipes'][1]);
+                fclose($proc['pipes'][2]);
+                proc_close($proc['process']);
+                
+                $returnCode = $status['exitcode'];
+                $isOnline = ($returnCode === 0);
+                $responseTime = null;
+                
+                if ($isOnline) {
+                    if (preg_match('/time[=<](\d+)ms/i', $output, $matches)) {
+                        $responseTime = (int)$matches[1];
+                    }
+                    $onlineCount++;
+                } else {
+                    $offlineCount++;
+                }
+                
+                $results[] = [
+                    'id' => $device->id,
+                    'device' => $device,
+                    'ip_address' => $device->ip_address,
+                    'status' => $isOnline ? 'online' : 'offline',
+                    'response_time' => $responseTime,
+                ];
+            } else {
+                // Process still running - terminate it and mark as offline
+                proc_terminate($proc['process']);
+                fclose($proc['pipes'][0]);
+                fclose($proc['pipes'][1]);
+                fclose($proc['pipes'][2]);
+                proc_close($proc['process']);
+                
+                $device = $deviceMap[$proc['device_id']];
+                $offlineCount++;
+                
+                $results[] = [
+                    'id' => $device->id,
+                    'device' => $device,
+                    'ip_address' => $device->ip_address,
+                    'status' => 'offline',
+                    'response_time' => null,
+                ];
+            }
+        }
+        
+        // Batch update devices
+        $this->batchUpdateDevices($results);
+        
+        return [
+            'online' => $onlineCount,
+            'offline' => $offlineCount,
+            'results' => $results
+        ];
+    }
+    
+    /**
+     * Batch ping devices to prevent timeout (legacy method)
+     */
+    private function batchPingDevices($devices, $batchSize = 15)
+    {
+        return $this->parallelBatchPingDevices($devices, $batchSize);
+    }
 
     /**
      * Fast single device ping with optimized timeout
      */
     private function pingSingleDeviceFast($device)
     {
-        $timeout = 1000; // 1 second timeout (increased from 500ms for reliability)
+        $timeout = 1000; // 1000ms (1 second) timeout for single device ping
         $startTime = microtime(true);
         
         // Use optimized ping command with timeout
         if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-            // Windows - use 1 second timeout
+            // Windows: -w is timeout in milliseconds
             $command = "ping -n 1 -w " . $timeout . " " . escapeshellarg($device->ip_address) . " 2>nul";
             $output = [];
             $returnCode = 0;
             exec($command, $output, $returnCode);
             $isOnline = ($returnCode === 0);
         } else {
-            // Linux/Mac - use 1 second timeout
-            $command = "ping -c 1 -W 1 " . escapeshellarg($device->ip_address) . " 2>/dev/null";
+            // Linux/Mac: -W is timeout in seconds
+            $timeoutSeconds = round($timeout / 1000, 1);
+            $command = "ping -c 1 -W {$timeoutSeconds} " . escapeshellarg($device->ip_address) . " 2>/dev/null";
             $output = [];
             $returnCode = 0;
             exec($command, $output, $returnCode);
@@ -586,6 +768,7 @@ class MonitoringController extends Controller
         try {
             $devices = Device::where('is_active', true)
                 ->where('category', $category)
+                ->where('status', '!=', 'offline_ack')
                 ->get();
 
             if ($devices->isEmpty()) {

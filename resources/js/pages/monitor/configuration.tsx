@@ -221,7 +221,7 @@ export default function Configuration() {
     // CRUD state
     const [selectedEntity, setSelectedEntity] = useState<CRUDEntity>('devices');
     const [showModal, setShowModal] = useState(false);
-    const [modalMode, setModalMode] = useState<'create' | 'edit' | 'delete' | 'acknowledge'>('create');
+    const [modalMode, setModalMode] = useState<'create' | 'edit' | 'delete' | 'acknowledge' | 'bulk_acknowledge' | 'bulk_edit'>('create');
     const [selectedItem, setSelectedItem] = useState<Device | Alert | Location | Branch | UserData | Brand | Model | null>(null);
     const [showViewModal, setShowViewModal] = useState(false);
     const [viewDevice, setViewDevice] = useState<Device | null>(null);
@@ -473,6 +473,24 @@ export default function Configuration() {
     const handleAcknowledgeOffline = (device: Device) => {
         setModalMode('acknowledge');
         setSelectedItem(device);
+        setShowModal(true);
+    };
+
+    const handleBulkAcknowledgeOffline = () => {
+        if (selectedIds.length === 0) {
+            alert('Please select devices to acknowledge');
+            return;
+        }
+        setModalMode('bulk_acknowledge');
+        setShowModal(true);
+    };
+
+    const handleBulkEdit = () => {
+        if (selectedIds.length === 0) {
+            alert('Please select devices to edit');
+            return;
+        }
+        setModalMode('bulk_edit');
         setShowModal(true);
     };
 
@@ -948,7 +966,36 @@ export default function Configuration() {
                                         <Check className="size-4" />
                                         {selectedIds.length === getCurrentData().length ? 'Deselect All' : 'Select All'}
                                     </button>
-                                    {selectedIds.length > 0 && (
+                                    {selectedIds.length > 0 && selectedEntity === 'devices' && (
+                                        <>
+                                            <button
+                                                onClick={handleBulkAcknowledgeOffline}
+                                                className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-2 text-sm font-medium text-white shadow-lg transition-all hover:scale-105"
+                                                title={`Acknowledge offline for ${selectedIds.length} selected device(s)`}
+                                            >
+                                                <CheckCircle2 className="size-4" />
+                                                Acknowledge Offline ({selectedIds.length})
+                                            </button>
+                                            <button
+                                                onClick={handleBulkEdit}
+                                                className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 px-4 py-2 text-sm font-medium text-white shadow-lg transition-all hover:scale-105"
+                                                title={`Edit ${selectedIds.length} selected device(s)`}
+                                            >
+                                                <Edit className="size-4" />
+                                                Bulk Edit ({selectedIds.length})
+                                            </button>
+                                            <button
+                                                onClick={handleBulkDelete}
+                                                disabled={isDeleting}
+                                                className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-red-500 to-red-600 px-4 py-2 text-sm font-medium text-white shadow-lg transition-all hover:scale-105 disabled:opacity-50"
+                                                title={`Delete ${selectedIds.length} selected item(s)`}
+                                            >
+                                                <Trash2 className="size-4" />
+                                                Delete Selected ({selectedIds.length})
+                                            </button>
+                                        </>
+                                    )}
+                                    {selectedIds.length > 0 && selectedEntity !== 'devices' && (
                                         <button
                                             onClick={handleBulkDelete}
                                             disabled={isDeleting}
@@ -1444,6 +1491,8 @@ export default function Configuration() {
                                 {modalMode === 'edit' && `Edit ${selectedEntity.slice(0, -1)}`}
                                 {modalMode === 'delete' && `Delete ${selectedEntity.slice(0, -1)}`}
                                 {modalMode === 'acknowledge' && 'Acknowledge Offline Device'}
+                                {modalMode === 'bulk_acknowledge' && `Bulk Acknowledge Offline (${selectedIds.length} devices)`}
+                                {modalMode === 'bulk_edit' && `Bulk Edit Devices (${selectedIds.length} devices)`}
                             </h3>
                             <button
                                 onClick={() => setShowModal(false)}
@@ -1477,6 +1526,10 @@ export default function Configuration() {
                                 </div>
                             ) : modalMode === 'acknowledge' ? (
                                 <AcknowledgeOfflineForm device={selectedItem as Device} />
+                            ) : modalMode === 'bulk_acknowledge' ? (
+                                <BulkAcknowledgeOfflineForm deviceIds={selectedIds} onSuccess={() => { setShowModal(false); setSelectedIds([]); fetchData(); }} />
+                            ) : modalMode === 'bulk_edit' ? (
+                                <BulkEditDevicesForm deviceIds={selectedIds} onSuccess={() => { setShowModal(false); setSelectedIds([]); fetchData(); }} />
                             ) : (
                                 <EntityForm
                                     entity={selectedEntity}
@@ -2918,6 +2971,359 @@ function ModelsTable({
             </tbody>
         </table>
         </div>
+    );
+}
+
+// Bulk Acknowledge Offline Form Component
+function BulkAcknowledgeOfflineForm({ deviceIds, onSuccess }: { deviceIds: number[]; onSuccess: () => void }) {
+    const [reason, setReason] = useState('');
+    const [acknowledgedBy, setAcknowledgedBy] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            
+            const response = await fetch('/api/devices/bulk-acknowledge-offline', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    device_ids: deviceIds,
+                    reason,
+                    acknowledged_by: acknowledgedBy,
+                }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                alert(`Successfully acknowledged ${data.acknowledged_count} offline device(s)`);
+                onSuccess();
+            } else {
+                const error = await response.json();
+                alert(error.error || 'Failed to acknowledge offline devices');
+            }
+        } catch (error) {
+            console.error('Error bulk acknowledging offline devices:', error);
+            alert('Network error while acknowledging devices');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="rounded-lg bg-orange-50 p-4 dark:bg-orange-950/20">
+                <div className="flex items-start gap-3">
+                    <AlertTriangle className="size-5 text-orange-600 dark:text-orange-400 mt-0.5" />
+                    <div>
+                        <p className="font-semibold text-orange-900 dark:text-orange-300">
+                            Bulk Acknowledge Offline Devices
+                        </p>
+                        <p className="mt-1 text-sm text-orange-700 dark:text-orange-400">
+                            This will acknowledge {deviceIds.length} selected offline device(s). Only devices with "offline" status will be updated.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Acknowledged By <span className="text-red-500">*</span>
+                </label>
+                <input
+                    type="text"
+                    value={acknowledgedBy}
+                    onChange={(e) => setAcknowledgedBy(e.target.value)}
+                    required
+                    className="w-full rounded-lg border border-slate-300 px-4 py-2 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                    placeholder="Your name"
+                />
+            </div>
+
+            <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Reason <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    required
+                    rows={4}
+                    className="w-full rounded-lg border border-slate-300 px-4 py-2 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                    placeholder="Explain why these devices are offline (e.g., scheduled maintenance, hardware replacement, etc.)"
+                />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4">
+                <button
+                    type="button"
+                    onClick={() => onSuccess()}
+                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-50"
+                >
+                    <CheckCircle2 className="size-4" />
+                    {isSubmitting ? 'Acknowledging...' : `Acknowledge ${deviceIds.length} Device(s)`}
+                </button>
+            </div>
+        </form>
+    );
+}
+
+// Bulk Edit Devices Form Component
+function BulkEditDevicesForm({ deviceIds, onSuccess }: { deviceIds: number[]; onSuccess: () => void }) {
+    const { currentBranch } = usePage<PageProps>().props;
+    const [status, setStatus] = useState<string>('');
+    const [category, setCategory] = useState<string>('');
+    const [branchId, setBranchId] = useState<number | null>(null);
+    const [locationId, setLocationId] = useState<number | null>(null);
+    const [isActive, setIsActive] = useState<boolean | null>(null);
+    const [managedBy, setManagedBy] = useState<number | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [branches, setBranches] = useState<Branch[]>([]);
+    const [locations, setLocations] = useState<Location[]>([]);
+    const [users, setUsers] = useState<UserData[]>([]);
+
+    useEffect(() => {
+        // Fetch branches
+        fetch('/api/branches', {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' },
+        })
+            .then(res => res.ok ? res.json() : [])
+            .then(data => setBranches(data))
+            .catch(err => console.error('Error loading branches:', err));
+
+        // Fetch users
+        fetch('/api/users', {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' },
+        })
+            .then(res => res.ok ? res.json() : [])
+            .then(data => setUsers(data))
+            .catch(err => console.error('Error loading users:', err));
+    }, []);
+
+    useEffect(() => {
+        if (branchId) {
+            fetch(`/api/locations?branch_id=${branchId}`, {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' },
+            })
+                .then(res => res.ok ? res.json() : [])
+                .then(data => setLocations(data))
+                .catch(err => console.error('Error loading locations:', err));
+        } else {
+            setLocations([]);
+        }
+    }, [branchId]);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+
+        try {
+            const updateData: Record<string, any> = {};
+            
+            if (status) updateData.status = status;
+            if (category) updateData.category = category;
+            if (branchId) updateData.branch_id = branchId;
+            if (locationId !== null) updateData.location_id = locationId;
+            if (isActive !== null) updateData.is_active = isActive;
+            if (managedBy !== null) updateData.managed_by = managedBy;
+
+            if (Object.keys(updateData).length === 0) {
+                alert('Please select at least one field to update');
+                setIsSubmitting(false);
+                return;
+            }
+
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            
+            const response = await fetch('/api/devices/bulk-update', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    device_ids: deviceIds,
+                    ...updateData,
+                }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                alert(`Successfully updated ${data.updated_count} device(s)`);
+                onSuccess();
+            } else {
+                const error = await response.json();
+                alert(error.error || 'Failed to update devices');
+            }
+        } catch (error) {
+            console.error('Error bulk updating devices:', error);
+            alert('Network error while updating devices');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="rounded-lg bg-blue-50 p-4 dark:bg-blue-950/20">
+                <div className="flex items-start gap-3">
+                    <Edit className="size-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                    <div>
+                        <p className="font-semibold text-blue-900 dark:text-blue-300">
+                            Bulk Edit Devices
+                        </p>
+                        <p className="mt-1 text-sm text-blue-700 dark:text-blue-400">
+                            Update {deviceIds.length} selected device(s). Leave fields empty to keep current values.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        Status
+                    </label>
+                    <select
+                        value={status}
+                        onChange={(e) => setStatus(e.target.value)}
+                        className="w-full rounded-lg border border-slate-300 px-4 py-2 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                    >
+                        <option value="">Keep current</option>
+                        <option value="online">Online</option>
+                        <option value="offline">Offline</option>
+                        <option value="warning">Warning</option>
+                        <option value="maintenance">Maintenance</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        Category
+                    </label>
+                    <select
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
+                        className="w-full rounded-lg border border-slate-300 px-4 py-2 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                    >
+                        <option value="">Keep current</option>
+                        <option value="switches">Switches</option>
+                        <option value="servers">Servers</option>
+                        <option value="wifi">WiFi</option>
+                        <option value="tas">TAS</option>
+                        <option value="cctv">CCTV</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        Branch
+                    </label>
+                    <select
+                        value={branchId || ''}
+                        onChange={(e) => setBranchId(e.target.value ? Number(e.target.value) : null)}
+                        className="w-full rounded-lg border border-slate-300 px-4 py-2 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                    >
+                        <option value="">Keep current</option>
+                        {branches.map(branch => (
+                            <option key={branch.id} value={branch.id}>{branch.name}</option>
+                        ))}
+                    </select>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        Location
+                    </label>
+                    <select
+                        value={locationId || ''}
+                        onChange={(e) => setLocationId(e.target.value ? Number(e.target.value) : null)}
+                        disabled={!branchId}
+                        className="w-full rounded-lg border border-slate-300 px-4 py-2 dark:border-slate-600 dark:bg-slate-700 dark:text-white disabled:opacity-50"
+                    >
+                        <option value="">Keep current</option>
+                        {locations.map(location => (
+                            <option key={location.id} value={location.id}>{location.name}</option>
+                        ))}
+                    </select>
+                    {!branchId && (
+                        <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                            Select a branch first
+                        </p>
+                    )}
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        Managed By
+                    </label>
+                    <select
+                        value={managedBy || ''}
+                        onChange={(e) => setManagedBy(e.target.value ? Number(e.target.value) : null)}
+                        className="w-full rounded-lg border border-slate-300 px-4 py-2 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                    >
+                        <option value="">Keep current</option>
+                        <option value="0">Not Assigned</option>
+                        {users.map(user => (
+                            <option key={user.id} value={user.id}>{user.name} ({user.role})</option>
+                        ))}
+                    </select>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        Active Status
+                    </label>
+                    <select
+                        value={isActive === null ? '' : isActive ? 'true' : 'false'}
+                        onChange={(e) => setIsActive(e.target.value === '' ? null : e.target.value === 'true')}
+                        className="w-full rounded-lg border border-slate-300 px-4 py-2 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                    >
+                        <option value="">Keep current</option>
+                        <option value="true">Active</option>
+                        <option value="false">Inactive</option>
+                    </select>
+                </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4">
+                <button
+                    type="button"
+                    onClick={() => onSuccess()}
+                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-50"
+                >
+                    <Save className="size-4" />
+                    {isSubmitting ? 'Updating...' : `Update ${deviceIds.length} Device(s)`}
+                </button>
+            </div>
+        </form>
     );
 }
 

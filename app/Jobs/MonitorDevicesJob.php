@@ -69,8 +69,9 @@ class MonitorDevicesJob implements ShouldQueue
                 'job_id' => $this->job->getJobId()
             ]);
 
-            // Get devices for this batch
+            // Get devices for this batch, excluding offline acknowledged devices
             $devices = Device::where('is_active', true)
+                ->where('status', '!=', 'offline_ack')
                 ->orderBy('id')
                 ->skip($this->batchNumber * $this->batchSize)
                 ->take($this->batchSize)
