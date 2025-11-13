@@ -2,6 +2,7 @@ import MonitorLayout from '@/layouts/monitor-layout';
 import {
     AlertTriangle,
     Edit,
+    Eye,
     Plus,
     Save,
     Server,
@@ -13,11 +14,15 @@ import {
     History,
     ChevronDown,
     ChevronUp,
+    ChevronLeft,
+    ChevronRight,
     CheckCircle2,
     RefreshCw,
     Search,
+    Check,
+    MessageCircle,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from '@/contexts/i18n-context';
 import { Head, router, usePage } from '@inertiajs/react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
@@ -38,6 +43,29 @@ const formatCategory = (category: string): string => {
     return formatted[category.toLowerCase()] || category.charAt(0).toUpperCase() + category.slice(1);
 };
 
+// Helper function to format uptime duration from minutes
+const formatUptimeDuration = (uptimeMinutes: number): string => {
+    if (uptimeMinutes === 0) return '0m';
+    
+    const minutes = uptimeMinutes;
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    const weeks = Math.floor(days / 7);
+    
+    if (weeks > 0) {
+        const remainingDays = days % 7;
+        return remainingDays > 0 ? `${weeks}w ${remainingDays}d` : `${weeks}w`;
+    } else if (days > 0) {
+        const remainingHours = hours % 24;
+        return remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days}d`;
+    } else if (hours > 0) {
+        const remainingMinutes = minutes % 60;
+        return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+    } else {
+        return `${minutes}m`;
+    }
+};
+
 interface Device {
     id: number;
     branch_id: number;
@@ -50,6 +78,7 @@ interface Device {
         id: number;
         name: string;
     };
+    location_name?: string;
     hardware_detail_id?: number;
     hardware_detail?: {
         id: number;
@@ -60,13 +89,23 @@ interface Device {
     ip_address: string;
     mac_address?: string;
     barcode: string;
+    managed_by?: number;
+    managed_by_user?: {
+        id: number;
+        name: string;
+        email: string;
+        role: string;
+    };
+    serial_number?: string;
     type: string;
     category: string;
     status: string;
     uptime_percentage: number;
+    uptime_minutes: number;
     is_active: boolean;
     response_time?: number;
     last_check?: string;
+    created_at?: string;
     offline_reason?: string;
     offline_acknowledged_by?: string;
     offline_acknowledged_at?: string;
@@ -119,6 +158,7 @@ interface UserData {
     id: number;
     name: string;
     email: string;
+    role: 'admin' | 'staff';
     created_at: string;
 }
 
@@ -159,6 +199,21 @@ interface ActivityLog {
     ip_address?: string;
 }
 
+interface DeviceComment {
+    id: number;
+    device_id: number;
+    comment: string;
+    author?: string;
+    type: 'general' | 'maintenance' | 'issue' | 'note';
+    created_at: string;
+    updated_at: string;
+    device?: {
+        id: number;
+        name: string;
+        ip_address: string;
+    };
+}
+
 export default function Configuration() {
     const { t } = useTranslation();
     const { currentBranch } = usePage<PageProps>().props;
@@ -168,6 +223,8 @@ export default function Configuration() {
     const [showModal, setShowModal] = useState(false);
     const [modalMode, setModalMode] = useState<'create' | 'edit' | 'delete' | 'acknowledge'>('create');
     const [selectedItem, setSelectedItem] = useState<Device | Alert | Location | Branch | UserData | Brand | Model | null>(null);
+    const [showViewModal, setShowViewModal] = useState(false);
+    const [viewDevice, setViewDevice] = useState<Device | null>(null);
 
     // Data state
     const [devices, setDevices] = useState<Device[]>([]);
@@ -179,6 +236,22 @@ export default function Configuration() {
     const [models, setModels] = useState<Model[]>([]);
     const [activityHistory, setActivityHistory] = useState<ActivityLog[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    
+    // Comments state
+    const [comments, setComments] = useState<DeviceComment[]>([]);
+    const [isLoadingComments, setIsLoadingComments] = useState(false);
+    const [showCommentsModal, setShowCommentsModal] = useState(false);
+    const [selectedDeviceForComments, setSelectedDeviceForComments] = useState<Device | null>(null);
+    
+    // Selection state for bulk operations
+    const [selectedIds, setSelectedIds] = useState<number[]>([]);
+    const [isDeleting, setIsDeleting] = useState(false);
+    
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const [perPage, setPerPage] = useState(50);
+    const [totalItems, setTotalItems] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
 
     // Filter and search state
     const [deviceSearchTerm, setDeviceSearchTerm] = useState('');
@@ -196,8 +269,15 @@ export default function Configuration() {
 
     // Fetch data when entity changes
     useEffect(() => {
+        setCurrentPage(1); // Reset to page 1 when entity changes
         fetchData();
+        setSelectedIds([]); // Clear selection when changing entity
     }, [selectedEntity, currentBranch?.id]);
+    
+    // Fetch data when page changes
+    useEffect(() => {
+        fetchData();
+    }, [currentPage, perPage]);
 
     // Auto-refresh data every 30 seconds
     useEffect(() => {
@@ -228,9 +308,21 @@ export default function Configuration() {
                 return;
             }
 
-            // Add branch filter for devices, alerts, locations, and history
+            // Add branch filter and pagination for devices, alerts, locations, and history
+            const params = new URLSearchParams();
+            
             if (currentBranch?.id && ['devices', 'alerts', 'locations', 'history'].includes(selectedEntity)) {
-                endpoint += `?branch_id=${currentBranch.id}`;
+                params.append('branch_id', currentBranch.id.toString());
+            }
+            
+            // Add pagination params for entities that support it
+            if (['devices', 'alerts', 'locations', 'users'].includes(selectedEntity)) {
+                params.append('page', currentPage.toString());
+                params.append('per_page', perPage.toString());
+            }
+            
+            if (params.toString()) {
+                endpoint += `?${params.toString()}`;
             }
 
             console.log('Fetching from:', endpoint);
@@ -245,8 +337,19 @@ export default function Configuration() {
             console.log('Response status:', response.status);
 
             if (response.ok) {
-                const data = await response.json();
-                console.log('Fetched data:', data);
+                const responseData = await response.json();
+                console.log('Fetched data:', responseData);
+                
+                // Check if response has pagination data
+                const hasPagination = responseData.pagination !== undefined;
+                const data = hasPagination ? responseData.data : responseData;
+                
+                // Update pagination state if available
+                if (hasPagination) {
+                    setTotalItems(responseData.pagination.total);
+                    setTotalPages(responseData.pagination.last_page);
+                    setCurrentPage(responseData.pagination.current_page);
+                }
                 
                 switch (selectedEntity) {
                     case 'branches':
@@ -327,6 +430,11 @@ export default function Configuration() {
         setModalMode('acknowledge');
         setSelectedItem(device);
         setShowModal(true);
+    };
+
+    const handleViewDevice = (device: Device) => {
+        setViewDevice(device);
+        setShowViewModal(true);
     };
 
     const handleSave = async () => {
@@ -454,6 +562,140 @@ export default function Configuration() {
         }
     };
 
+    // Bulk delete handler
+    const handleBulkDelete = async () => {
+        if (selectedIds.length === 0) {
+            alert('Please select items to delete');
+            return;
+        }
+
+        if (!confirm(`Are you sure you want to delete ${selectedIds.length} selected item(s)?`)) {
+            return;
+        }
+
+        setIsDeleting(true);
+        try {
+            const entityMap: Record<CRUDEntity, string> = {
+                branches: '/api/branches',
+                devices: '/api/devices',
+                alerts: '/api/alerts',
+                locations: '/api/locations',
+                users: '/api/users',
+                brands: '/api/brands',
+                models: '/api/models',
+                history: '/api/activity-logs',
+            };
+
+            const endpoint = entityMap[selectedEntity];
+            if (!endpoint) return;
+
+            // Delete each selected item
+            const deletePromises = selectedIds.map(id =>
+                fetch(`${endpoint}/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    },
+                })
+            );
+
+            await Promise.all(deletePromises);
+            
+            // Refresh data and clear selection
+            await fetchData();
+            setSelectedIds([]);
+            alert(`Successfully deleted ${selectedIds.length} item(s)`);
+        } catch (error) {
+            console.error('Error bulk deleting:', error);
+            alert('Failed to delete some items. Please try again.');
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
+    // Toggle selection for a single item
+    const toggleSelection = (id: number) => {
+        setSelectedIds(prev =>
+            prev.includes(id)
+                ? prev.filter(selectedId => selectedId !== id)
+                : [...prev, id]
+        );
+    };
+
+    // Toggle select all
+    const toggleSelectAll = () => {
+        const currentData = getCurrentData();
+        if (selectedIds.length === currentData.length) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(currentData.map((item: any) => item.id));
+        }
+    };
+
+    // Get current data based on selected entity
+    const getCurrentData = () => {
+        switch (selectedEntity) {
+            case 'branches': return branches;
+            case 'devices': return filteredDevices;
+            case 'alerts': return filteredAlerts;
+            case 'locations': return locations;
+            case 'users': return users;
+            case 'brands': return brands;
+            case 'models': return models;
+            case 'history': return activityHistory;
+            default: return [];
+        }
+    };
+
+    // Comment management functions
+    const fetchComments = async (deviceId: number) => {
+        setIsLoadingComments(true);
+        try {
+            const response = await fetch(`/devices/${deviceId}/comments`);
+            if (response.ok) {
+                const data = await response.json();
+                setComments(data.comments);
+            }
+        } catch (error) {
+            console.error('Error fetching comments:', error);
+        } finally {
+            setIsLoadingComments(false);
+        }
+    };
+
+    const openCommentsModal = (device: Device) => {
+        setSelectedDeviceForComments(device);
+        setShowCommentsModal(true);
+        fetchComments(device.id);
+    };
+
+    const closeCommentsModal = () => {
+        setShowCommentsModal(false);
+        setSelectedDeviceForComments(null);
+        setComments([]);
+    };
+
+    const deleteComment = async (commentId: number) => {
+        if (!confirm('Are you sure you want to delete this comment?')) return;
+        
+        try {
+            const response = await fetch(`/comments/${commentId}`, {
+                method: 'DELETE',
+            });
+            
+            if (response.ok) {
+                setComments(prev => prev.filter(comment => comment.id !== commentId));
+            } else {
+                const errorData = await response.json();
+                alert(`Failed to delete comment: ${errorData.error || 'Unknown error'}`);
+            }
+        } catch (error) {
+            console.error('Error deleting comment:', error);
+            alert('Network error while deleting comment');
+        }
+    };
+
     // Add error logging
     useEffect(() => {
         const handleError = (error: ErrorEvent) => {
@@ -462,6 +704,21 @@ export default function Configuration() {
         window.addEventListener('error', handleError);
         return () => window.removeEventListener('error', handleError);
     }, []);
+
+    // Fetch users when modal opens for devices (so managed_by dropdown is populated)
+    useEffect(() => {
+        if (showModal && selectedEntity === 'devices' && users.length === 0) {
+            fetch('/api/users', {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' },
+            })
+                .then(response => response.json())
+                .then(data => {
+                    setUsers(data);
+                })
+                .catch(error => console.error('Error fetching users:', error));
+        }
+    }, [showModal, selectedEntity]);
 
     // Filter and sort devices
     const filteredDevices = devices.filter(device => {
@@ -603,13 +860,34 @@ export default function Configuration() {
                                 Refresh
                             </button>
                             {selectedEntity !== 'history' && (
-                                <button
-                                    onClick={handleCreate}
-                                    className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-500 px-4 py-2 text-sm font-medium text-white shadow-lg transition-all hover:scale-105"
-                                >
-                                    <Plus className="size-4" />
-                                    Add New
-                                </button>
+                                <>
+                                    <button
+                                        onClick={toggleSelectAll}
+                                        className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+                                        title={selectedIds.length === getCurrentData().length ? 'Deselect All' : 'Select All'}
+                                    >
+                                        <Check className="size-4" />
+                                        {selectedIds.length === getCurrentData().length ? 'Deselect All' : 'Select All'}
+                                    </button>
+                                    {selectedIds.length > 0 && (
+                                        <button
+                                            onClick={handleBulkDelete}
+                                            disabled={isDeleting}
+                                            className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-red-500 to-red-600 px-4 py-2 text-sm font-medium text-white shadow-lg transition-all hover:scale-105 disabled:opacity-50"
+                                            title={`Delete ${selectedIds.length} selected item(s)`}
+                                        >
+                                            <Trash2 className="size-4" />
+                                            Delete Selected ({selectedIds.length})
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={handleCreate}
+                                        className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-500 px-4 py-2 text-sm font-medium text-white shadow-lg transition-all hover:scale-105"
+                                    >
+                                        <Plus className="size-4" />
+                                        Add New
+                                    </button>
+                                </>
                             )}
                         </div>
                     </div>
@@ -628,6 +906,8 @@ export default function Configuration() {
                                         branches={branches}
                                         onEdit={handleEdit}
                                         onDelete={handleDelete}
+                                        selectedIds={selectedIds}
+                                        onToggleSelection={toggleSelection}
                                     />
                                 )}
                                 {selectedEntity === 'devices' && (
@@ -674,9 +954,11 @@ export default function Configuration() {
                                         </div>
                                         <DevicesTable
                                             devices={filteredDevices}
+                                            onView={handleViewDevice}
                                             onEdit={handleEdit}
                                             onDelete={handleDelete}
                                             onAcknowledgeOffline={handleAcknowledgeOffline}
+                                            onComments={openCommentsModal}
                                             sortField={deviceSortField}
                                             sortDirection={deviceSortDirection}
                                             onSort={(field) => {
@@ -687,10 +969,17 @@ export default function Configuration() {
                                                     setDeviceSortDirection('asc');
                                                 }
                                             }}
+                                            selectedIds={selectedIds}
+                                            onToggleSelection={toggleSelection}
                                         />
-                                        <div className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                                            Showing {filteredDevices.length} of {devices.length} devices
-                                        </div>
+                                        <Pagination
+                                            currentPage={currentPage}
+                                            totalPages={totalPages}
+                                            totalItems={totalItems}
+                                            perPage={perPage}
+                                            onPageChange={setCurrentPage}
+                                            onPerPageChange={setPerPage}
+                                        />
                                     </>
                                 )}
                                 {selectedEntity === 'alerts' && (
@@ -747,10 +1036,17 @@ export default function Configuration() {
                                                     setAlertSortDirection('asc');
                                                 }
                                             }}
+                                            selectedIds={selectedIds}
+                                            onToggleSelection={toggleSelection}
                                         />
-                                        <div className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                                            Showing {filteredAlerts.length} of {alerts.length} alerts
-                                        </div>
+                                        <Pagination
+                                            currentPage={currentPage}
+                                            totalPages={totalPages}
+                                            totalItems={totalItems}
+                                            perPage={perPage}
+                                            onPageChange={setCurrentPage}
+                                            onPerPageChange={setPerPage}
+                                        />
                                     </>
                                 )}
                                 {selectedEntity === 'locations' && (
@@ -758,6 +1054,8 @@ export default function Configuration() {
                                         locations={locations}
                                         onEdit={handleEdit}
                                         onDelete={handleDelete}
+                                        selectedIds={selectedIds}
+                                        onToggleSelection={toggleSelection}
                                     />
                                 )}
                                 {selectedEntity === 'users' && (
@@ -765,6 +1063,8 @@ export default function Configuration() {
                                         users={users}
                                         onEdit={handleEdit}
                                         onDelete={handleDelete}
+                                        selectedIds={selectedIds}
+                                        onToggleSelection={toggleSelection}
                                     />
                                 )}
                                 {selectedEntity === 'brands' && (
@@ -772,6 +1072,8 @@ export default function Configuration() {
                                         brands={brands}
                                         onEdit={handleEdit}
                                         onDelete={handleDelete}
+                                        selectedIds={selectedIds}
+                                        onToggleSelection={toggleSelection}
                                     />
                                 )}
                                 {selectedEntity === 'models' && (
@@ -779,6 +1081,8 @@ export default function Configuration() {
                                         models={models}
                                         onEdit={handleEdit}
                                         onDelete={handleDelete}
+                                        selectedIds={selectedIds}
+                                        onToggleSelection={toggleSelection}
                                     />
                                 )}
                                 {selectedEntity === 'history' && (
@@ -839,6 +1143,7 @@ export default function Configuration() {
                                     entity={selectedEntity}
                                     mode={modalMode}
                                     data={selectedItem}
+                                    users={users}
                                 />
                             )}
                         </div>
@@ -875,27 +1180,486 @@ export default function Configuration() {
                     </div>
                 </div>
             )}
+
+            {/* View Device Modal */}
+            {showViewModal && viewDevice && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-4xl rounded-2xl bg-white shadow-2xl dark:bg-slate-800">
+                        {/* Header */}
+                        <div className="flex items-center justify-between border-b border-slate-200 p-6 dark:border-slate-700">
+                            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+                                Device Details
+                            </h2>
+                            <button
+                                onClick={() => setShowViewModal(false)}
+                                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700"
+                            >
+                                <X className="size-5" />
+                            </button>
+                        </div>
+
+                        {/* Content */}
+                        <div className="max-h-[70vh] overflow-y-auto p-6">
+                            <div className="grid gap-6 md:grid-cols-2">
+                                {/* Basic Information */}
+                                <div className="space-y-4">
+                                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                                        Basic Information
+                                    </h3>
+                                    
+                                    <div>
+                                        <label className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                                            Device Name
+                                        </label>
+                                        <p className="mt-1 text-slate-900 dark:text-white">{viewDevice.name}</p>
+                                    </div>
+
+                                    <div>
+                                        <label className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                                            IP Address
+                                        </label>
+                                        <p className="mt-1 font-mono text-slate-900 dark:text-white">{viewDevice.ip_address}</p>
+                                    </div>
+
+                                    <div>
+                                        <label className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                                            MAC Address
+                                        </label>
+                                        <p className="mt-1 font-mono text-slate-900 dark:text-white">{viewDevice.mac_address || '-'}</p>
+                                    </div>
+
+                                    <div>
+                                        <label className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                                            Barcode
+                                        </label>
+                                        <p className="mt-1 text-slate-900 dark:text-white">{viewDevice.barcode}</p>
+                                    </div>
+
+                                    <div>
+                                        <label className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                                            Serial Number
+                                        </label>
+                                        <p className="mt-1 text-slate-900 dark:text-white">{viewDevice.serial_number || '-'}</p>
+                                    </div>
+
+                                    <div>
+                                        <label className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                                            Category
+                                        </label>
+                                        <p className="mt-1 text-slate-900 dark:text-white">{formatCategory(viewDevice.category)}</p>
+                                    </div>
+
+                                    <div>
+                                        <label className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                                            Status
+                                        </label>
+                                        <p className="mt-1">
+                                            <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+                                                viewDevice.status === 'online' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                                                viewDevice.status === 'warning' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                                'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                                            }`}>
+                                                {viewDevice.status}
+                                            </span>
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Location & Management */}
+                                <div className="space-y-4">
+                                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                                        Location & Management
+                                    </h3>
+
+                                    <div>
+                                        <label className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                                            Branch
+                                        </label>
+                                        <p className="mt-1 text-slate-900 dark:text-white">{viewDevice.branch?.name || '-'}</p>
+                                    </div>
+
+                                    <div>
+                                        <label className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                                            Location
+                                        </label>
+                                        <p className="mt-1 text-slate-900 dark:text-white">{viewDevice.location?.name || viewDevice.location_name || '-'}</p>
+                                    </div>
+
+                                    <div>
+                                        <label className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                                            Managed By
+                                        </label>
+                                        {viewDevice.managed_by_user ? (
+                                            <div className="mt-1">
+                                                <p className="text-slate-900 dark:text-white">{viewDevice.managed_by_user.name}</p>
+                                                <p className="text-sm text-slate-600 dark:text-slate-400">{viewDevice.managed_by_user.email}</p>
+                                                <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                                                    viewDevice.managed_by_user.role === 'admin' 
+                                                        ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
+                                                        : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+                                                }`}>
+                                                    {viewDevice.managed_by_user.role}
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <p className="mt-1 text-slate-400 dark:text-slate-600">Not assigned</p>
+                                        )}
+                                    </div>
+
+                                    <div>
+                                        <label className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                                            Hardware
+                                        </label>
+                                        {viewDevice.hardware_detail ? (
+                                            <div className="mt-1">
+                                                <p className="font-semibold text-slate-900 dark:text-white">
+                                                    {viewDevice.hardware_detail.brand}
+                                                </p>
+                                                <p className="text-sm text-slate-600 dark:text-slate-400">
+                                                    {viewDevice.hardware_detail.model}
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <p className="mt-1 text-slate-400 dark:text-slate-600">-</p>
+                                        )}
+                                    </div>
+
+                                    <div>
+                                        <label className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                                            Uptime
+                                        </label>
+                                        <p className="mt-1 text-slate-900 dark:text-white">{formatUptimeDuration(viewDevice.uptime_minutes)}</p>
+                                    </div>
+
+                                    {viewDevice.response_time && (
+                                        <div>
+                                            <label className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                                                Response Time
+                                            </label>
+                                            <p className="mt-1 text-slate-900 dark:text-white">{viewDevice.response_time}ms</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Comments Section */}
+                                <div className="space-y-4">
+                                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                                        <MessageCircle className="size-5" />
+                                        Comments
+                                    </h3>
+                                    
+                                    <DeviceComments deviceId={viewDevice.id} />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="flex justify-end gap-3 border-t border-slate-200 p-6 dark:border-slate-700">
+                            <button
+                                onClick={() => {
+                                    setShowViewModal(false);
+                                    handleEdit(viewDevice);
+                                }}
+                                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                            >
+                                Edit Device
+                            </button>
+                            <button
+                                onClick={() => setShowViewModal(false)}
+                                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Comments Modal */}
+            {showCommentsModal && selectedDeviceForComments && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
+                    <div className="w-full max-w-2xl my-8 rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-800">
+                        {/* Modal Header */}
+                        <div className="flex items-center justify-between border-b border-slate-200 p-6 dark:border-slate-700">
+                            <h3 className="text-xl font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                                <MessageCircle className="size-5" />
+                                Comments - {selectedDeviceForComments.name}
+                            </h3>
+                            <button
+                                onClick={closeCommentsModal}
+                                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700"
+                            >
+                                <X className="size-5" />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-6">
+                            {/* Device Info */}
+                            <div className="mb-4 p-3 bg-slate-50 rounded-lg dark:bg-slate-700">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="font-medium text-slate-900 dark:text-white">{selectedDeviceForComments.name}</p>
+                                        <p className="text-sm text-slate-600 dark:text-slate-400 font-mono">{selectedDeviceForComments.ip_address}</p>
+                                    </div>
+                                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                        selectedDeviceForComments.status === 'online' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                                        selectedDeviceForComments.status === 'warning' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                        'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                                    }`}>
+                                        {selectedDeviceForComments.status}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Comments List */}
+                            <div className="space-y-3 max-h-96 overflow-y-auto mb-4">
+                                {isLoadingComments ? (
+                                    <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                                        Loading comments...
+                                    </div>
+                                ) : comments.length === 0 ? (
+                                    <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                                        No comments yet. Add the first comment!
+                                    </div>
+                                ) : (
+                                    comments.map((comment) => (
+                                        <div
+                                            key={comment.id}
+                                            className="rounded-lg bg-slate-50 p-4 border border-slate-200 dark:bg-slate-700 dark:border-slate-600"
+                                        >
+                                            <div className="flex items-start justify-between mb-2">
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                                        comment.type === 'maintenance' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                                        comment.type === 'issue' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
+                                                        comment.type === 'note' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
+                                                        'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
+                                                    }`}>
+                                                        {comment.type}
+                                                    </span>
+                                                    <span className="font-medium text-sm text-slate-900 dark:text-white">
+                                                        {comment.author}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                                                        {new Date(comment.created_at).toLocaleString()}
+                                                    </span>
+                                                    <button
+                                                        onClick={() => deleteComment(comment.id)}
+                                                        className="text-slate-400 hover:text-red-600 dark:text-slate-500 dark:hover:text-red-400 transition-colors"
+                                                        title="Delete comment"
+                                                    >
+                                                        <Trash2 className="size-3" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
+                                                {comment.comment}
+                                            </p>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+
+                            {/* Add Comment Form */}
+                            <div className="border-t border-slate-200 pt-4 dark:border-slate-700">
+                                <CommentForm 
+                                    deviceId={selectedDeviceForComments.id}
+                                    onCommentAdded={() => fetchComments(selectedDeviceForComments.id)}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </MonitorLayout>
+    );
+}
+
+// Device Comments Component (Read-only for device details)
+function DeviceComments({ deviceId }: { deviceId: number }) {
+    const [comments, setComments] = useState<DeviceComment[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+
+    const fetchComments = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const response = await fetch(`/devices/${deviceId}/comments`);
+            if (response.ok) {
+                const data = await response.json();
+                setComments(data.comments);
+            }
+        } catch (error) {
+            console.error('Error fetching comments:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [deviceId]);
+
+    useEffect(() => {
+        fetchComments();
+    }, [fetchComments]);
+
+    if (isLoading) {
+        return (
+            <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                Loading comments...
+            </div>
+        );
+    }
+
+    if (comments.length === 0) {
+        return (
+            <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                No comments yet for this device.
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-3 max-h-64 overflow-y-auto">
+            {comments.map((comment) => (
+                <div
+                    key={comment.id}
+                    className="rounded-lg bg-slate-50 p-4 border border-slate-200 dark:bg-slate-700 dark:border-slate-600"
+                >
+                    <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                comment.type === 'maintenance' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                comment.type === 'issue' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
+                                comment.type === 'note' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
+                                'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
+                            }`}>
+                                {comment.type}
+                            </span>
+                            <span className="font-medium text-sm text-slate-900 dark:text-white">
+                                {comment.author}
+                            </span>
+                        </div>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                            {new Date(comment.created_at).toLocaleString()}
+                        </span>
+                    </div>
+                    <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
+                        {comment.comment}
+                    </p>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+// Comment Form Component
+function CommentForm({ deviceId, onCommentAdded }: { deviceId: number; onCommentAdded: () => void }) {
+    const [comment, setComment] = useState('');
+    const [author, setAuthor] = useState('');
+    const [type, setType] = useState<'general' | 'maintenance' | 'issue' | 'note'>('general');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!comment.trim()) return;
+
+        setIsSubmitting(true);
+        try {
+            const response = await fetch(`/devices/${deviceId}/comments`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({
+                    comment: comment.trim(),
+                    author: author.trim() || 'Admin',
+                    type: type,
+                }),
+            });
+            
+            if (response.ok) {
+                setComment('');
+                setAuthor('');
+                onCommentAdded();
+            } else {
+                const errorData = await response.json();
+                alert(`Failed to add comment: ${errorData.error || 'Unknown error'}`);
+            }
+        } catch (error) {
+            console.error('Error adding comment:', error);
+            alert('Network error while adding comment');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-3">
+            <div className="flex gap-2">
+                <input
+                    type="text"
+                    placeholder="Your name (optional)"
+                    value={author}
+                    onChange={(e) => setAuthor(e.target.value)}
+                    className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                />
+                <select
+                    value={type}
+                    onChange={(e) => setType(e.target.value as any)}
+                    className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                >
+                    <option value="general">General</option>
+                    <option value="maintenance">Maintenance</option>
+                    <option value="issue">Issue</option>
+                    <option value="note">Note</option>
+                </select>
+            </div>
+            <div className="flex gap-2">
+                <textarea
+                    placeholder="Add a comment..."
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                    rows={3}
+                />
+                <button
+                    type="submit"
+                    disabled={!comment.trim() || isSubmitting}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors h-fit"
+                >
+                    {isSubmitting ? 'Adding...' : 'Add'}
+                </button>
+            </div>
+        </form>
     );
 }
 
 // Devices Table Component
 function DevicesTable({
     devices,
+    onView,
     onEdit,
     onDelete,
     onAcknowledgeOffline,
+    onComments,
     sortField,
     sortDirection,
     onSort,
+    selectedIds,
+    onToggleSelection,
 }: {
     devices: Device[];
+    onView: (device: Device) => void;
     onEdit: (device: Device) => void;
     onDelete: (device: Device) => void;
     onAcknowledgeOffline: (device: Device) => void;
+    onComments: (device: Device) => void;
     sortField: string;
     sortDirection: 'asc' | 'desc';
     onSort: (field: string) => void;
+    selectedIds: number[];
+    onToggleSelection: (id: number) => void;
 }) {
     if (devices.length === 0) {
         return (
@@ -913,6 +1677,24 @@ function DevicesTable({
         <table className="w-full">
             <thead className="bg-slate-50 dark:bg-slate-900">
                 <tr>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 w-12">
+                        <input
+                            type="checkbox"
+                            checked={selectedIds.length === devices.length && devices.length > 0}
+                            onChange={() => {
+                                if (selectedIds.length === devices.length) {
+                                    devices.forEach(d => onToggleSelection(d.id));
+                                } else {
+                                    devices.forEach(d => {
+                                        if (!selectedIds.includes(d.id)) {
+                                            onToggleSelection(d.id);
+                                        }
+                                    });
+                                }
+                            }}
+                            className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                        />
+                    </th>
                     <th
                         onClick={() => onSort('name')}
                         className="cursor-pointer px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
@@ -974,6 +1756,14 @@ function DevicesTable({
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                 {devices.map((device) => (
                     <tr key={device.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                        <td className="px-6 py-4">
+                            <input
+                                type="checkbox"
+                                checked={selectedIds.includes(device.id)}
+                                onChange={() => onToggleSelection(device.id)}
+                                className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                            />
+                        </td>
                         <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
                             {device.name}
                         </td>
@@ -1055,6 +1845,20 @@ function DevicesTable({
                                         <CheckCircle2 className="size-4" />
                                     </button>
                                 )}
+                                <button 
+                                    onClick={() => onView(device)} 
+                                    className="rounded-lg p-2 text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/30"
+                                    title="View Details"
+                                >
+                                    <Eye className="size-4" />
+                                </button>
+                                <button 
+                                    onClick={() => onComments(device)} 
+                                    className="rounded-lg p-2 text-purple-600 hover:bg-purple-50 dark:text-purple-400 dark:hover:bg-purple-900/30"
+                                    title="Manage Comments"
+                                >
+                                    <MessageCircle className="size-4" />
+                                </button>
                                 <button onClick={() => onEdit(device)} className="rounded-lg p-2 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30">
                                     <Edit className="size-4" />
                                 </button>
@@ -1078,6 +1882,8 @@ function AlertsTable({
     sortField,
     sortDirection,
     onSort,
+    selectedIds,
+    onToggleSelection,
 }: {
     alerts: Alert[];
     onEdit: (alert: Alert) => void;
@@ -1085,6 +1891,8 @@ function AlertsTable({
     sortField: string;
     sortDirection: 'asc' | 'desc';
     onSort: (field: string) => void;
+    selectedIds: number[];
+    onToggleSelection: (id: number) => void;
 }) {
     if (alerts.length === 0) {
         return (
@@ -1099,6 +1907,24 @@ function AlertsTable({
         <table className="w-full">
             <thead className="bg-slate-50 dark:bg-slate-900">
                 <tr>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 w-12">
+                        <input
+                            type="checkbox"
+                            checked={selectedIds.length === alerts.length && alerts.length > 0}
+                            onChange={() => {
+                                if (selectedIds.length === alerts.length) {
+                                    alerts.forEach(a => onToggleSelection(a.id));
+                                } else {
+                                    alerts.forEach(a => {
+                                        if (!selectedIds.includes(a.id)) {
+                                            onToggleSelection(a.id);
+                                        }
+                                    });
+                                }
+                            }}
+                            className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                        />
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Device</th>
                     <th
                         onClick={() => onSort('title')}
@@ -1146,6 +1972,14 @@ function AlertsTable({
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                 {alerts.map((alert) => (
                     <tr key={alert.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                        <td className="px-6 py-4">
+                            <input
+                                type="checkbox"
+                                checked={selectedIds.includes(alert.id)}
+                                onChange={() => onToggleSelection(alert.id)}
+                                className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                            />
+                        </td>
                         <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">{alert.device?.name || `Device #${alert.device_id}`}</td>
                         <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{alert.title}</td>
                         <td className="px-6 py-4">
@@ -1196,10 +2030,14 @@ function LocationsTable({
     locations,
     onEdit,
     onDelete,
+    selectedIds,
+    onToggleSelection,
 }: {
     locations: Location[];
     onEdit: (location: Location) => void;
     onDelete: (location: Location) => void;
+    selectedIds: number[];
+    onToggleSelection: (id: number) => void;
 }) {
     if (locations.length === 0) {
         return (
@@ -1217,6 +2055,24 @@ function LocationsTable({
         <table className="w-full">
             <thead className="bg-slate-50 dark:bg-slate-900">
                 <tr>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 w-12">
+                        <input
+                            type="checkbox"
+                            checked={selectedIds.length === locations.length && locations.length > 0}
+                            onChange={() => {
+                                if (selectedIds.length === locations.length) {
+                                    locations.forEach(l => onToggleSelection(l.id));
+                                } else {
+                                    locations.forEach(l => {
+                                        if (!selectedIds.includes(l.id)) {
+                                            onToggleSelection(l.id);
+                                        }
+                                    });
+                                }
+                            }}
+                            className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                        />
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                         Location Name
                     </th>
@@ -1234,6 +2090,14 @@ function LocationsTable({
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                 {locations.map((location) => (
                     <tr key={location.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                        <td className="px-6 py-4">
+                            <input
+                                type="checkbox"
+                                checked={selectedIds.includes(location.id)}
+                                onChange={() => onToggleSelection(location.id)}
+                                className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                            />
+                        </td>
                         <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
                             {location.name}
                         </td>
@@ -1271,10 +2135,14 @@ function BranchesTable({
     branches,
     onEdit,
     onDelete,
+    selectedIds,
+    onToggleSelection,
 }: {
     branches: Branch[];
     onEdit: (branch: Branch) => void;
     onDelete: (branch: Branch) => void;
+    selectedIds: number[];
+    onToggleSelection: (id: number) => void;
 }) {
     if (branches.length === 0) {
         return (
@@ -1292,6 +2160,24 @@ function BranchesTable({
         <table className="w-full">
             <thead className="bg-slate-50 dark:bg-slate-900">
                 <tr>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 w-12">
+                        <input
+                            type="checkbox"
+                            checked={selectedIds.length === branches.length && branches.length > 0}
+                            onChange={() => {
+                                if (selectedIds.length === branches.length) {
+                                    branches.forEach(b => onToggleSelection(b.id));
+                                } else {
+                                    branches.forEach(b => {
+                                        if (!selectedIds.includes(b.id)) {
+                                            onToggleSelection(b.id);
+                                        }
+                                    });
+                                }
+                            }}
+                            className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                        />
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                         #
                     </th>
@@ -1318,6 +2204,14 @@ function BranchesTable({
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                 {branches.map((branch, index) => (
                     <tr key={branch.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                        <td className="px-6 py-4">
+                            <input
+                                type="checkbox"
+                                checked={selectedIds.includes(branch.id)}
+                                onChange={() => onToggleSelection(branch.id)}
+                                className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                            />
+                        </td>
                         <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
                             #{index + 1}
                         </td>
@@ -1384,10 +2278,14 @@ function UsersTable({
     users,
     onEdit,
     onDelete,
+    selectedIds,
+    onToggleSelection,
 }: {
     users: UserData[];
     onEdit: (user: UserData) => void;
     onDelete: (user: UserData) => void;
+    selectedIds: number[];
+    onToggleSelection: (id: number) => void;
 }) {
     if (users.length === 0) {
         return (
@@ -1402,8 +2300,27 @@ function UsersTable({
         <table className="w-full">
             <thead className="bg-slate-50 dark:bg-slate-900">
                 <tr>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 w-12">
+                        <input
+                            type="checkbox"
+                            checked={selectedIds.length === users.length && users.length > 0}
+                            onChange={() => {
+                                if (selectedIds.length === users.length) {
+                                    users.forEach(u => onToggleSelection(u.id));
+                                } else {
+                                    users.forEach(u => {
+                                        if (!selectedIds.includes(u.id)) {
+                                            onToggleSelection(u.id);
+                                        }
+                                    });
+                                }
+                            }}
+                            className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                        />
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Name</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Email</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Role</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Created</th>
                     <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Actions</th>
                 </tr>
@@ -1411,8 +2328,25 @@ function UsersTable({
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                 {users.map((user) => (
                     <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                        <td className="px-6 py-4">
+                            <input
+                                type="checkbox"
+                                checked={selectedIds.includes(user.id)}
+                                onChange={() => onToggleSelection(user.id)}
+                                className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                            />
+                        </td>
                         <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">{user.name}</td>
                         <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{user.email}</td>
+                        <td className="px-6 py-4">
+                            <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+                                user.role === 'admin' 
+                                    ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
+                                    : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+                            }`}>
+                                {user.role}
+                            </span>
+                        </td>
                         <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{new Date(user.created_at).toLocaleDateString()}</td>
                         <td className="px-6 py-4 text-right">
                             <div className="flex justify-end gap-2">
@@ -1436,10 +2370,14 @@ function BrandsTable({
     brands,
     onEdit,
     onDelete,
+    selectedIds,
+    onToggleSelection,
 }: {
     brands: Brand[];
     onEdit: (brand: Brand) => void;
     onDelete: (brand: Brand) => void;
+    selectedIds: number[];
+    onToggleSelection: (id: number) => void;
 }) {
     if (brands.length === 0) {
         return (
@@ -1454,6 +2392,24 @@ function BrandsTable({
         <table className="w-full">
             <thead className="bg-slate-50 dark:bg-slate-900">
                 <tr>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 w-12">
+                        <input
+                            type="checkbox"
+                            checked={selectedIds.length === brands.length && brands.length > 0}
+                            onChange={() => {
+                                if (selectedIds.length === brands.length) {
+                                    brands.forEach(b => onToggleSelection(b.id));
+                                } else {
+                                    brands.forEach(b => {
+                                        if (!selectedIds.includes(b.id)) {
+                                            onToggleSelection(b.id);
+                                        }
+                                    });
+                                }
+                            }}
+                            className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                        />
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">#</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Name</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Description</th>
@@ -1463,6 +2419,14 @@ function BrandsTable({
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                 {brands.map((brand, index) => (
                     <tr key={brand.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                        <td className="px-6 py-4">
+                            <input
+                                type="checkbox"
+                                checked={selectedIds.includes(brand.id)}
+                                onChange={() => onToggleSelection(brand.id)}
+                                className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                            />
+                        </td>
                         <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">#{index + 1}</td>
                         <td className="px-6 py-4 text-sm font-semibold text-slate-900 dark:text-white">{brand.name}</td>
                         <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{brand.description || '-'}</td>
@@ -1488,10 +2452,14 @@ function ModelsTable({
     models,
     onEdit,
     onDelete,
+    selectedIds,
+    onToggleSelection,
 }: {
     models: Model[];
     onEdit: (model: Model) => void;
     onDelete: (model: Model) => void;
+    selectedIds: number[];
+    onToggleSelection: (id: number) => void;
 }) {
     if (models.length === 0) {
         return (
@@ -1506,6 +2474,24 @@ function ModelsTable({
         <table className="w-full">
             <thead className="bg-slate-50 dark:bg-slate-900">
                 <tr>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 w-12">
+                        <input
+                            type="checkbox"
+                            checked={selectedIds.length === models.length && models.length > 0}
+                            onChange={() => {
+                                if (selectedIds.length === models.length) {
+                                    models.forEach(m => onToggleSelection(m.id));
+                                } else {
+                                    models.forEach(m => {
+                                        if (!selectedIds.includes(m.id)) {
+                                            onToggleSelection(m.id);
+                                        }
+                                    });
+                                }
+                            }}
+                            className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                        />
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">#</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Name</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Brand</th>
@@ -1516,6 +2502,14 @@ function ModelsTable({
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                 {models.map((model, index) => (
                     <tr key={model.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                        <td className="px-6 py-4">
+                            <input
+                                type="checkbox"
+                                checked={selectedIds.includes(model.id)}
+                                onChange={() => onToggleSelection(model.id)}
+                                className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                            />
+                        </td>
                         <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">#{index + 1}</td>
                         <td className="px-6 py-4 text-sm font-semibold text-slate-900 dark:text-white">{model.name}</td>
                         <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{model.brand?.name || '-'}</td>
@@ -1798,10 +2792,12 @@ function EntityForm({
     entity,
     mode,
     data,
+    users,
 }: {
     entity: CRUDEntity;
     mode: 'create' | 'edit';
     data: Device | Alert | Location | Branch | UserData | Brand | Model | null;
+    users: UserData[];
 }) {
     const { currentBranch } = usePage<PageProps>().props;
     
@@ -2137,6 +3133,21 @@ function EntityForm({
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Barcode *</label>
                             <input type="text" name="barcode" defaultValue={deviceData?.barcode || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="Enter barcode" required />
+                        </div>
+                        <div>
+                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Serial Number</label>
+                            <input type="text" name="serial_number" defaultValue={deviceData?.serial_number || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="Enter serial number" />
+                        </div>
+                        <div>
+                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Managed By</label>
+                            <select name="managed_by" defaultValue={deviceData?.managed_by || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white">
+                                <option value="">Not Assigned</option>
+                                {users && users.length > 0 && users.map((user: UserData) => (
+                                    <option key={user.id} value={user.id}>
+                                        {user.name} ({user.role})
+                                    </option>
+                                ))}
+                            </select>
                         </div>
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">IP Address *</label>
@@ -2538,6 +3549,13 @@ function EntityForm({
                             <input type="email" name="email" defaultValue={userData?.email || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" required />
                         </div>
                         <div>
+                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Role *</label>
+                            <select name="role" defaultValue={userData?.role || 'staff'} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" required>
+                                <option value="staff">Staff</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                        <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
                                 {mode === 'create' ? 'Password *' : 'New Password (leave blank to keep current)'}
                             </label>
@@ -2652,5 +3670,137 @@ function LocationMapPicker({
             <Marker position={[latitude, longitude]} />
             <MapClickHandler />
         </MapContainer>
+    );
+}
+
+// Pagination Component
+function Pagination({ 
+    currentPage, 
+    totalPages, 
+    totalItems,
+    perPage,
+    onPageChange,
+    onPerPageChange 
+}: { 
+    currentPage: number; 
+    totalPages: number; 
+    totalItems: number;
+    perPage: number;
+    onPageChange: (page: number) => void;
+    onPerPageChange: (perPage: number) => void;
+}) {
+    const startItem = (currentPage - 1) * perPage + 1;
+    const endItem = Math.min(currentPage * perPage, totalItems);
+    
+    const getPageNumbers = () => {
+        const pages: (number | string)[] = [];
+        const maxVisible = 5;
+        
+        if (totalPages <= maxVisible) {
+            for (let i = 1; i <= totalPages; i++) {
+                pages.push(i);
+            }
+        } else {
+            pages.push(1);
+            
+            if (currentPage > 3) {
+                pages.push('...');
+            }
+            
+            const start = Math.max(2, currentPage - 1);
+            const end = Math.min(totalPages - 1, currentPage + 1);
+            
+            for (let i = start; i <= end; i++) {
+                pages.push(i);
+            }
+            
+            if (currentPage < totalPages - 2) {
+                pages.push('...');
+            }
+            
+            pages.push(totalPages);
+        }
+        
+        return pages;
+    };
+    
+    if (totalPages <= 1) return null;
+    
+    return (
+        <div className="flex items-center justify-between border-t border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-800 sm:px-6">
+            <div className="flex flex-1 justify-between sm:hidden">
+                <button
+                    onClick={() => onPageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="relative inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+                >
+                    Previous
+                </button>
+                <button
+                    onClick={() => onPageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="relative ml-3 inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+                >
+                    Next
+                </button>
+            </div>
+            <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                <div className="flex items-center gap-4">
+                    <p className="text-sm text-slate-700 dark:text-slate-300">
+                        Showing <span className="font-medium">{startItem}</span> to <span className="font-medium">{endItem}</span> of{' '}
+                        <span className="font-medium">{totalItems}</span> results
+                    </p>
+                    <select
+                        value={perPage}
+                        onChange={(e) => onPerPageChange(Number(e.target.value))}
+                        className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+                    >
+                        <option value={25}>25 per page</option>
+                        <option value={50}>50 per page</option>
+                        <option value={100}>100 per page</option>
+                        <option value={200}>200 per page</option>
+                    </select>
+                </div>
+                <div>
+                    <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                        <button
+                            onClick={() => onPageChange(currentPage - 1)}
+                            disabled={currentPage === 1}
+                            className="relative inline-flex items-center rounded-l-md px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 disabled:opacity-50 dark:ring-slate-600 dark:hover:bg-slate-700"
+                        >
+                            <span className="sr-only">Previous</span>
+                            <ChevronLeft className="size-5" />
+                        </button>
+                        {getPageNumbers().map((page, idx) => (
+                            page === '...' ? (
+                                <span key={`ellipsis-${idx}`} className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-slate-700 ring-1 ring-inset ring-slate-300 dark:text-slate-300 dark:ring-slate-600">
+                                    ...
+                                </span>
+                            ) : (
+                                <button
+                                    key={page}
+                                    onClick={() => onPageChange(page as number)}
+                                    className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ring-1 ring-inset ring-slate-300 dark:ring-slate-600 ${
+                                        currentPage === page
+                                            ? 'z-10 bg-blue-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600'
+                                            : 'text-slate-900 hover:bg-slate-50 dark:text-slate-100 dark:hover:bg-slate-700'
+                                    }`}
+                                >
+                                    {page}
+                                </button>
+                            )
+                        ))}
+                        <button
+                            onClick={() => onPageChange(currentPage + 1)}
+                            disabled={currentPage === totalPages}
+                            className="relative inline-flex items-center rounded-r-md px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 disabled:opacity-50 dark:ring-slate-600 dark:hover:bg-slate-700"
+                        >
+                            <span className="sr-only">Next</span>
+                            <ChevronRight className="size-5" />
+                        </button>
+                    </nav>
+                </div>
+            </div>
+        </div>
     );
 }

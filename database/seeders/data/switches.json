@@ -1,0 +1,2502 @@
+[
+  {
+    "name": "1st Floor",
+    "ip_address": "10.8.3.143",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990084",
+    "updated_at": "2025-11-12T16:55:36.990085"
+  },
+  {
+    "name": "1st Floor Server",
+    "ip_address": "10.8.3.144",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990095",
+    "updated_at": "2025-11-12T16:55:36.990096"
+  },
+  {
+    "name": "1st Floor WC03 Blkg Lif",
+    "ip_address": "10.8.3.206",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991940",
+    "updated_at": "2025-11-12T16:55:36.991942"
+  },
+  {
+    "name": "1st Floor WC04",
+    "ip_address": "10.8.3.207",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991952",
+    "updated_at": "2025-11-12T16:55:36.991954"
+  },
+  {
+    "name": "1stFloor FSKTM",
+    "ip_address": "10.8.3.132",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990468",
+    "updated_at": "2025-11-12T16:55:36.990469"
+  },
+  {
+    "name": "2nd Floor",
+    "ip_address": "10.8.3.145",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990118",
+    "updated_at": "2025-11-12T16:55:36.990119"
+  },
+  {
+    "name": "2nd Floor Mkmal Komputer Siwazah",
+    "ip_address": "10.8.3.146",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990107",
+    "updated_at": "2025-11-12T16:55:36.990109"
+  },
+  {
+    "name": "2nd Floor WC05 Blkg Lif",
+    "ip_address": "10.8.3.208",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991964",
+    "updated_at": "2025-11-12T16:55:36.991966"
+  },
+  {
+    "name": "2nd Floor WC06",
+    "ip_address": "10.8.3.209",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991976",
+    "updated_at": "2025-11-12T16:55:36.991977"
+  },
+  {
+    "name": "2ndFloor FSKTM",
+    "ip_address": "10.8.3.133",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990478",
+    "updated_at": "2025-11-12T16:55:36.990480"
+  },
+  {
+    "name": "3rd Floor",
+    "ip_address": "10.8.3.147",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990128",
+    "updated_at": "2025-11-12T16:55:36.990130"
+  },
+  {
+    "name": "3rd Floor WC07 Blkg Lif",
+    "ip_address": "10.8.3.210",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991988",
+    "updated_at": "2025-11-12T16:55:36.991989"
+  },
+  {
+    "name": "3rd Floor WC08",
+    "ip_address": "10.8.3.211",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991999",
+    "updated_at": "2025-11-12T16:55:36.992000"
+  },
+  {
+    "name": "3rdFloor FSKTM",
+    "ip_address": "10.8.3.134",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990489",
+    "updated_at": "2025-11-12T16:55:36.990490"
+  },
+  {
+    "name": "4th Floor",
+    "ip_address": "10.8.3.148",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990139",
+    "updated_at": "2025-11-12T16:55:36.990140"
+  },
+  {
+    "name": "4th Floor WC09 Blkg Lif",
+    "ip_address": "10.8.3.212",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992011",
+    "updated_at": "2025-11-12T16:55:36.992013"
+  },
+  {
+    "name": "4th Floor WC10",
+    "ip_address": "10.8.3.213",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992023",
+    "updated_at": "2025-11-12T16:55:36.992024"
+  },
+  {
+    "name": "4thtFloor FSKTM",
+    "ip_address": "10.8.3.135",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990500",
+    "updated_at": "2025-11-12T16:55:36.990501"
+  },
+  {
+    "name": "5th Floor",
+    "ip_address": "10.8.3.216",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990150",
+    "updated_at": "2025-11-12T16:55:36.990151"
+  },
+  {
+    "name": "5th Floor FSKTM",
+    "ip_address": "10.8.3.136",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990511",
+    "updated_at": "2025-11-12T16:55:36.990512"
+  },
+  {
+    "name": "5th Floor WC11 Blkg Lif",
+    "ip_address": "10.8.3.214",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992034",
+    "updated_at": "2025-11-12T16:55:36.992036"
+  },
+  {
+    "name": "5th Floor WC12 Blkg Pej PNC",
+    "ip_address": "10.8.3.215",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992050",
+    "updated_at": "2025-11-12T16:55:36.992052"
+  },
+  {
+    "name": "6th Floor",
+    "ip_address": "10.8.3.217",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990162",
+    "updated_at": "2025-11-12T16:55:36.990163"
+  },
+  {
+    "name": "6th Floor FSKTM",
+    "ip_address": "10.8.3.137",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990525",
+    "updated_at": "2025-11-12T16:55:36.990526"
+  },
+  {
+    "name": "7th Floor",
+    "ip_address": "10.8.3.218",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990172",
+    "updated_at": "2025-11-12T16:55:36.990174"
+  },
+  {
+    "name": "7th tFloor FSKTM",
+    "ip_address": "10.8.3.138",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990536",
+    "updated_at": "2025-11-12T16:55:36.990537"
+  },
+  {
+    "name": "8th Floor",
+    "ip_address": "10.8.3.219",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990183",
+    "updated_at": "2025-11-12T16:55:36.990185"
+  },
+  {
+    "name": "A 1stFloor",
+    "ip_address": "10.8.3.190",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990241",
+    "updated_at": "2025-11-12T16:55:36.990242"
+  },
+  {
+    "name": "A 2ndFloor",
+    "ip_address": "10.8.3.191",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990251",
+    "updated_at": "2025-11-12T16:55:36.990253"
+  },
+  {
+    "name": "A 3rdFloor",
+    "ip_address": "10.8.3.192",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990262",
+    "updated_at": "2025-11-12T16:55:36.990264"
+  },
+  {
+    "name": "A 4thdFloor",
+    "ip_address": "10.8.3.193",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990273",
+    "updated_at": "2025-11-12T16:55:36.990274"
+  },
+  {
+    "name": "A 5thFloor",
+    "ip_address": "10.8.3.194",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990283",
+    "updated_at": "2025-11-12T16:55:36.990285"
+  },
+  {
+    "name": "A Blok Pejabat",
+    "ip_address": "10.100.0.4",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992397",
+    "updated_at": "2025-11-12T16:55:36.992398"
+  },
+  {
+    "name": "A Gfloor Floor",
+    "ip_address": "10.8.3.189",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990295",
+    "updated_at": "2025-11-12T16:55:36.990296"
+  },
+  {
+    "name": "A LAN & POE",
+    "ip_address": "10.8.2.217",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991061",
+    "updated_at": "2025-11-12T16:55:36.991063"
+  },
+  {
+    "name": "A POE L1 (room A2-05)",
+    "ip_address": "10.8.2.46",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991073",
+    "updated_at": "2025-11-12T16:55:36.991075"
+  },
+  {
+    "name": "A-001",
+    "ip_address": "10.9.4.30",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990796",
+    "updated_at": "2025-11-12T16:55:36.990797"
+  },
+  {
+    "name": "A-004-A BK2",
+    "ip_address": "10.9.4.7",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990807",
+    "updated_at": "2025-11-12T16:55:36.990808"
+  },
+  {
+    "name": "A-101-02 Studio Pemb. Video & Animasi (3824)",
+    "ip_address": "10.9.4.4",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990820",
+    "updated_at": "2025-11-12T16:55:36.990822"
+  },
+  {
+    "name": "A-102-02",
+    "ip_address": "10.9.4.16",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990831",
+    "updated_at": "2025-11-12T16:55:36.990832"
+  },
+  {
+    "name": "A-109-02",
+    "ip_address": "10.9.4.18",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990841",
+    "updated_at": "2025-11-12T16:55:36.990842"
+  },
+  {
+    "name": "A-203 Bilik Pensyarah 3",
+    "ip_address": "10.9.4.26",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990852",
+    "updated_at": "2025-11-12T16:55:36.990854"
+  },
+  {
+    "name": "A10 KOKO 1st Flr",
+    "ip_address": "10.8.3.239",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.988964",
+    "updated_at": "2025-11-12T16:55:36.988993"
+  },
+  {
+    "name": "A10 KOKO Gfloor sw1",
+    "ip_address": "10.8.3.237",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989014",
+    "updated_at": "2025-11-12T16:55:36.989016"
+  },
+  {
+    "name": "A10 to A20 Master UBNT",
+    "ip_address": "10.60.35.247",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992317",
+    "updated_at": "2025-11-12T16:55:36.992319"
+  },
+  {
+    "name": "A20 to A10 Remote UBNTPing: 10.60.35.248",
+    "ip_address": "10.60.35.248",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992330",
+    "updated_at": "2025-11-12T16:55:36.992333"
+  },
+  {
+    "name": "A4 1st Floor",
+    "ip_address": "10.8.3.7",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989029",
+    "updated_at": "2025-11-12T16:55:36.989031"
+  },
+  {
+    "name": "A5 PTM",
+    "ip_address": "10.8.3.14",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989041",
+    "updated_at": "2025-11-12T16:55:36.989044"
+  },
+  {
+    "name": "A6 Pos Kawalan",
+    "ip_address": "10.8.3.167",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989054",
+    "updated_at": "2025-11-12T16:55:36.989056"
+  },
+  {
+    "name": "AP SW BCB 2nd Floor B-201-02",
+    "ip_address": "10.9.4.40",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990874",
+    "updated_at": "2025-11-12T16:55:36.990877"
+  },
+  {
+    "name": "ATM & Bust Stop Switch",
+    "ip_address": "10.10.10.17",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989068",
+    "updated_at": "2025-11-12T16:55:36.989069"
+  },
+  {
+    "name": "ATM Master UBNT (B3 blkg ict room to ATM)Ping: 10.10.11.24",
+    "ip_address": "10.10.11.24",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992346",
+    "updated_at": "2025-11-12T16:55:36.992347"
+  },
+  {
+    "name": "ATM Remote UBNT (ATM to B23)Ping: 10.10.11.25",
+    "ip_address": "10.10.11.25",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992359",
+    "updated_at": "2025-11-12T16:55:36.992360"
+  },
+  {
+    "name": "B",
+    "ip_address": "10.8.3.86",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991084",
+    "updated_at": "2025-11-12T16:55:36.991086"
+  },
+  {
+    "name": "B 1stFloor",
+    "ip_address": "10.8.3.196",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990305",
+    "updated_at": "2025-11-12T16:55:36.990322"
+  },
+  {
+    "name": "B Blok Asrama Perempuan",
+    "ip_address": "10.100.0.5",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992409",
+    "updated_at": "2025-11-12T16:55:36.992410"
+  },
+  {
+    "name": "B GndFloor",
+    "ip_address": "10.8.3.195",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990345",
+    "updated_at": "2025-11-12T16:55:36.990347"
+  },
+  {
+    "name": "B SW2",
+    "ip_address": "10.8.2.64",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991095",
+    "updated_at": "2025-11-12T16:55:36.991096"
+  },
+  {
+    "name": "B-001-B Studio FKAAB GFloor (fpt lama)Ping: 10.9.4.2",
+    "ip_address": "10.9.4.2",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990901",
+    "updated_at": "2025-11-12T16:55:36.990903"
+  },
+  {
+    "name": "B-003",
+    "ip_address": "10.9.4.6",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990920",
+    "updated_at": "2025-11-12T16:55:36.990922"
+  },
+  {
+    "name": "B-014-A PTM Office Operasi (3812)",
+    "ip_address": "10.9.4.3",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990942",
+    "updated_at": "2025-11-12T16:55:36.990944"
+  },
+  {
+    "name": "B-014-A PTM Office Operasi Access Switch",
+    "ip_address": "10.9.4.8",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990963",
+    "updated_at": "2025-11-12T16:55:36.990965"
+  },
+  {
+    "name": "B-103-01",
+    "ip_address": "10.9.4.11",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990981",
+    "updated_at": "2025-11-12T16:55:36.990983"
+  },
+  {
+    "name": "B-104",
+    "ip_address": "10.9.4.12",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990999",
+    "updated_at": "2025-11-12T16:55:36.991001"
+  },
+  {
+    "name": "B-105-01",
+    "ip_address": "10.9.4.13",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991012",
+    "updated_at": "2025-11-12T16:55:36.991014"
+  },
+  {
+    "name": "B-106-02",
+    "ip_address": "10.9.4.14",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991025",
+    "updated_at": "2025-11-12T16:55:36.991026"
+  },
+  {
+    "name": "B2 1st Floor Makmal Bahasa",
+    "ip_address": "10.8.3.44",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989081",
+    "updated_at": "2025-11-12T16:55:36.989082"
+  },
+  {
+    "name": "B2 Pej. Antarabangsa",
+    "ip_address": "10.8.3.57",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989092",
+    "updated_at": "2025-11-12T16:55:36.989094"
+  },
+  {
+    "name": "Billing Telefon Server Library",
+    "ip_address": "10.63.55.207",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992063",
+    "updated_at": "2025-11-12T16:55:36.992064"
+  },
+  {
+    "name": "C",
+    "ip_address": "10.8.2.44",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991105",
+    "updated_at": "2025-11-12T16:55:36.991106"
+  },
+  {
+    "name": "C 1StFloor",
+    "ip_address": "10.8.3.198",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990412",
+    "updated_at": "2025-11-12T16:55:36.990422"
+  },
+  {
+    "name": "C 2ndFloor",
+    "ip_address": "10.8.3.199",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990433",
+    "updated_at": "2025-11-12T16:55:36.990435"
+  },
+  {
+    "name": "C Blok VIP Asrama",
+    "ip_address": "10.100.0.6",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992420",
+    "updated_at": "2025-11-12T16:55:36.992422"
+  },
+  {
+    "name": "C GndFloor",
+    "ip_address": "10.8.3.197",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990444",
+    "updated_at": "2025-11-12T16:55:36.990446"
+  },
+  {
+    "name": "C2 - Inkubator",
+    "ip_address": "10.8.3.178",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989104",
+    "updated_at": "2025-11-12T16:55:36.989105"
+  },
+  {
+    "name": "CCTV Switch For Server Bilik Server Aras 2",
+    "ip_address": "10.8.3.65",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992076",
+    "updated_at": "2025-11-12T16:55:36.992078"
+  },
+  {
+    "name": "CCTV Switch For Server Gfloor Bilik Kawalan",
+    "ip_address": "10.8.3.66",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992089",
+    "updated_at": "2025-11-12T16:55:36.992091"
+  },
+  {
+    "name": "CORE PUMAS",
+    "ip_address": "10.100.0.3",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992431",
+    "updated_at": "2025-11-12T16:55:36.992433"
+  },
+  {
+    "name": "Cafe Access Switch",
+    "ip_address": "10.8.2.30",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990616",
+    "updated_at": "2025-11-12T16:55:36.990617"
+  },
+  {
+    "name": "Cafe Main Switch",
+    "ip_address": "10.8.2.29",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990629",
+    "updated_at": "2025-11-12T16:55:36.990630"
+  },
+  {
+    "name": "Cambium Master FKAAB(A) to KKP(H)",
+    "ip_address": "10.8.2.169",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991122",
+    "updated_at": "2025-11-12T16:55:36.991124"
+  },
+  {
+    "name": "Cambium Remote KKP(H) to FKAAB(A)Ping: 10.8.2.170",
+    "ip_address": "10.8.2.170",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991135",
+    "updated_at": "2025-11-12T16:55:36.991136"
+  },
+  {
+    "name": "Core SW BCB 2nd Floor B-201-02",
+    "ip_address": "10.9.4.252",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991039",
+    "updated_at": "2025-11-12T16:55:36.991041"
+  },
+  {
+    "name": "D",
+    "ip_address": "10.8.2.45",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991145",
+    "updated_at": "2025-11-12T16:55:36.991147"
+  },
+  {
+    "name": "D Blok Asrama Lelaki",
+    "ip_address": "10.100.0.7",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992444",
+    "updated_at": "2025-11-12T16:55:36.992446"
+  },
+  {
+    "name": "D1-3rdFloor Bilik Pensyarah",
+    "ip_address": "10.8.3.92",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989183",
+    "updated_at": "2025-11-12T16:55:36.989184"
+  },
+  {
+    "name": "D1-Gfloor Bilik Pensyarah",
+    "ip_address": "10.8.3.80",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989228",
+    "updated_at": "2025-11-12T16:55:36.989229"
+  },
+  {
+    "name": "D10 Unit Awam Lama",
+    "ip_address": "10.8.3.64",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989148",
+    "updated_at": "2025-11-12T16:55:36.989150"
+  },
+  {
+    "name": "D11 Kabin Pemandu",
+    "ip_address": "10.60.35.208",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989160",
+    "updated_at": "2025-11-12T16:55:36.989161"
+  },
+  {
+    "name": "D13-001 Pej Lestari",
+    "ip_address": "10.8.3.73",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989171",
+    "updated_at": "2025-11-12T16:55:36.989173"
+  },
+  {
+    "name": "D14-Unit Percetakan",
+    "ip_address": "10.8.3.74",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989194",
+    "updated_at": "2025-11-12T16:55:36.989195"
+  },
+  {
+    "name": "D15-Pejabat Alumni & PKU",
+    "ip_address": "10.8.3.70",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989206",
+    "updated_at": "2025-11-12T16:55:36.989207"
+  },
+  {
+    "name": "D16-PKU2",
+    "ip_address": "10.8.3.90",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989216",
+    "updated_at": "2025-11-12T16:55:36.989218"
+  },
+  {
+    "name": "D2-Asrama TSN 1stFloor POE",
+    "ip_address": "10.8.2.129",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989239",
+    "updated_at": "2025-11-12T16:55:36.989241"
+  },
+  {
+    "name": "D2-Pej TSN D02-007-02 G-Floor",
+    "ip_address": "10.8.3.76",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989253",
+    "updated_at": "2025-11-12T16:55:36.989255"
+  },
+  {
+    "name": "D3-Asrama TSN 1stFloor POE",
+    "ip_address": "10.8.2.130",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989275",
+    "updated_at": "2025-11-12T16:55:36.989277"
+  },
+  {
+    "name": "D4-Asrama TSN 1stFloor POE",
+    "ip_address": "10.8.3.17",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989287",
+    "updated_at": "2025-11-12T16:55:36.989288"
+  },
+  {
+    "name": "D6-004a-Felo-KKTSN-POE",
+    "ip_address": "10.8.3.169",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989298",
+    "updated_at": "2025-11-12T16:55:36.989299"
+  },
+  {
+    "name": "D7 2ndFloor",
+    "ip_address": "10.8.3.62",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989332",
+    "updated_at": "2025-11-12T16:55:36.989334"
+  },
+  {
+    "name": "D7 Gfloor",
+    "ip_address": "10.8.3.61",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989344",
+    "updated_at": "2025-11-12T16:55:36.989345"
+  },
+  {
+    "name": "D8-Pusat Sukan D08-002",
+    "ip_address": "10.8.3.75",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989355",
+    "updated_at": "2025-11-12T16:55:36.989357"
+  },
+  {
+    "name": "D9-PPP Unit Kenderaan & Majlis",
+    "ip_address": "10.8.3.72",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989368",
+    "updated_at": "2025-11-12T16:55:36.989370"
+  },
+  {
+    "name": "DSI Belakang",
+    "ip_address": "10.8.2.231",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992155",
+    "updated_at": "2025-11-12T16:55:36.992156"
+  },
+  {
+    "name": "DSI UCiTV",
+    "ip_address": "10.8.2.230",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992167",
+    "updated_at": "2025-11-12T16:55:36.992168"
+  },
+  {
+    "name": "Disti B3.E6",
+    "ip_address": "10.8.3.250",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989115",
+    "updated_at": "2025-11-12T16:55:36.989116"
+  },
+  {
+    "name": "Disti C15.C16",
+    "ip_address": "10.8.3.248",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989126",
+    "updated_at": "2025-11-12T16:55:36.989127"
+  },
+  {
+    "name": "Disti FKAAB BlokA-Gfloor",
+    "ip_address": "10.8.2.210",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989736",
+    "updated_at": "2025-11-12T16:55:36.989738"
+  },
+  {
+    "name": "Disti FKAAB BlokA-Gfloor",
+    "ip_address": "10.8.2.211",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989754",
+    "updated_at": "2025-11-12T16:55:36.989755"
+  },
+  {
+    "name": "Disti FKAAB BlokA-Gfloor",
+    "ip_address": "10.8.3.3",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989765",
+    "updated_at": "2025-11-12T16:55:36.989766"
+  },
+  {
+    "name": "Disti FKEE QB",
+    "ip_address": "10.8.2.220",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989800",
+    "updated_at": "2025-11-12T16:55:36.989802"
+  },
+  {
+    "name": "Disti FPTV Blok A-Gfloor",
+    "ip_address": "10.8.3.120",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990457",
+    "updated_at": "2025-11-12T16:55:36.990458"
+  },
+  {
+    "name": "Disti FSKTM GFloor",
+    "ip_address": "10.8.2.206",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990548",
+    "updated_at": "2025-11-12T16:55:36.990549"
+  },
+  {
+    "name": "Disti FSKTM GFloor",
+    "ip_address": "10.8.2.207",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990559",
+    "updated_at": "2025-11-12T16:55:36.990561"
+  },
+  {
+    "name": "Disti FSKTM GFloor",
+    "ip_address": "10.8.3.130",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990570",
+    "updated_at": "2025-11-12T16:55:36.990571"
+  },
+  {
+    "name": "Disti G4 Cafe Gfloor",
+    "ip_address": "10.8.3.100",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991409",
+    "updated_at": "2025-11-12T16:55:36.991410"
+  },
+  {
+    "name": "Disti Perpustakaan 2nd Floor",
+    "ip_address": "10.8.3.202",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992144",
+    "updated_at": "2025-11-12T16:55:36.992145"
+  },
+  {
+    "name": "Disti Perpustakaan 2nd Floor BigStage",
+    "ip_address": "10.8.2.212",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992118",
+    "updated_at": "2025-11-12T16:55:36.992119"
+  },
+  {
+    "name": "Disti Perpustakaan 2nd Floor Blkg LifPing: 10.8.2.213",
+    "ip_address": "10.8.2.213",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992131",
+    "updated_at": "2025-11-12T16:55:36.992133"
+  },
+  {
+    "name": "Disti QA-CCTV GFloor",
+    "ip_address": "10.8.3.124",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989811",
+    "updated_at": "2025-11-12T16:55:36.989813"
+  },
+  {
+    "name": "Disti QA-GFloor",
+    "ip_address": "10.8.3.18",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989822",
+    "updated_at": "2025-11-12T16:55:36.989825"
+  },
+  {
+    "name": "Distribution Sw FPTP",
+    "ip_address": "10.8.3.20",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990194",
+    "updated_at": "2025-11-12T16:55:36.990196"
+  },
+  {
+    "name": "E Blok Dewan Makan",
+    "ip_address": "10.100.0.8",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992455",
+    "updated_at": "2025-11-12T16:55:36.992457"
+  },
+  {
+    "name": "E Disti Gfloor",
+    "ip_address": "10.8.3.93",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991156",
+    "updated_at": "2025-11-12T16:55:36.991158"
+  },
+  {
+    "name": "E POE",
+    "ip_address": "10.8.2.40",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991167",
+    "updated_at": "2025-11-12T16:55:36.991169"
+  },
+  {
+    "name": "E1 Makmal AMMC",
+    "ip_address": "10.8.3.60",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989379",
+    "updated_at": "2025-11-12T16:55:36.989381"
+  },
+  {
+    "name": "E10-002_Makmal_Aerodinamik",
+    "ip_address": "10.8.3.123",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989390",
+    "updated_at": "2025-11-12T16:55:36.989392"
+  },
+  {
+    "name": "E10-Makmal 1st Floor E10-103-03",
+    "ip_address": "10.8.3.52",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989402",
+    "updated_at": "2025-11-12T16:55:36.989404"
+  },
+  {
+    "name": "E11-Bilik Pensyarah E11-004A",
+    "ip_address": "10.8.3.51",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989414",
+    "updated_at": "2025-11-12T16:55:36.989415"
+  },
+  {
+    "name": "E12-Bilik Pensyarah E12-004A",
+    "ip_address": "10.8.3.49",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989425",
+    "updated_at": "2025-11-12T16:55:36.989427"
+  },
+  {
+    "name": "E14-Bilik Kuliah E14-001",
+    "ip_address": "10.8.3.54",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989437",
+    "updated_at": "2025-11-12T16:55:36.989438"
+  },
+  {
+    "name": "E15-Bilik Kuliah E15-001",
+    "ip_address": "10.8.3.53",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989448",
+    "updated_at": "2025-11-12T16:55:36.989449"
+  },
+  {
+    "name": "E16 2nd Floor",
+    "ip_address": "10.8.3.118",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989459",
+    "updated_at": "2025-11-12T16:55:36.989461"
+  },
+  {
+    "name": "E16 3rd Floor",
+    "ip_address": "10.8.3.119",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989482",
+    "updated_at": "2025-11-12T16:55:36.989483"
+  },
+  {
+    "name": "E16 3rd Floor CCTV",
+    "ip_address": "10.8.3.220",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989471",
+    "updated_at": "2025-11-12T16:55:36.989472"
+  },
+  {
+    "name": "E16 Gfloor 1stFloor Pendaftar",
+    "ip_address": "10.8.3.117",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989494",
+    "updated_at": "2025-11-12T16:55:36.989495"
+  },
+  {
+    "name": "E17-Makmal Bahan FKAAB",
+    "ip_address": "10.8.3.55",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989507",
+    "updated_at": "2025-11-12T16:55:36.989508"
+  },
+  {
+    "name": "E2",
+    "ip_address": "10.8.3.34",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989517",
+    "updated_at": "2025-11-12T16:55:36.989519"
+  },
+  {
+    "name": "E3-Bilik Pensyarah E03-002",
+    "ip_address": "10.8.3.47",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989529",
+    "updated_at": "2025-11-12T16:55:36.989530"
+  },
+  {
+    "name": "E5-Bilik Pensyarah E05-002",
+    "ip_address": "10.8.3.46",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989542",
+    "updated_at": "2025-11-12T16:55:36.989543"
+  },
+  {
+    "name": "E6-Bilik ICT E6-002B-0",
+    "ip_address": "10.8.3.56",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989553",
+    "updated_at": "2025-11-12T16:55:36.989554"
+  },
+  {
+    "name": "E7-Kanzu E7-002-01",
+    "ip_address": "10.8.3.48",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989564",
+    "updated_at": "2025-11-12T16:55:36.989567"
+  },
+  {
+    "name": "E7-Pejabat Penerbit E7-002-01",
+    "ip_address": "10.8.3.77",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989577",
+    "updated_at": "2025-11-12T16:55:36.989579"
+  },
+  {
+    "name": "E9-Makmal RECESS E9-102-01",
+    "ip_address": "10.8.3.50",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989588",
+    "updated_at": "2025-11-12T16:55:36.989590"
+  },
+  {
+    "name": "F",
+    "ip_address": "10.8.3.91",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991177",
+    "updated_at": "2025-11-12T16:55:36.991178"
+  },
+  {
+    "name": "F1-Makmal Kuasa F1-001-07",
+    "ip_address": "10.8.3.68",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989601",
+    "updated_at": "2025-11-12T16:55:36.989603"
+  },
+  {
+    "name": "F2-Pejabat PPA",
+    "ip_address": "10.8.3.71",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989612",
+    "updated_at": "2025-11-12T16:55:36.989613"
+  },
+  {
+    "name": "F3 P.Khidmat Pelajar",
+    "ip_address": "10.8.3.97",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989628",
+    "updated_at": "2025-11-12T16:55:36.989630"
+  },
+  {
+    "name": "F4 Chamber Lab FKEEPing: 10.8.3.42",
+    "ip_address": "10.8.3.42",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989641",
+    "updated_at": "2025-11-12T16:55:36.989642"
+  },
+  {
+    "name": "F5 MINT SRC",
+    "ip_address": "10.8.3.243",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989652",
+    "updated_at": "2025-11-12T16:55:36.989654"
+  },
+  {
+    "name": "F6 1stFloor Oricc",
+    "ip_address": "10.8.2.33",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990641",
+    "updated_at": "2025-11-12T16:55:36.990642"
+  },
+  {
+    "name": "F6 2ndFloor Oricc",
+    "ip_address": "10.8.2.57",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990651",
+    "updated_at": "2025-11-12T16:55:36.990653"
+  },
+  {
+    "name": "F6 3rdFloor Oricc",
+    "ip_address": "10.8.2.58",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990662",
+    "updated_at": "2025-11-12T16:55:36.990664"
+  },
+  {
+    "name": "F6 4thFloor Oricc",
+    "ip_address": "10.8.2.59",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990673",
+    "updated_at": "2025-11-12T16:55:36.990674"
+  },
+  {
+    "name": "F6 Disti Main Switch Oricc",
+    "ip_address": "10.8.2.31",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990686",
+    "updated_at": "2025-11-12T16:55:36.990688"
+  },
+  {
+    "name": "F6 Gfloor Oricc",
+    "ip_address": "10.8.2.32",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990697",
+    "updated_at": "2025-11-12T16:55:36.990699"
+  },
+  {
+    "name": "FSKTM Temp Sw to NDC",
+    "ip_address": "10.8.3.21",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992503",
+    "updated_at": "2025-11-12T16:55:36.992505"
+  },
+  {
+    "name": "FSKTM to New DC Master UBNT",
+    "ip_address": "10.10.11.31",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992371",
+    "updated_at": "2025-11-12T16:55:36.992373"
+  },
+  {
+    "name": "G",
+    "ip_address": "10.8.3.113",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991190",
+    "updated_at": "2025-11-12T16:55:36.991193"
+  },
+  {
+    "name": "G-Floor Mkml Automasi J002-A",
+    "ip_address": "10.8.3.99",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990219",
+    "updated_at": "2025-11-12T16:55:36.990221"
+  },
+  {
+    "name": "G1 Disti Wing B",
+    "ip_address": "10.8.3.173",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989664",
+    "updated_at": "2025-11-12T16:55:36.989665"
+  },
+  {
+    "name": "G1-A-1st Floor Mkml Senibina Komputer",
+    "ip_address": "10.8.3.155",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989676",
+    "updated_at": "2025-11-12T16:55:36.989678"
+  },
+  {
+    "name": "G2 Disti FKMP Wing F",
+    "ip_address": "10.8.3.172",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989688",
+    "updated_at": "2025-11-12T16:55:36.989690"
+  },
+  {
+    "name": "G3 Disti A-Gfloor",
+    "ip_address": "10.8.3.180",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989700",
+    "updated_at": "2025-11-12T16:55:36.989701"
+  },
+  {
+    "name": "G4-1stFlr-Office",
+    "ip_address": "10.8.3.102",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991421",
+    "updated_at": "2025-11-12T16:55:36.991423"
+  },
+  {
+    "name": "G4-AB Blok Soikongan",
+    "ip_address": "10.8.3.103",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991449",
+    "updated_at": "2025-11-12T16:55:36.991450"
+  },
+  {
+    "name": "G4-AB-Switch PoE",
+    "ip_address": "10.8.3.38",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991460",
+    "updated_at": "2025-11-12T16:55:36.991461"
+  },
+  {
+    "name": "G4-CD Blok Sokongan",
+    "ip_address": "10.8.3.104",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991495",
+    "updated_at": "2025-11-12T16:55:36.991497"
+  },
+  {
+    "name": "G4-Gnd Cafe",
+    "ip_address": "10.8.3.101",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991524",
+    "updated_at": "2025-11-12T16:55:36.991525"
+  },
+  {
+    "name": "G4A POE KKTDI Switch 1st Floor",
+    "ip_address": "10.10.11.19",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991438",
+    "updated_at": "2025-11-12T16:55:36.991439"
+  },
+  {
+    "name": "G4B POE KKTDI Switch 1st Floor",
+    "ip_address": "10.10.11.18",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991472",
+    "updated_at": "2025-11-12T16:55:36.991473"
+  },
+  {
+    "name": "G4C POE KKTDI Switch 1st Floor",
+    "ip_address": "10.10.11.17",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991484",
+    "updated_at": "2025-11-12T16:55:36.991486"
+  },
+  {
+    "name": "G4D POE KKTDI Switch 1st Floor",
+    "ip_address": "10.10.11.16",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991509",
+    "updated_at": "2025-11-12T16:55:36.991512"
+  },
+  {
+    "name": "G5-1stFlr Office",
+    "ip_address": "10.8.3.106",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991535",
+    "updated_at": "2025-11-12T16:55:36.991536"
+  },
+  {
+    "name": "G5-AB Blok Sokongan",
+    "ip_address": "10.8.3.107",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991861",
+    "updated_at": "2025-11-12T16:55:36.991864"
+  },
+  {
+    "name": "G5-CD Sokongan",
+    "ip_address": "10.8.3.108",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991903",
+    "updated_at": "2025-11-12T16:55:36.991904"
+  },
+  {
+    "name": "G5-Gnd Cafe",
+    "ip_address": "10.8.3.105",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991927",
+    "updated_at": "2025-11-12T16:55:36.991929"
+  },
+  {
+    "name": "G5A POE KKTF Switch 1st Floor",
+    "ip_address": "10.8.2.86",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991549",
+    "updated_at": "2025-11-12T16:55:36.991550"
+  },
+  {
+    "name": "G5B POE KKTF Switch 1st Floor",
+    "ip_address": "10.8.2.87",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991879",
+    "updated_at": "2025-11-12T16:55:36.991881"
+  },
+  {
+    "name": "G5C POE KKTF Switch 1st Floor",
+    "ip_address": "10.8.2.88",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991892",
+    "updated_at": "2025-11-12T16:55:36.991893"
+  },
+  {
+    "name": "G5D POE KKTF Switch 1st Floor",
+    "ip_address": "10.8.2.89",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991915",
+    "updated_at": "2025-11-12T16:55:36.991917"
+  },
+  {
+    "name": "G8 Envirolab",
+    "ip_address": "10.10.11.115",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989776",
+    "updated_at": "2025-11-12T16:55:36.989777"
+  },
+  {
+    "name": "G9 Biodiesel",
+    "ip_address": "10.8.3.234",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990581",
+    "updated_at": "2025-11-12T16:55:36.990582"
+  },
+  {
+    "name": "GFloor FSKTM",
+    "ip_address": "10.8.3.131",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990592",
+    "updated_at": "2025-11-12T16:55:36.990593"
+  },
+  {
+    "name": "Gfloor",
+    "ip_address": "10.8.3.142",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990230",
+    "updated_at": "2025-11-12T16:55:36.990231"
+  },
+  {
+    "name": "Gfloor Disti Room",
+    "ip_address": "10.8.3.141",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990206",
+    "updated_at": "2025-11-12T16:55:36.990207"
+  },
+  {
+    "name": "Gfloor WC01 Blkg Lif",
+    "ip_address": "10.8.3.204",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992179",
+    "updated_at": "2025-11-12T16:55:36.992180"
+  },
+  {
+    "name": "Gfloor WC02",
+    "ip_address": "10.8.3.205",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992190",
+    "updated_at": "2025-11-12T16:55:36.992191"
+  },
+  {
+    "name": "H Disti",
+    "ip_address": "10.8.3.235",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991217",
+    "updated_at": "2025-11-12T16:55:36.991219"
+  },
+  {
+    "name": "H Lab",
+    "ip_address": "10.8.3.89",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991235",
+    "updated_at": "2025-11-12T16:55:36.991238"
+  },
+  {
+    "name": "H Lab POE for AP",
+    "ip_address": "10.64.3.5",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991253",
+    "updated_at": "2025-11-12T16:55:36.991255"
+  },
+  {
+    "name": "HEPA Access Switch",
+    "ip_address": "10.8.2.27",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990708",
+    "updated_at": "2025-11-12T16:55:36.990710"
+  },
+  {
+    "name": "HEPA Main Switch",
+    "ip_address": "10.8.2.19",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990719",
+    "updated_at": "2025-11-12T16:55:36.990720"
+  },
+  {
+    "name": "J",
+    "ip_address": "10.8.3.109",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991264",
+    "updated_at": "2025-11-12T16:55:36.991265"
+  },
+  {
+    "name": "K",
+    "ip_address": "10.8.3.110",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991274",
+    "updated_at": "2025-11-12T16:55:36.991275"
+  },
+  {
+    "name": "Kolam Renang",
+    "ip_address": "10.8.2.56",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989137",
+    "updated_at": "2025-11-12T16:55:36.989138"
+  },
+  {
+    "name": "L",
+    "ip_address": "10.8.3.114",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991283",
+    "updated_at": "2025-11-12T16:55:36.991285"
+  },
+  {
+    "name": "M",
+    "ip_address": "10.8.3.111",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991295",
+    "updated_at": "2025-11-12T16:55:36.991297"
+  },
+  {
+    "name": "MKPTM2",
+    "ip_address": "10.9.4.9",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991049",
+    "updated_at": "2025-11-12T16:55:36.991051"
+  },
+  {
+    "name": "Masjid",
+    "ip_address": "10.8.3.232",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992200",
+    "updated_at": "2025-11-12T16:55:36.992202"
+  },
+  {
+    "name": "Mkml Komp3 - Blok C 1st Floor",
+    "ip_address": "10.8.2.34",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989789",
+    "updated_at": "2025-11-12T16:55:36.989790"
+  },
+  {
+    "name": "N",
+    "ip_address": "10.8.3.112",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991305",
+    "updated_at": "2025-11-12T16:55:36.991306"
+  },
+  {
+    "name": "NDC Poe Switch Cold Isle",
+    "ip_address": "10.10.11.27",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992516",
+    "updated_at": "2025-11-12T16:55:36.992517"
+  },
+  {
+    "name": "New DC - FSKTM Remote UBNTPing: 10.10.11.32",
+    "ip_address": "10.10.11.32",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992384",
+    "updated_at": "2025-11-12T16:55:36.992385"
+  },
+  {
+    "name": "PABX Telefon Server Library",
+    "ip_address": "10.63.55.206",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992213",
+    "updated_at": "2025-11-12T16:55:36.992214"
+  },
+  {
+    "name": "PEPLINK PUMAS",
+    "ip_address": "10.100.2.1",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992466",
+    "updated_at": "2025-11-12T16:55:36.992468"
+  },
+  {
+    "name": "PKU PC Calling E-Klinik",
+    "ip_address": "10.60.27.174",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989712",
+    "updated_at": "2025-11-12T16:55:36.989713"
+  },
+  {
+    "name": "PMU Pencawang Masuk Utama Blkg Evegreen",
+    "ip_address": "10.8.3.29",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989725",
+    "updated_at": "2025-11-12T16:55:36.989726"
+  },
+  {
+    "name": "PPP Pembangunan",
+    "ip_address": "10.8.2.110",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992236",
+    "updated_at": "2025-11-12T16:55:36.992237"
+  },
+  {
+    "name": "PPP Penyelengaraan",
+    "ip_address": "10.8.2.158",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992247",
+    "updated_at": "2025-11-12T16:55:36.992248"
+  },
+  {
+    "name": "PPUK Kabin Depan Relasis",
+    "ip_address": "10.8.2.41",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990753",
+    "updated_at": "2025-11-12T16:55:36.990755"
+  },
+  {
+    "name": "Palapes Kabin",
+    "ip_address": "10.8.3.115",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990730",
+    "updated_at": "2025-11-12T16:55:36.990731"
+  },
+  {
+    "name": "Palapes Pejabat",
+    "ip_address": "10.8.3.82",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990741",
+    "updated_at": "2025-11-12T16:55:36.990742"
+  },
+  {
+    "name": "Pos Kawalan 4 Depan Masjid",
+    "ip_address": "10.8.2.63",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992225",
+    "updated_at": "2025-11-12T16:55:36.992226"
+  },
+  {
+    "name": "Pumas Master UBNT Pos Kawalan",
+    "ip_address": "10.100.10.205",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992479",
+    "updated_at": "2025-11-12T16:55:36.992480"
+  },
+  {
+    "name": "Pumas Remote UBNT Pos Kawalan",
+    "ip_address": "10.100.10.206",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992491",
+    "updated_at": "2025-11-12T16:55:36.992493"
+  },
+  {
+    "name": "QA-1st Floor SwPing: 10.8.3.241",
+    "ip_address": "10.8.3.241",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989836",
+    "updated_at": "2025-11-12T16:55:36.989837"
+  },
+  {
+    "name": "QA-1st Floor SwPing: 10.8.3.246",
+    "ip_address": "10.8.3.246",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989847",
+    "updated_at": "2025-11-12T16:55:36.989849"
+  },
+  {
+    "name": "QA-2nd Floor SwPing: 10.8.3.63",
+    "ip_address": "10.8.3.63",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989859",
+    "updated_at": "2025-11-12T16:55:36.989861"
+  },
+  {
+    "name": "QA-3rd Floor SwPing: 10.8.3.85",
+    "ip_address": "10.8.3.85",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989871",
+    "updated_at": "2025-11-12T16:55:36.989872"
+  },
+  {
+    "name": "QA-4th Floor SwPing: 10.8.3.94",
+    "ip_address": "10.8.3.94",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989882",
+    "updated_at": "2025-11-12T16:55:36.989884"
+  },
+  {
+    "name": "QA-5th Floor SwPing: 10.8.3.95",
+    "ip_address": "10.8.3.95",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989894",
+    "updated_at": "2025-11-12T16:55:36.989895"
+  },
+  {
+    "name": "QA-6th Floor SwPing: 10.8.3.96",
+    "ip_address": "10.8.3.96",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989905",
+    "updated_at": "2025-11-12T16:55:36.989907"
+  },
+  {
+    "name": "QA-7th Floor SwPing: 10.8.3.98",
+    "ip_address": "10.8.3.98",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989917",
+    "updated_at": "2025-11-12T16:55:36.989918"
+  },
+  {
+    "name": "QA-CCTV 1st Floor swPing: 10.8.3.125",
+    "ip_address": "10.8.3.125",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989929",
+    "updated_at": "2025-11-12T16:55:36.989931"
+  },
+  {
+    "name": "QA-CCTV 2nd Floor swPing: 10.8.3.126",
+    "ip_address": "10.8.3.126",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989942",
+    "updated_at": "2025-11-12T16:55:36.989943"
+  },
+  {
+    "name": "QA-CCTV 3rd Floor swPing: 10.8.3.161",
+    "ip_address": "10.8.3.161",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989954",
+    "updated_at": "2025-11-12T16:55:36.989955"
+  },
+  {
+    "name": "QA-CCTV 4th Floor swPing: 10.8.3.200",
+    "ip_address": "10.8.3.200",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989966",
+    "updated_at": "2025-11-12T16:55:36.989967"
+  },
+  {
+    "name": "QA-CCTV 5th Floor swPing: 10.8.3.203",
+    "ip_address": "10.8.3.203",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989979",
+    "updated_at": "2025-11-12T16:55:36.989980"
+  },
+  {
+    "name": "QA-CCTV 6th Floor swPing: 10.8.3.236",
+    "ip_address": "10.8.3.236",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.989991",
+    "updated_at": "2025-11-12T16:55:36.989992"
+  },
+  {
+    "name": "QA-CCTV 7th Floor swPing: 10.8.3.240",
+    "ip_address": "10.8.3.240",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990003",
+    "updated_at": "2025-11-12T16:55:36.990004"
+  },
+  {
+    "name": "QA-CCTV GFloor swPing: 10.8.3.122",
+    "ip_address": "10.8.3.122",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990014",
+    "updated_at": "2025-11-12T16:55:36.990016"
+  },
+  {
+    "name": "QA-GFloor SwPing: 10.8.3.121",
+    "ip_address": "10.8.3.121",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990027",
+    "updated_at": "2025-11-12T16:55:36.990028"
+  },
+  {
+    "name": "QB-1st Floor",
+    "ip_address": "10.8.2.222",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990038",
+    "updated_at": "2025-11-12T16:55:36.990040"
+  },
+  {
+    "name": "QB-2nd Floor",
+    "ip_address": "10.8.2.223",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990049",
+    "updated_at": "2025-11-12T16:55:36.990051"
+  },
+  {
+    "name": "QB-Gfloor",
+    "ip_address": "10.8.2.221",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990073",
+    "updated_at": "2025-11-12T16:55:36.990074"
+  },
+  {
+    "name": "Reccess",
+    "ip_address": "10.8.3.87",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990764",
+    "updated_at": "2025-11-12T16:55:36.990765"
+  },
+  {
+    "name": "Relasis Pejabat",
+    "ip_address": "10.8.2.21",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990775",
+    "updated_at": "2025-11-12T16:55:36.990776"
+  },
+  {
+    "name": "SW Server Room Gfoor in Disti",
+    "ip_address": "10.10.11.23",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990605",
+    "updated_at": "2025-11-12T16:55:36.990606"
+  },
+  {
+    "name": "Server Farm Library Rack Switch",
+    "ip_address": "10.8.3.2",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992271",
+    "updated_at": "2025-11-12T16:55:36.992272"
+  },
+  {
+    "name": "Stor Kimia 10.8.2.67",
+    "ip_address": "10.8.2.67",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992282",
+    "updated_at": "2025-11-12T16:55:36.992284"
+  },
+  {
+    "name": "Suksis Pejabat",
+    "ip_address": "10.8.3.116",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.990785",
+    "updated_at": "2025-11-12T16:55:36.990787"
+  },
+  {
+    "name": "Taska",
+    "ip_address": "10.8.3.233",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992292",
+    "updated_at": "2025-11-12T16:55:36.992294"
+  },
+  {
+    "name": "UBNT Master FKAAB(A) to KKP(H)",
+    "ip_address": "10.10.11.212",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991319",
+    "updated_at": "2025-11-12T16:55:36.991320"
+  },
+  {
+    "name": "UBNT Master FKAAB(A) to KKP(H)",
+    "ip_address": "10.10.11.213",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991331",
+    "updated_at": "2025-11-12T16:55:36.991333"
+  },
+  {
+    "name": "UBNT Master FKAAB(C) to KKP(H)",
+    "ip_address": "10.8.2.49",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991347",
+    "updated_at": "2025-11-12T16:55:36.991349"
+  },
+  {
+    "name": "UBNT Remote KKP(H) to FKAAB(A)Ping: 10.10.11.210",
+    "ip_address": "10.10.11.210",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991366",
+    "updated_at": "2025-11-12T16:55:36.991368"
+  },
+  {
+    "name": "UBNT Remote KKP(H) to FKAAB(A)Ping: 10.10.11.211",
+    "ip_address": "10.10.11.211",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991379",
+    "updated_at": "2025-11-12T16:55:36.991381"
+  },
+  {
+    "name": "UBNT Remote KKP(H) to FKAAB(C)Ping: 10.8.2.50",
+    "ip_address": "10.8.2.50",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.991391",
+    "updated_at": "2025-11-12T16:55:36.991393"
+  },
+  {
+    "name": "Yayasan UTHM Library Gfloor (bilik kaca)",
+    "ip_address": "10.8.2.39",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992305",
+    "updated_at": "2025-11-12T16:55:36.992307"
+  },
+  {
+    "name": "printer fujixerox IO",
+    "ip_address": "10.63.24.225",
+    "category": "switches",
+    "status": "unknown",
+    "location": "",
+    "brand": "",
+    "created_at": "2025-11-12T16:55:36.992258",
+    "updated_at": "2025-11-12T16:55:36.992260"
+  }
+]

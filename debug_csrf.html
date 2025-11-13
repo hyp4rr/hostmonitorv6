@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug CSRF</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+</head>
+<body>
+    <h1>CSRF Debug</h1>
+    
+    <h2>CSRF Token from Meta:</h2>
+    <div id="csrf-token"></div>
+    
+    <h2>Test POST Request:</h2>
+    <button onclick="testPost()">Test POST to /api/monitoring/ping-all</button>
+    <div id="result"></div>
+    
+    <script>
+        // Display CSRF token
+        const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        document.getElementById('csrf-token').innerHTML = token || 'NO TOKEN FOUND';
+        
+        async function testPost() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<p>Testing...</p>';
+            
+            try {
+                console.log('CSRF Token:', token);
+                
+                const response = await fetch('/api/monitoring/ping-all', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': token,
+                    },
+                    credentials: 'same-origin',
+                });
+                
+                console.log('Response Status:', response.status);
+                console.log('Response Headers:', [...response.headers.entries()]);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.innerHTML = `
+                        <h3 style="color: green;">✅ SUCCESS!</h3>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    const text = await response.text();
+                    resultDiv.innerHTML = `
+                        <h3 style="color: red;">❌ FAILED: ${response.status}</h3>
+                        <p>${response.statusText}</p>
+                        <pre>${text}</pre>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = `
+                    <h3 style="color: red;">❌ NETWORK ERROR</h3>
+                    <p>${error.message}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

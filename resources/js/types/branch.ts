@@ -53,10 +53,12 @@ export interface CurrentBranch {
     code: string;
     description: string;
     address: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    is_active: boolean;
     deviceCount: number;
-    locationCount: number;
     devices: BranchDevice[];
-    locations: BranchLocation[];
+    locations: string[]; // Laravel sends string array, not BranchLocation array
     branches: BranchListItem[];
 }
 

@@ -1,0 +1,99 @@
+<!DOCTYPE html><html><head>
+<meta name="GENERATOR" content="Advanced Host Monitor">
+<META HTTP-EQUIV="REFRESH" CONTENT="60">
+<title>HostMonitor report</title>
+<style type="text/css">
+ body { background-color:#FFFFFF; color:#000000}
+ a:link {color:#0000FF;} a:hover {color:#0000FF;} a:active {color:#0000FF;} a:visited {color:#0000FF;} th { position: sticky; top: 0; }
+ th.collapsable { position: sticky; top: 0; white-space: nowrap; vertical-align: top; text-align:left }
+ input { text-align:center; margin:1px; line-height:12px; height:20px; width:55px; }
+@media screen and (orientation: portrait) and (-webkit-min-device-pixel-ratio: 2) { table { font-size: 200%; } th.collapsable {position: sticky; top: 0; display:none;} input { text-align:center; margin:1px; line-height:12px; height:20px; width:55px; font-size: 100%; } }
+ td.Folder { text-align:left; font-weight:bolder; min-width:10%; vertical-align: top; background-color:#00FF00; color: #000000 }
+ input.NotTested { background: #FFFFFF; color: #000000}
+ input.Alive { background: #FFFFFF; color: #000000}
+ input.NoAnswer { background: #FF0000; color: #FFFFFF}
+ input.Unknown { background: #FFFFFF; color: #FF8040}
+ input.UnknownHost { background: #FFFFFF; color: #FF8040}
+ input.Checking { background: #FFFFFF; color: #000000}
+ input.Resolving { background: #FFFFFF; color: #000000}
+ input.Ok { background: #FFFFFF; color: #000000}
+ input.Bad { background: #FF0000; color: #FFFFFF}
+ input.Disabled { background: #C0C0C0; color: #000000}
+ input.BadContents { background: #FF0000; color: #FFFFFF}
+ input.WaitForMaster { background: #FFFF00; color: #000000}
+ input.OutOfSchedule { background: #E4E4E4; color: #000000}
+ input.Paused { background: #E4E4E4; color: #000000}
+ input.Warning { background: #FF9B37; color: #FFFFFF}
+ input.Normal { background: #FFFFFF; color: #000000}
+ input.ACK { background: #80FFFF; color: #000000}
+ #msgwin { display: block; max-height:95%; overflow-y:auto; overflow-x:hidden; border-color: #c0c0c0; border-width: 2px 4px 4px 2px;	margin: 0; padding: 0; position: fixed; z-index: 100; visibility: hidden; top: 50%; left: 50%; -ms-transform: translate(-50%, -50%); -webkit-transform: translate(-50%, -50%); -moz-transform: translate(-50%, -50%); -o-transform: translate(-50%, -50%); transform: translate(-50%, -50%); }
+</style>
+<script> <!--
+ie5=(document.getElementById&&document.all&&document.styleSheets)?1:0;nn6=(document.getElementById&&!document.all)?1:0;
+if(ie5||nn6) { if(ie5) cs=2,th=30; else cs=0,th=20; document.write("<div id='msgwin'><table style='background-color: #fff; color: #000000; border: 2px groove #c0c0c0;'><tr><td colspan=2 id='jsTname' style='background-color: #B0B0B0; font-weight: bolder; padding:0.3em; text-align: center;' onclick='JsHide()'></td></tr><tr><td id='jsFname' style='padding:1em; white-space: nowrap'>Test name<br>Ack comment<br>Status changed at<br>Status<br><br>Last test time<br>Interval<br>Comment<br>Master test<br><br>Comment line #2<br></td><td id='jsFval' style='padding:1em; white-space: nowrap'></td><tr><td colspan=2><input id='jsBtnOk' type='button' value='Ok' style='padding:0.3em; height:2em; width:100%; max-width:100%' onclick='JsHide()'></td></tr></table></div>"); }
+document.write("<div id='msgwinfade'></div>");
+function JsHide() { document.getElementById('msgwin').style.visibility = 'hidden'; }
+function confirmAlternative() { if(confirm("Scipt requieres a better browser!")) document.location.href="http://www.mozilla.org"; }
+function showInfo(stitle,scontent2) { document.getElementById("jsTname").innerHTML=stitle; document.getElementById("jsFval").innerHTML=scontent2;if(ie5||nn6) { document.getElementById("msgwin").style.visibility = "visible"; }else confirmAlternative(); }
+var HintCounter = 0;var TimerVar = setInterval(Timer1, 12000);function Timer1() { if (HintCounter==0) { document.getElementById("tdHint").innerHTML="place the cursor on the element to see the name and the status<br>click on the element to see more details"; } else { HintCounter=0; } }
+function showHint(stext) { var win1 = document.getElementById("tdHint"); win1.innerHTML=stext; HintCounter=1; }
+document.onkeydown = function(evt) {evt = evt || window.event;var isEscape = false;if ("key" in evt) { isEscape = (evt.key === "Escape" || evt.key === "Esc"); } else { isEscape = (evt.keyCode === 27); }if (isEscape) JsHide(); };
+var statsStr = "";
+--></SCRIPT>
+</head>
+
+<body>
+<div style="position:-webkit-sticky; position: sticky; top:0; text-align:center; background:#FFFFFF"><table style="border:none; width:100%"><thead><tr><th class="collapsable"><span style="font-size:150%; font-weight:bold"><u><a href="https://www.ks-soft.net/hostmon.eng/index.htm" target="_blank" style="color:#000000">HostMonitor Report</a></u></span><br>
+<span style="font-size:120%">Generated on 5/11/2025 at 4:53:54 PM</span><br>
+Time zone: GMT +08:00 Malaysia, Singapore, Western Australia<br></th><th id="tdHint" style="text-align:center; font-weight:lighter; width:99%">place the cursor on the element to see the name and the status<br>click on the element to see more details</th><th style="white-space: nowrap; font-size: 100%; text-align:right"><input type="button" id="btn1g" style="max-width:100%" title="Good tests" class="Alive" value=" " onmouseover="javascript:showHint(statsStr)"><br><input type="button" id="btn2b" style="max-width:100%" title="Bad tests (not-acknowledged)" class="Bad" value=" " onmouseover="javascript:showHint(statsStr)"><br><input type="button" id="btn3u" style="max-width:100%" title="Warning+Unknown (not-acknowledged)" class="Unknown" value=" " onmouseover="javascript:showHint(statsStr)"><br></th></tr></thead></table></div>
+<hr><form>
+<table style="border:none">
+
+<tr><td class="Folder">TAS</td><td>&nbsp;</td><td>
+<input type=button class=Alive value='A4: 10.8.23.155' title="A4: 10.8.23.155" onmouseover="javascript:showHint('A4: 10.8.23.155<br>Host is alive<br>1 ms')" onclick="javascript:showInfo('A4: 10.8.23.155','A4: 10.8.23.155<br><br>24/10/2025 10:23:04 AM<br>Host is alive<br><br>5/11/2025 4:47:57 PM<br>00:10:00<br>Ping 10.8.23.155<br><br><br><br>')">
+<input type=button class=Alive value='A5: 10.8.27.222' title="A5: 10.8.27.222" onmouseover="javascript:showHint('A5: 10.8.27.222<br>Host is alive<br>2 ms')" onclick="javascript:showInfo('A5: 10.8.27.222','A5: 10.8.27.222<br><br>15/6/2025 9:44:31 AM<br>Host is alive<br><br>5/11/2025 4:44:36 PM<br>00:10:00<br>Ping 10.8.27.222<br><br><br><br>')">
+<input type=button class=Alive value='BCB: 10.9.159.202' title="BCB: 10.9.159.202" onmouseover="javascript:showHint('BCB: 10.9.159.202<br>Host is alive<br>14 ms')" onclick="javascript:showInfo('BCB: 10.9.159.202','BCB: 10.9.159.202<br><br>29/10/2025 8:23:43 AM<br>Host is alive<br><br>5/11/2025 4:50:49 PM<br>00:10:00<br>Ping 10.9.159.202<br><br><br><br>')">
+<input type=button class=NoAnswer value='BENDAHARI: 10.60.27.205' title="BENDAHARI: 10.60.27.205" onmouseover="javascript:showHint('BENDAHARI: 10.60.27.205<br>No answer<br>')" onclick="javascript:showInfo('BENDAHARI: 10.60.27.205','BENDAHARI: 10.60.27.205<br><br>7/3/2025 3:25:48 PM<br>No answer<br><br>5/11/2025 4:46:22 PM<br>00:10:00<br>Ping 10.60.27.205<br><br><br><br>')">
+<input type=button class=Alive value='C16: 10.61.27.201' title="C16: 10.61.27.201" onmouseover="javascript:showHint('C16: 10.61.27.201<br>Host is alive<br>1 ms')" onclick="javascript:showInfo('C16: 10.61.27.201','C16: 10.61.27.201<br><br>4/9/2025 10:45:15 PM<br>Host is alive<br><br>5/11/2025 4:44:36 PM<br>00:10:00<br>Ping 10.61.27.201<br><br><br><br>')">
+<input type=button class=Alive value='D15 HEP: 10.60.27.204' title="D15 HEP: 10.60.27.204" onmouseover="javascript:showHint('D15 HEP: 10.60.27.204<br>Host is alive<br>1 ms')" onclick="javascript:showInfo('D15 HEP: 10.60.27.204','D15 HEP: 10.60.27.204<br><br>10/10/2025 12:49:42 PM<br>Host is alive<br><br>5/11/2025 4:44:36 PM<br>00:10:00<br>mac address 2c4d-54d8-04be 3.70 port Ping 10.60.27.204<br><br><br><br>')">
+<input type=button class=Alive value='FKAAS: 10.67.23.222' title="FKAAS: 10.67.23.222" onmouseover="javascript:showHint('FKAAS: 10.67.23.222<br>Host is alive<br>1 ms')" onclick="javascript:showInfo('FKAAS: 10.67.23.222','FKAAS: 10.67.23.222<br><br>15/6/2025 9:43:01 AM<br>Host is alive<br><br>5/11/2025 4:44:36 PM<br>00:10:00<br>Ping 10.67.23.222<br><br><br><br>')">
+<input type=button class=Alive value='FKEE QA: 10.69.23.201' title="FKEE QA: 10.69.23.201" onmouseover="javascript:showHint('FKEE QA: 10.69.23.201<br>Host is alive<br>1 ms')" onclick="javascript:showInfo('FKEE QA: 10.69.23.201','FKEE QA: 10.69.23.201<br><br>2/11/2025 8:02:35 PM<br>Host is alive<br><br>5/11/2025 4:49:50 PM<br>00:10:00<br>Ping 10.69.23.201<br><br><br><br>')">
+<input type=button class=Alive value='FKEE: 10.61.68.7' title="FKEE: 10.61.68.7" onmouseover="javascript:showHint('FKEE: 10.61.68.7<br>Host is alive<br>1 ms')" onclick="javascript:showInfo('FKEE: 10.61.68.7','FKEE: 10.61.68.7<br><br>6/10/2025 5:22:37 PM<br>Host is alive<br><br>5/11/2025 4:44:36 PM<br>00:10:00<br>Ping 10.61.68.7<br><br><br><br>')">
+<input type=button class=Alive value='FKMP: 10.69.23.201' title="FKMP: 10.69.23.201" onmouseover="javascript:showHint('FKMP: 10.69.23.201<br>Host is alive<br>1 ms')" onclick="javascript:showInfo('FKMP: 10.69.23.201','FKMP: 10.69.23.201<br><br>2/11/2025 8:02:35 PM<br>Host is alive<br><br>5/11/2025 4:49:50 PM<br>00:10:00<br>Ping 10.69.23.201<br><br><br><br>')">
+<input type=button class=NoAnswer value='FPTP: 10.68.23.201' title="FPTP: 10.68.23.201" onmouseover="javascript:showHint('FPTP: 10.68.23.201<br>No answer<br>')" onclick="javascript:showInfo('FPTP: 10.68.23.201','FPTP: 10.68.23.201<br><br>22/8/2024 3:49:39 PM<br>No answer<br><br>5/11/2025 4:46:24 PM<br>00:10:00<br>Ping 10.68.23.201<br><br><br><br>')">
+<input type=button class=Alive value='FPTV: 10.66.23.216' title="FPTV: 10.66.23.216" onmouseover="javascript:showHint('FPTV: 10.66.23.216<br>Host is alive<br>1 ms')" onclick="javascript:showInfo('FPTV: 10.66.23.216','FPTV: 10.66.23.216<br><br>24/10/2025 9:11:24 AM<br>Host is alive<br><br>5/11/2025 4:44:36 PM<br>00:10:00<br>Ping 10.66.23.216<br><br><br><br>')">
+<input type=button class=Alive value='FSKTM: 10.65.53.158' title="FSKTM: 10.65.53.158" onmouseover="javascript:showHint('FSKTM: 10.65.53.158<br>Host is alive<br>1 ms')" onclick="javascript:showInfo('FSKTM: 10.65.53.158','FSKTM: 10.65.53.158<br><br>23/7/2025 11:58:35 AM<br>Host is alive<br><br>5/11/2025 4:44:36 PM<br>00:10:00<br>Ping 10.65.53.158 <br><br><br><br>')">
+<input type=button class=Alive value='LIBRARY: 10.63.23.201' title="LIBRARY: 10.63.23.201" onmouseover="javascript:showHint('LIBRARY: 10.63.23.201<br>Host is alive<br>1 ms')" onclick="javascript:showInfo('LIBRARY: 10.63.23.201','LIBRARY: 10.63.23.201<br><br>1/11/2025 4:38:36 PM<br>Host is alive<br><br>5/11/2025 4:52:39 PM<br>00:10:00<br>Ping 10.63.23.201<br><br><br><br>')">
+<input type=button class=Alive value='MASJID: 10.63.47.209' title="MASJID: 10.63.47.209" onmouseover="javascript:showHint('MASJID: 10.63.47.209<br>Host is alive<br>1 ms')" onclick="javascript:showInfo('MASJID: 10.63.47.209','MASJID: 10.63.47.209<br><br>2/11/2025 3:57:40 PM<br>Host is alive<br><br>5/11/2025 4:46:39 PM<br>00:10:00<br>Ping 10.63.47.209<br><br><br><br>')">
+<input type=button class=Alive value='PENDAFTAR: 10.61.24.138' title="PENDAFTAR: 10.61.24.138" onmouseover="javascript:showHint('PENDAFTAR: 10.61.24.138<br>Host is alive<br>1 ms')" onclick="javascript:showInfo('PENDAFTAR: 10.61.24.138','PENDAFTAR: 10.61.24.138<br><br>3/10/2025 3:44:40 PM<br>Host is alive<br><br>5/11/2025 4:44:36 PM<br>00:10:00<br>Ping 10.61.24.138<br><br><br><br>')">
+<input type=button class=Alive value='PENGAWAL: 10.8.23.224' title="PENGAWAL: 10.8.23.224" onmouseover="javascript:showHint('PENGAWAL: 10.8.23.224<br>Host is alive<br>2 ms')" onclick="javascript:showInfo('PENGAWAL: 10.8.23.224','PENGAWAL: 10.8.23.224<br><br>17/9/2025 12:30:36 PM<br>Host is alive<br><br>5/11/2025 4:44:36 PM<br>00:10:00<br>Ping 10.8.23.224<br><br><br><br>')">
+<input type=button class=Alive value='PERWIRA: 10.8.35.205' title="PERWIRA: 10.8.35.205" onmouseover="javascript:showHint('PERWIRA: 10.8.35.205<br>Host is alive<br>1 ms')" onclick="javascript:showInfo('PERWIRA: 10.8.35.205','PERWIRA: 10.8.35.205<br><br>30/10/2025 6:31:47 AM<br>Host is alive<br><br>5/11/2025 4:53:01 PM<br>00:10:00<br>Ping 10.8.35.205<br><br><br><br>')">
+<input type=button class=Alive value='PHUI: 10.8.23.156' title="PHUI: 10.8.23.156" onmouseover="javascript:showHint('PHUI: 10.8.23.156<br>Host is alive<br>1 ms')" onclick="javascript:showInfo('PHUI: 10.8.23.156','PHUI: 10.8.23.156<br><br>1/11/2025 6:28:10 AM<br>Host is alive<br><br>5/11/2025 4:46:39 PM<br>00:10:00<br>Ping 10.8.23.156<br><br><br><br>')">
+<input type=button class=Alive value='PKU: 10.60.27.221' title="PKU: 10.60.27.221" onmouseover="javascript:showHint('PKU: 10.60.27.221<br>Host is alive<br>1 ms')" onclick="javascript:showInfo('PKU: 10.60.27.221','PKU: 10.60.27.221<br><br>10/10/2025 12:49:42 PM<br>Host is alive<br><br>5/11/2025 4:44:36 PM<br>00:10:00<br>mac address 2c4d-54d7-5904 3.70 port 4/0/7<br><br><br>  Ping 10.60.27.221<br>')">
+<input type=button class=Alive value='PPA: 10.60.34.140' title="PPA: 10.60.34.140" onmouseover="javascript:showHint('PPA: 10.60.34.140<br>Host is alive<br>2 ms')" onclick="javascript:showInfo('PPA: 10.60.34.140','PPA: 10.60.34.140<br><br>19/9/2025 8:13:34 PM<br>Host is alive<br><br>5/11/2025 4:44:36 PM<br>00:10:00<br>Ping 10.60.34.140<br><br><br><br>')">
+<input type=button class=Alive value='PPA: 10.63.47.212' title="PPA: 10.63.47.212" onmouseover="javascript:showHint('PPA: 10.63.47.212<br>Host is alive<br>1 ms')" onclick="javascript:showInfo('PPA: 10.63.47.212','PPA: 10.63.47.212<br><br>30/10/2025 6:09:25 PM<br>Host is alive<br><br>5/11/2025 4:46:39 PM<br>00:10:00<br>Ping 10.63.47.212<br><br><br><br>')">
+<input type=button class=Alive value='PPP: 10.63.47.212' title="PPP: 10.63.47.212" onmouseover="javascript:showHint('PPP: 10.63.47.212<br>Host is alive<br>1 ms')" onclick="javascript:showInfo('PPP: 10.63.47.212','PPP: 10.63.47.212<br><br>30/10/2025 6:09:28 PM<br>Host is alive<br><br>5/11/2025 4:46:39 PM<br>00:10:00<br>Ping 10.63.47.212<br><br><br><br>')">
+<input type=button class=Alive value='PPUK: 10.60.33.67' title="PPUK: 10.60.33.67" onmouseover="javascript:showHint('PPUK: 10.60.33.67<br>Host is alive<br>2 ms')" onclick="javascript:showInfo('PPUK: 10.60.33.67','PPUK: 10.60.33.67<br><br>19/9/2025 7:33:42 PM<br>Host is alive<br><br>5/11/2025 4:44:36 PM<br>00:10:00<br>Ping 10.60.33.67<br><br><br><br>')">
+<input type=button class=Alive value='PUMAS: 10.100.10.1' title="PUMAS: 10.100.10.1" onmouseover="javascript:showHint('PUMAS: 10.100.10.1<br>Host is alive<br>14 ms')" onclick="javascript:showInfo('PUMAS: 10.100.10.1','PUMAS: 10.100.10.1<br><br>28/10/2025 1:06:38 AM<br>Host is alive<br><br>5/11/2025 4:50:49 PM<br>00:10:00<br>Ping 10.100.10.1<br><br><br><br>')">
+<input type=button class=Alive value='SHIFT KESELAMATAN: 10.8.23.201' title="SHIFT KESELAMATAN: 10.8.23.201" onmouseover="javascript:showHint('SHIFT KESELAMATAN: 10.8.23.201<br>Host is alive<br>1 ms')" onclick="javascript:showInfo('SHIFT KESELAMATAN: 10.8.23.201','SHIFT KESELAMATAN: 10.8.23.201<br><br>29/10/2025 3:00:31 PM<br>Host is alive<br><br>5/11/2025 4:44:36 PM<br>00:10:00<br>Ping 10.8.23.201<br><br><br><br>')">
+</td></tr>
+<tr><td class="Folder">ANPR (Auto Num Plate Recognition)</td><td>&nbsp;</td><td>
+<input type=button class=Alive value='ANPR Pos 1 Stadium Ping: 10.8.23.225' title="ANPR Pos 1 Stadium Ping: 10.8.23.225" onmouseover="javascript:showHint('ANPR Pos 1 Stadium Ping: 10.8.23.225<br>Host is alive<br>46 ms')" onclick="javascript:showInfo('ANPR Pos 1 Stadium Ping: 10.8.23.225','ANPR Pos 1 Stadium Ping: 10.8.23.225<br><br>21/10/2025 3:04:02 PM<br>Host is alive<br><br>5/11/2025 4:53:50 PM<br>00:05:00<br>Ping 10.8.23.225<br><br><br><br>')">
+<input type=button class=Alive value='ANPR Pos 1 Stadium Ping: 10.8.23.226' title="ANPR Pos 1 Stadium Ping: 10.8.23.226" onmouseover="javascript:showHint('ANPR Pos 1 Stadium Ping: 10.8.23.226<br>Host is alive<br>58 ms')" onclick="javascript:showInfo('ANPR Pos 1 Stadium Ping: 10.8.23.226','ANPR Pos 1 Stadium Ping: 10.8.23.226<br><br>21/10/2025 2:58:43 PM<br>Host is alive<br><br>5/11/2025 4:50:57 PM<br>00:05:00<br>Ping 10.8.23.226<br><br><br><br>')">
+<input type=button class=Alive value='ANPR Pos 1 Stadium Ping: 10.8.23.227' title="ANPR Pos 1 Stadium Ping: 10.8.23.227" onmouseover="javascript:showHint('ANPR Pos 1 Stadium Ping: 10.8.23.227<br>Host is alive<br>59 ms')" onclick="javascript:showInfo('ANPR Pos 1 Stadium Ping: 10.8.23.227','ANPR Pos 1 Stadium Ping: 10.8.23.227<br><br>21/10/2025 3:03:24 PM<br>Host is alive<br><br>5/11/2025 4:50:57 PM<br>00:05:00<br>Ping 10.8.23.227<br><br><br><br>')">
+<input type=button class=Alive value='ANPR Pos 1 Stadium Ping: 10.8.23.228' title="ANPR Pos 1 Stadium Ping: 10.8.23.228" onmouseover="javascript:showHint('ANPR Pos 1 Stadium Ping: 10.8.23.228<br>Host is alive<br>33 ms')" onclick="javascript:showInfo('ANPR Pos 1 Stadium Ping: 10.8.23.228','ANPR Pos 1 Stadium Ping: 10.8.23.228<br><br>21/10/2025 3:03:22 PM<br>Host is alive<br><br>5/11/2025 4:49:02 PM<br>00:05:00<br>Ping 10.8.23.228<br><br><br><br>')">
+<input type=button class=Alive value='ANPR Pos Wakaf Gate Tmn U Ping: 10.63...' title="ANPR Pos Wakaf Gate Tmn U Ping: 10.63.47.215" onmouseover="javascript:showHint('ANPR Pos Wakaf Gate Tmn U Ping: 10.63.47.215<br>Host is alive<br>1 ms')" onclick="javascript:showInfo('ANPR Pos Wakaf Gate Tmn U Ping: 10.63.47.215','ANPR Pos Wakaf Gate Tmn U Ping: 10.63.47.215<br><br>16/10/2025 7:51:31 PM<br>Host is alive<br><br>5/11/2025 4:49:02 PM<br>00:05:00<br>Ping 10.63.47.215<br><br><br><br>')">
+<input type=button class=Alive value='ANPR Pos Wakaf Gate Tmn U Ping: 10.63...' title="ANPR Pos Wakaf Gate Tmn U Ping: 10.63.47.216" onmouseover="javascript:showHint('ANPR Pos Wakaf Gate Tmn U Ping: 10.63.47.216<br>Host is alive<br>1 ms')" onclick="javascript:showInfo('ANPR Pos Wakaf Gate Tmn U Ping: 10.63.47.216','ANPR Pos Wakaf Gate Tmn U Ping: 10.63.47.216<br><br>16/10/2025 7:51:31 PM<br>Host is alive<br><br>5/11/2025 4:49:02 PM<br>00:05:00<br>Ping 10.63.47.216<br><br><br><br>')">
+</td></tr>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-32Z9EG1BJB"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-32Z9EG1BJB');
+</script>
+
+<div><p><a href="http://uptime.uthm.edu.my">Muka Depan</a> <br><br> Amalkan buat Master Test untuk kurangkan beban server ping berkali-kali device down, boleh rujuk team network device anda lalu switch mana</p></div>
+<!-- This report was generated by Advanced Host Monitor (www.ks-soft.net) -->

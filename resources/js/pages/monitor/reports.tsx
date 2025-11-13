@@ -7,6 +7,29 @@ import { usePage } from '@inertiajs/react';
 import { PageProps } from '@/types';
 import type { CurrentBranch } from '@/types/branch';
 
+// Helper function to format uptime duration from minutes
+const formatUptimeDuration = (uptimeMinutes: number): string => {
+    if (uptimeMinutes === 0) return '0m';
+    
+    const minutes = uptimeMinutes;
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    const weeks = Math.floor(days / 7);
+    
+    if (weeks > 0) {
+        const remainingDays = days % 7;
+        return remainingDays > 0 ? `${weeks}w ${remainingDays}d` : `${weeks}w`;
+    } else if (days > 0) {
+        const remainingHours = hours % 24;
+        return remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days}d`;
+    } else if (hours > 0) {
+        const remainingMinutes = minutes % 60;
+        return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+    } else {
+        return `${minutes}m`;
+    }
+};
+
 interface DeviceEvent {
     id: string;
     deviceName: string;

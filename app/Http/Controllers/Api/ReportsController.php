@@ -8,6 +8,7 @@ use App\Models\MonitoringHistory;
 use App\Models\Alert;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
 
 class ReportsController extends Controller
@@ -20,60 +21,73 @@ class ReportsController extends Controller
         $branchId = $request->input('branch_id');
         $dateRange = $request->input('date_range', '7days');
         
-        // Calculate date range
-        $startDate = $this->getStartDate($dateRange);
+        $cacheKey = "reports.uptime.branch.{$branchId}.range.{$dateRange}";
         
-        // Get devices with their actual uptime data
-        $devices = Device::where('branch_id', $branchId)
-            ->where('is_active', true)
-            ->where('status', '!=', 'offline_ack')
-            ->get();
-        
-        $stats = $devices->map(function ($device) use ($startDate) {
-            // Get monitoring history for this device in the date range
-            $history = MonitoringHistory::where('device_id', $device->id)
-                ->where('checked_at', '>=', $startDate)
-                ->orderBy('checked_at', 'asc')
+        // Cache for 2 minutes (120 seconds)
+        $stats = Cache::remember($cacheKey, 120, function () use ($branchId, $dateRange) {
+            // Calculate date range
+            $startDate = $this->getStartDate($dateRange);
+            
+            // Get devices with their actual uptime data
+            $devices = Device::where('branch_id', $branchId)
+                ->where('is_active', true)
+                ->where('status', '!=', 'offline_ack')
+                ->select('id', 'name', 'category', 'uptime_percentage', 'offline_duration_minutes')
                 ->get();
             
-            // Use device's actual uptime percentage (same as device management)
-            $uptimePercentage = $device->uptime_percentage;
+            // Get all monitoring history for these devices in one query
+            $deviceIds = $devices->pluck('id');
+            $allHistory = MonitoringHistory::whereIn('device_id', $deviceIds)
+                ->where('checked_at', '>=', $startDate)
+                ->orderBy('device_id', 'asc')
+                ->orderBy('checked_at', 'asc')
+                ->select('device_id', 'status', 'checked_at')
+                ->get()
+                ->groupBy('device_id');
             
-            // Calculate downtime
-            $downtimeMinutes = $device->offline_duration_minutes ?? 0;
-            $hours = floor($downtimeMinutes / 60);
-            $minutes = ceil($downtimeMinutes % 60);
-            $downtimeStr = $hours > 0 ? "{$hours}h {$minutes}min" : "{$minutes}min";
-            
-            // Count incidents (state transitions from online to offline only)
-            $incidents = 0;
-            $previousStatus = null;
-            foreach ($history as $record) {
-                if ($previousStatus === 'online' && $record->status === 'offline') {
-                    $incidents++;
+            return $devices->map(function ($device) use ($allHistory) {
+                // Get history for this specific device
+                $history = $allHistory->get($device->id, collect());
+                
+                // Use device's actual uptime percentage
+                $uptimePercentage = $device->uptime_percentage;
+                
+                // Calculate downtime
+                $downtimeMinutes = $device->offline_duration_minutes ?? 0;
+                $hours = floor($downtimeMinutes / 60);
+                $minutes = ceil($downtimeMinutes % 60);
+                $downtimeStr = $hours > 0 ? "{$hours}h {$minutes}min" : "{$minutes}min";
+                
+                // Count incidents (state transitions from online to offline only)
+                $incidents = 0;
+                $previousStatus = null;
+                foreach ($history as $record) {
+                    if ($previousStatus === 'online' && $record->status === 'offline') {
+                        $incidents++;
+                    }
+                    $previousStatus = $record->status;
                 }
-                $previousStatus = $record->status;
-            }
-            
-            // Get last incident (last transition to offline)
-            $lastIncident = null;
-            $previousStatus = null;
-            foreach ($history->reverse() as $record) {
-                if ($record->status === 'offline' && $previousStatus === 'online') {
-                    $lastIncident = $record;
-                    break;
+                
+                // Get last incident (last transition to offline)
+                $lastIncident = null;
+                $previousStatus = null;
+                foreach ($history->reverse() as $record) {
+                    if ($record->status === 'offline' && $previousStatus === 'online') {
+                        $lastIncident = $record;
+                        break;
+                    }
+                    $previousStatus = $record->status;
                 }
-                $previousStatus = $record->status;
-            }
-            
-            return [
-                'device' => $device->name,
-                'uptime' => round($uptimePercentage, 2),
-                'downtime' => $downtimeStr,
-                'incidents' => $incidents,
-                'category' => $this->formatCategory($device->category),
-                'lastIncident' => $lastIncident ? $lastIncident->checked_at->toDateString() : 'Never',
-            ];
+                
+                return [
+                    'device' => $device->name,
+                    'uptime' => round($uptimePercentage, 2),
+                    'downtime' => $downtimeStr,
+                    'incidents' => $incidents,
+                    'category' => $this->formatCategory($device->category),
+                    'lastIncident' => $lastIncident ? $lastIncident->checked_at->toDateString() : 'Never',
+                ];
+            });
         });
         
         return response()->json($stats);
@@ -88,7 +102,11 @@ class ReportsController extends Controller
         $dateRange = $request->input('date_range', '7days');
         $limit = $request->input('limit', 50);
         
-        $startDate = $this->getStartDate($dateRange);
+        $cacheKey = "reports.events.branch.{$branchId}.range.{$dateRange}.limit.{$limit}";
+        
+        // Cache for 1 minute (60 seconds)
+        return Cache::remember($cacheKey, 60, function () use ($branchId, $dateRange, $limit) {
+            $startDate = $this->getStartDate($dateRange);
         
         // Get all monitoring history entries
         $allHistory = MonitoringHistory::join('devices', 'monitoring_history.device_id', '=', 'devices.id')
@@ -140,7 +158,8 @@ class ReportsController extends Controller
             })
             ->values();
         
-        return response()->json($events);
+            return response()->json($events);
+        });
     }
     
     /**
@@ -149,6 +168,11 @@ class ReportsController extends Controller
     public function categoryStats(Request $request)
     {
         $branchId = $request->input('branch_id');
+        
+        $cacheKey = "reports.category.branch.{$branchId}";
+        
+        // Cache for 3 minutes (180 seconds)
+        return Cache::remember($cacheKey, 180, function () use ($branchId) {
         
         $stats = Device::where('branch_id', $branchId)
             ->where('is_active', true)
@@ -169,7 +193,8 @@ class ReportsController extends Controller
                 ];
             });
         
-        return response()->json($stats);
+            return response()->json($stats);
+        });
     }
     
     /**
@@ -180,7 +205,11 @@ class ReportsController extends Controller
         $branchId = $request->input('branch_id');
         $dateRange = $request->input('date_range', '7days');
         
-        $startDate = $this->getStartDate($dateRange);
+        $cacheKey = "reports.alerts.branch.{$branchId}.range.{$dateRange}";
+        
+        // Cache for 2 minutes (120 seconds)
+        return Cache::remember($cacheKey, 120, function () use ($branchId, $dateRange) {
+            $startDate = $this->getStartDate($dateRange);
         
         $summary = Alert::join('devices', 'alerts.device_id', '=', 'devices.id')
             ->where('devices.branch_id', $branchId)
@@ -191,13 +220,14 @@ class ReportsController extends Controller
             ->pluck('count', 'severity')
             ->toArray();
         
-        return response()->json([
-            'critical' => $summary['critical'] ?? 0,
-            'high' => $summary['high'] ?? 0,
-            'medium' => $summary['medium'] ?? 0,
-            'low' => $summary['low'] ?? 0,
-            'total' => array_sum($summary),
-        ]);
+            return response()->json([
+                'critical' => $summary['critical'] ?? 0,
+                'high' => $summary['high'] ?? 0,
+                'medium' => $summary['medium'] ?? 0,
+                'low' => $summary['low'] ?? 0,
+                'total' => array_sum($summary),
+            ]);
+        });
     }
     
     /**
@@ -208,58 +238,67 @@ class ReportsController extends Controller
         $branchId = $request->input('branch_id');
         $dateRange = $request->input('date_range', '7days');
         
-        $startDate = $this->getStartDate($dateRange);
+        $cacheKey = "reports.summary.branch.{$branchId}.range.{$dateRange}";
         
-        // Get all devices
-        $devices = Device::where('branch_id', $branchId)
-            ->where('is_active', true)
-            ->where('status', '!=', 'offline_ack')
-            ->get();
-        
-        $totalDevices = $devices->count();
-        
-        // Calculate average uptime from device uptime_percentage (same as device management)
-        $avgUptime = 0;
-        if ($totalDevices > 0) {
-            $uptimeSum = $devices->sum('uptime_percentage');
-            $avgUptime = round($uptimeSum / $totalDevices, 2);
-        }
-        
-        // Count total incidents (state transitions from online to offline only)
-        $totalIncidents = 0;
-        foreach ($devices as $device) {
-            // Get history ordered by time
-            $history = MonitoringHistory::where('device_id', $device->id)
-                ->where('checked_at', '>=', $startDate)
-                ->orderBy('checked_at', 'asc')
-                ->get();
+        // Cache for 2 minutes (120 seconds)
+        return Cache::remember($cacheKey, 120, function () use ($branchId, $dateRange) {
+            $startDate = $this->getStartDate($dateRange);
             
-            // Count transitions from online to offline
-            $previousStatus = null;
-            foreach ($history as $record) {
-                if ($previousStatus === 'online' && $record->status === 'offline') {
-                    $totalIncidents++;
-                }
-                $previousStatus = $record->status;
-            }
-        }
-        
-        // Calculate total downtime
-        $totalDowntimeMinutes = $devices->sum('offline_duration_minutes') ?? 0;
-        $hours = floor($totalDowntimeMinutes / 60);
-        $minutes = ceil($totalDowntimeMinutes % 60);
-        
-        return response()->json([
-            'avgUptime' => $avgUptime,
-            'totalIncidents' => $totalIncidents,
-            'totalDowntime' => [
-                'hours' => $hours,
-                'minutes' => $minutes,
-                'formatted' => $hours > 0 ? "{$hours}h {$minutes}m" : "{$minutes}m",
-                'percentage' => $totalDevices > 0 ? round((100 - $avgUptime), 2) : 0,
-            ],
-            'devicesMonitored' => $totalDevices,
-        ]);
+            // Get aggregate stats in a single query
+            $deviceStats = Device::where('branch_id', $branchId)
+                ->where('is_active', true)
+                ->where('status', '!=', 'offline_ack')
+                ->select([
+                    DB::raw('COUNT(*) as total_devices'),
+                    DB::raw('AVG(uptime_percentage) as avg_uptime'),
+                    DB::raw('SUM(offline_duration_minutes) as total_downtime_minutes')
+                ])
+                ->first();
+            
+            $totalDevices = $deviceStats->total_devices ?? 0;
+            $avgUptime = round($deviceStats->avg_uptime ?? 0, 2);
+            $totalDowntimeMinutes = $deviceStats->total_downtime_minutes ?? 0;
+            
+            // Count incidents using a more efficient query
+            // Get device IDs for this branch
+            $deviceIds = Device::where('branch_id', $branchId)
+                ->where('is_active', true)
+                ->where('status', '!=', 'offline_ack')
+                ->pluck('id');
+            
+            // Count status transitions in a single query using window functions
+            $totalIncidents = DB::table('monitoring_history as mh1')
+                ->join('monitoring_history as mh2', function($join) {
+                    $join->on('mh1.device_id', '=', 'mh2.device_id')
+                         ->whereRaw('mh2.checked_at = (
+                             SELECT MAX(checked_at) 
+                             FROM monitoring_history 
+                             WHERE device_id = mh1.device_id 
+                             AND checked_at < mh1.checked_at
+                         )');
+                })
+                ->whereIn('mh1.device_id', $deviceIds)
+                ->where('mh1.checked_at', '>=', $startDate)
+                ->where('mh2.status', 'online')
+                ->where('mh1.status', 'offline')
+                ->count();
+            
+            // Calculate downtime display
+            $hours = floor($totalDowntimeMinutes / 60);
+            $minutes = ceil($totalDowntimeMinutes % 60);
+            
+            return response()->json([
+                'avgUptime' => $avgUptime,
+                'totalIncidents' => $totalIncidents,
+                'totalDowntime' => [
+                    'hours' => $hours,
+                    'minutes' => $minutes,
+                    'formatted' => $hours > 0 ? "{$hours}h {$minutes}m" : "{$minutes}m",
+                    'percentage' => $totalDevices > 0 ? round((100 - $avgUptime), 2) : 0,
+                ],
+                'devicesMonitored' => $totalDevices,
+            ]);
+        });
     }
     
     /**

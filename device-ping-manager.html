@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Ping Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto p-6">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6">
+            <i class="fas fa-network-wired mr-2"></i>
+            Device Ping Manager
+        </h1>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Total Devices</p>
+                        <p class="text-2xl font-bold text-gray-900" id="totalDevices">0</p>
+                    </div>
+                    <i class="fas fa-server text-gray-400 text-2xl"></i>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Online</p>
+                        <p class="text-2xl font-bold text-green-600" id="onlineDevices">0</p>
+                    </div>
+                    <i class="fas fa-wifi text-green-500 text-2xl"></i>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Offline</p>
+                        <p class="text-2xl font-bold text-red-600" id="offlineDevices">0</p>
+                    </div>
+                    <i class="fas fa-wifi-slash text-red-500 text-2xl"></i>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Uptime</p>
+                        <p class="text-2xl font-bold text-blue-600" id="uptimePercentage">0%</p>
+                    </div>
+                    <i class="fas fa-chart-line text-blue-500 text-2xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Network Control Center</h2>
+            <div class="flex flex-wrap gap-3">
+                <button id="pingAllBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center space-x-2">
+                    <i class="fas fa-sync-alt"></i>
+                    <span>Ping All Devices</span>
+                </button>
+                
+                <button id="refreshBtn" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 disabled:opacity-50 flex items-center space-x-2">
+                    <i class="fas fa-activity"></i>
+                    <span>Refresh Status</span>
+                </button>
+                
+                <button id="pingTasBtn" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50">
+                    Ping TAS Devices
+                </button>
+                
+                <div class="flex items-center text-sm text-gray-600 ml-auto">
+                    <i class="fas fa-clock mr-1"></i>
+                    <span id="lastUpdate">Never updated</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Device List -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="p-6 border-b">
+                <h2 class="text-xl font-semibold text-gray-800">Device Status</h2>
+            </div>
+            <div class="p-6">
+                <div id="loadingIndicator" class="hidden text-center py-8">
+                    <i class="fas fa-sync-alt animate-spin text-2xl text-blue-600 mr-2"></i>
+                    Loading device status...
+                </div>
+                
+                <div id="deviceList" class="space-y-3">
+                    <!-- Devices will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class DevicePingManager {
+            constructor() {
+                this.devices = [];
+                this.loading = false;
+                this.init();
+            }
+
+            init() {
+                this.bindEvents();
+                this.loadDeviceStatus();
+                // Auto-refresh every 30 seconds
+                setInterval(() => this.loadDeviceStatus(), 30000);
+            }
+
+            bindEvents() {
+                document.getElementById('pingAllBtn').addEventListener('click', () => this.pingAllDevices());
+                document.getElementById('refreshBtn').addEventListener('click', () => this.loadDeviceStatus());
+                document.getElementById('pingTasBtn').addEventListener('click', () => this.pingCategory('tas'));
+            }
+
+            async loadDeviceStatus() {
+                try {
+                    this.setLoading(true);
+                    const response = await fetch('/api/monitoring/ping-status');
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.devices = data.devices;
+                        this.updateStats(data.stats);
+                        this.renderDevices();
+                        this.updateLastUpdate(data.timestamp);
+                    }
+                } catch (error) {
+                    console.error('Failed to load device status:', error);
+                    this.showError('Failed to load device status');
+                } finally {
+                    this.setLoading(false);
+                }
+            }
+
+            async pingAllDevices() {
+                try {
+                    this.setButtonLoading('pingAllBtn', true);
+                    const response = await fetch('/api/monitoring/ping-all', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        await this.loadDeviceStatus();
+                        const percentage = ((data.stats.online_devices / data.stats.total_devices) * 100).toFixed(1);
+                        this.showSuccess(`Ping Complete!\n\nTotal Devices: ${data.stats.total_devices}\nOnline: ${data.stats.online_devices}\nOffline: ${data.stats.offline_devices}\nUptime: ${percentage}%\nDuration: ${data.duration}ms`);
+                    } else {
+                        this.showError('Failed to ping all devices: ' + data.error);
+                    }
+                } catch (error) {
+                    console.error('Failed to ping all devices:', error);
+                    this.showError('Network error while pinging devices');
+                } finally {
+                    this.setButtonLoading('pingAllBtn', false);
+                }
+            }
+
+            async pingSingleDevice(deviceId) {
+                try {
+                    const device = this.devices.find(d => d.id === deviceId);
+                    if (!device) return;
+
+                    // Update UI to show pinging status
+                    this.updateDeviceStatus(deviceId, 'pinging');
+
+                    const response = await fetch(`/api/monitoring/device/${deviceId}/ping`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.updateDeviceStatus(deviceId, data.stats.current_status, data.stats.response_time, data.stats.performance);
+                        const statusIcon = data.stats.is_online ? '🟢' : '🔴';
+                        const performance = data.stats.performance.toUpperCase();
+                        this.showSuccess(`${statusIcon} ${device.name}\n\nStatus: ${data.stats.current_status}\nResponse Time: ${data.stats.response_time || 'N/A'}ms\nPerformance: ${performance}\nPing Duration: ${data.stats.ping_duration}ms`);
+                    } else {
+                        this.showError('Failed to ping device: ' + data.error);
+                        await this.loadDeviceStatus();
+                    }
+                } catch (error) {
+                    console.error('Failed to ping device:', error);
+                    this.showError('Network error while pinging device');
+                    await this.loadDeviceStatus();
+                }
+            }
+
+            async pingCategory(category) {
+                try {
+                    const response = await fetch(`/api/monitoring/category/${category}/ping`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        await this.loadDeviceStatus();
+                        const percentage = ((data.stats.online_devices / data.stats.total_devices) * 100).toFixed(1);
+                        this.showSuccess(`Category '${category}' Ping Complete!\n\nTotal Devices: ${data.stats.total_devices}\nOnline: ${data.stats.online_devices}\nOffline: ${data.stats.offline_devices}\nUptime: ${percentage}%\nDuration: ${data.duration}ms`);
+                    } else {
+                        this.showError('Failed to ping category: ' + data.error);
+                    }
+                } catch (error) {
+                    console.error('Failed to ping category:', error);
+                    this.showError('Network error while pinging category');
+                }
+            }
+
+            updateStats(stats) {
+                document.getElementById('totalDevices').textContent = stats.total;
+                document.getElementById('onlineDevices').textContent = stats.online;
+                document.getElementById('offlineDevices').textContent = stats.offline;
+                
+                const uptime = stats.total > 0 ? ((stats.online / stats.total) * 100).toFixed(1) : 0;
+                document.getElementById('uptimePercentage').textContent = uptime + '%';
+            }
+
+            renderDevices() {
+                const deviceList = document.getElementById('deviceList');
+                
+                if (this.devices.length === 0) {
+                    deviceList.innerHTML = '<p class="text-center text-gray-500 py-8">No devices found</p>';
+                    return;
+                }
+
+                deviceList.innerHTML = this.devices.map(device => this.renderDevice(device)).join('');
+            }
+
+            renderDevice(device) {
+                const statusIcon = this.getStatusIcon(device.status);
+                const statusBadge = this.getStatusBadge(device.status);
+                const performanceColor = this.getPerformanceColor(device.performance);
+
+                return `
+                    <div class="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                        <div class="flex items-center space-x-3">
+                            ${statusIcon}
+                            <div>
+                                <div class="font-medium">${device.name}</div>
+                                <div class="text-sm text-gray-600">
+                                    ${device.ip_address} • ${device.category} • ${device.location || 'N/A'}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center space-x-3">
+                            <div class="text-right">
+                                <div class="text-sm">
+                                    Response: <span class="${performanceColor}">
+                                        ${device.response_time ? device.response_time + 'ms' : 'N/A'}
+                                    </span>
+                                </div>
+                                <div class="text-xs text-gray-600 capitalize">
+                                    ${device.performance || 'unknown'}
+                                </div>
+                            </div>
+                            
+                            ${statusBadge}
+                            
+                            <button 
+                                onclick="deviceManager.pingSingleDevice(${device.id})"
+                                class="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50"
+                                ${device.status === 'pinging' ? 'disabled' : ''}
+                            >
+                                ${device.status === 'pinging' ? '<i class="fas fa-sync-alt animate-spin"></i>' : 'Ping'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            updateDeviceStatus(deviceId, status, responseTime, performance) {
+                const deviceIndex = this.devices.findIndex(d => d.id === deviceId);
+                if (deviceIndex !== -1) {
+                    this.devices[deviceIndex].status = status;
+                    if (responseTime !== undefined) this.devices[deviceIndex].response_time = responseTime;
+                    if (performance !== undefined) this.devices[deviceIndex].performance = performance;
+                    this.renderDevices();
+                }
+            }
+
+            getStatusIcon(status) {
+                const icons = {
+                    online: '<i class="fas fa-wifi text-green-500"></i>',
+                    offline: '<i class="fas fa-wifi-slash text-red-500"></i>',
+                    warning: '<i class="fas fa-exclamation-triangle text-yellow-500"></i>',
+                    pinging: '<i class="fas fa-sync-alt text-blue-500 animate-spin"></i>'
+                };
+                return icons[status] || '<i class="fas fa-activity text-gray-500"></i>';
+            }
+
+            getStatusBadge(status) {
+                const badges = {
+                    online: '<span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded">online</span>',
+                    offline: '<span class="px-2 py-1 text-xs bg-red-100 text-red-800 rounded">offline</span>',
+                    warning: '<span class="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded">warning</span>',
+                    pinging: '<span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">pinging</span>'
+                };
+                return badges[status] || '<span class="px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded">unknown</span>';
+            }
+
+            getPerformanceColor(performance) {
+                const colors = {
+                    excellent: 'text-green-600',
+                    good: 'text-blue-600',
+                    fair: 'text-yellow-600',
+                    poor: 'text-red-600',
+                    offline: 'text-gray-600'
+                };
+                return colors[performance] || 'text-gray-600';
+            }
+
+            setLoading(loading) {
+                this.loading = loading;
+                document.getElementById('loadingIndicator').classList.toggle('hidden', !loading);
+                document.getElementById('deviceList').classList.toggle('hidden', loading);
+            }
+
+            setButtonLoading(buttonId, loading) {
+                const button = document.getElementById(buttonId);
+                button.disabled = loading;
+                const icon = button.querySelector('i');
+                if (icon) {
+                    icon.classList.toggle('animate-spin', loading);
+                }
+            }
+
+            updateLastUpdate(timestamp) {
+                const date = new Date(timestamp);
+                document.getElementById('lastUpdate').textContent = `Last updated: ${date.toLocaleTimeString()}`;
+            }
+
+            showSuccess(message) {
+                alert(message);
+            }
+
+            showError(message) {
+                alert('❌ ' + message);
+            }
+        }
+
+        // Initialize the device manager
+        const deviceManager = new DevicePingManager();
+    </script>
+</body>
+</html>

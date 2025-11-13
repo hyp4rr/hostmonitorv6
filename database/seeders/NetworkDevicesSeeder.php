@@ -102,6 +102,8 @@ class NetworkDevicesSeeder extends Seeder
 
             // Track locations and statistics for this category
             $locations = [];
+            $locationsCreated = 0;
+            $locationsReused = 0;
             $stats = [
                 'total' => 0,
                 'online' => 0,
@@ -123,9 +125,9 @@ class NetworkDevicesSeeder extends Seeder
                     continue;
                 }
 
-                // Create or get location
+                // Create or get location - firstOrCreate will reuse existing location if found
                 if (!isset($locations[$locationName])) {
-                    $locations[$locationName] = Location::firstOrCreate(
+                    $location = Location::firstOrCreate(
                         [
                             'branch_id' => $branch->id,
                             'name' => $locationName
@@ -136,6 +138,15 @@ class NetworkDevicesSeeder extends Seeder
                             'longitude' => 103.0850,
                         ]
                     );
+                    
+                    $locations[$locationName] = $location;
+                    
+                    // Track if location was created or reused
+                    if ($location->wasRecentlyCreated) {
+                        $locationsCreated++;
+                    } else {
+                        $locationsReused++;
+                    }
                 }
 
                 $location = $locations[$locationName];
@@ -152,8 +163,11 @@ class NetworkDevicesSeeder extends Seeder
                 $uptimePercentage = $deviceStatus === 'online' ? 99.9 : 0.0;
 
                 // Generate barcode (use HM- for servers, category prefix for others)
+                // Pad each octet to 3 digits to ensure uniqueness (e.g., 10.8.5.45 -> 010008005045)
                 $barcodePrefix = $category === 'servers' ? 'HM' : strtoupper($category);
-                $barcode = $barcodePrefix . '-' . str_replace('.', '', $ipAddress);
+                $ipParts = explode('.', $ipAddress);
+                $paddedIp = implode('', array_map(fn($part) => str_pad($part, 3, '0', STR_PAD_LEFT), $ipParts));
+                $barcode = $barcodePrefix . '-' . $paddedIp;
 
                 // Create or update device
                 $device = Device::updateOrCreate(
@@ -200,6 +214,7 @@ class NetworkDevicesSeeder extends Seeder
             $totalStats['updated'] += $stats['updated'];
 
             $this->command->info("✅ {$category}: {$stats['total']} devices imported");
+            $this->command->info("   📍 Locations: {$locationsCreated} created, {$locationsReused} reused");
         }
 
         // Display summary

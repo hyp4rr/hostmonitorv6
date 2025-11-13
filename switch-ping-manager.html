@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Switch Ping Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .status-online { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+        .status-offline { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+        .status-warning { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+        .status-unknown { background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); }
+        .switch-card { transition: all 0.3s ease; }
+        .switch-card:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .ping-button { transition: all 0.2s ease; }
+        .ping-button:hover { transform: scale(1.05); }
+        .ping-button:active { transform: scale(0.95); }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .pinging { animation: pulse 1.5s infinite; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <i class="fas fa-network-wired text-3xl"></i>
+                    <div>
+                        <h1 class="text-2xl font-bold">Switch Ping Manager</h1>
+                        <p class="text-blue-100">Network Switch Monitoring Dashboard</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button onclick="pingAllSwitches()" class="bg-green-500 hover:bg-green-600 px-6 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2">
+                        <i class="fas fa-broadcast-tower"></i>
+                        <span id="pingAllText">Ping All Switches</span>
+                    </button>
+                    <button onclick="refreshData()" class="bg-blue-500 hover:bg-blue-600 px-4 py-3 rounded-lg font-semibold transition-all duration-200">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Stats Overview -->
+    <div class="container mx-auto px-4 py-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Total Switches</p>
+                        <p class="text-2xl font-bold text-gray-800" id="totalSwitches">0</p>
+                    </div>
+                    <i class="fas fa-network-wired text-3xl text-gray-400"></i>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Online</p>
+                        <p class="text-2xl font-bold text-green-600" id="onlineSwitches">0</p>
+                    </div>
+                    <i class="fas fa-check-circle text-3xl text-green-400"></i>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Offline</p>
+                        <p class="text-2xl font-bold text-red-600" id="offlineSwitches">0</p>
+                    </div>
+                    <i class="fas fa-times-circle text-3xl text-red-400"></i>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Uptime</p>
+                        <p class="text-2xl font-bold text-blue-600" id="uptimePercent">0%</p>
+                    </div>
+                    <i class="fas fa-chart-line text-3xl text-blue-400"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search and Filter -->
+        <div class="bg-white rounded-lg shadow p-4 mb-6">
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="flex-1">
+                    <div class="relative">
+                        <input type="text" id="searchInput" placeholder="Search switches by name or IP..." 
+                               class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               onkeyup="filterSwitches()">
+                        <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                    </div>
+                </div>
+                <select id="statusFilter" onchange="filterSwitches()" 
+                        class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">All Status</option>
+                    <option value="online">Online</option>
+                    <option value="offline">Offline</option>
+                    <option value="warning">Warning</option>
+                    <option value="unknown">Unknown</option>
+                </select>
+                <select id="sortBy" onchange="sortSwitches()" 
+                        class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="name">Sort by Name</option>
+                    <option value="ip">Sort by IP</option>
+                    <option value="status">Sort by Status</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Switches Grid -->
+        <div id="switchesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <!-- Switch cards will be inserted here -->
+        </div>
+
+        <!-- Loading indicator -->
+        <div id="loadingIndicator" class="hidden text-center py-8">
+            <i class="fas fa-spinner fa-spin text-4xl text-blue-500"></i>
+            <p class="mt-2 text-gray-600">Loading switch data...</p>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-4 right-4 hidden">
+        <div class="bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-3">
+            <i id="toastIcon" class="fas fa-info-circle"></i>
+            <span id="toastMessage">Message</span>
+        </div>
+    </div>
+
+    <script>
+        let switches = [];
+        let filteredSwitches = [];
+
+        // Load switch data
+        async function loadSwitchData() {
+            try {
+                const response = await fetch('database/seeders/data/switches.json');
+                switches = await response.json();
+                filteredSwitches = [...switches];
+                updateStats();
+                renderSwitches();
+            } catch (error) {
+                console.error('Error loading switch data:', error);
+                showToast('Error loading switch data', 'error');
+            }
+        }
+
+        // Update statistics
+        function updateStats() {
+            const total = filteredSwitches.length;
+            const online = filteredSwitches.filter(s => s.status === 'online').length;
+            const offline = filteredSwitches.filter(s => s.status === 'offline').length;
+            const uptime = total > 0 ? ((online / total) * 100).toFixed(1) : 0;
+
+            document.getElementById('totalSwitches').textContent = total;
+            document.getElementById('onlineSwitches').textContent = online;
+            document.getElementById('offlineSwitches').textContent = offline;
+            document.getElementById('uptimePercent').textContent = uptime + '%';
+        }
+
+        // Render switches
+        function renderSwitches() {
+            const grid = document.getElementById('switchesGrid');
+            grid.innerHTML = '';
+
+            filteredSwitches.forEach(switch_ => {
+                const card = createSwitchCard(switch_);
+                grid.appendChild(card);
+            });
+        }
+
+        // Create switch card
+        function createSwitchCard(switch_) {
+            const card = document.createElement('div');
+            card.className = 'switch-card bg-white rounded-lg shadow-md overflow-hidden';
+            
+            const statusClass = `status-${switch_.status}`;
+            const statusIcon = getStatusIcon(switch_.status);
+            
+            card.innerHTML = `
+                <div class="${statusClass} h-2"></div>
+                <div class="p-4">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex-1">
+                            <h3 class="font-semibold text-gray-800 text-sm mb-1">${switch_.name}</h3>
+                            <p class="text-xs text-gray-600 font-mono">${switch_.ip_address}</p>
+                        </div>
+                        <div class="ml-2">
+                            <i class="${statusIcon} text-lg"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs px-2 py-1 rounded-full ${getStatusBadgeClass(switch_.status)}">
+                            ${switch_.status.toUpperCase()}
+                        </span>
+                        <button onclick="pingSingleSwitch('${switch_.ip_address}', '${switch_.name}')" 
+                                class="ping-button bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs font-medium">
+                            <i class="fas fa-broadcast-tower mr-1"></i>Ping
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        // Get status icon
+        function getStatusIcon(status) {
+            switch(status) {
+                case 'online': return 'fas fa-check-circle text-green-500';
+                case 'offline': return 'fas fa-times-circle text-red-500';
+                case 'warning': return 'fas fa-exclamation-triangle text-yellow-500';
+                default: return 'fas fa-question-circle text-gray-400';
+            }
+        }
+
+        // Get status badge class
+        function getStatusBadgeClass(status) {
+            switch(status) {
+                case 'online': return 'bg-green-100 text-green-800';
+                case 'offline': return 'bg-red-100 text-red-800';
+                case 'warning': return 'bg-yellow-100 text-yellow-800';
+                default: return 'bg-gray-100 text-gray-800';
+            }
+        }
+
+        // Filter switches
+        function filterSwitches() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+            
+            filteredSwitches = switches.filter(switch_ => {
+                const matchesSearch = switch_.name.toLowerCase().includes(searchTerm) || 
+                                     switch_.ip_address.includes(searchTerm);
+                const matchesStatus = !statusFilter || switch_.status === statusFilter;
+                
+                return matchesSearch && matchesStatus;
+            });
+            
+            updateStats();
+            renderSwitches();
+        }
+
+        // Sort switches
+        function sortSwitches() {
+            const sortBy = document.getElementById('sortBy').value;
+            
+            filteredSwitches.sort((a, b) => {
+                switch(sortBy) {
+                    case 'name':
+                        return a.name.localeCompare(b.name);
+                    case 'ip':
+                        return a.ip_address.localeCompare(b.ip_address);
+                    case 'status':
+                        return a.status.localeCompare(b.status);
+                    default:
+                        return 0;
+                }
+            });
+            
+            renderSwitches();
+        }
+
+        // Ping single switch
+        async function pingSingleSwitch(ip, name) {
+            showToast(`Pinging ${name}...`, 'info');
+            
+            try {
+                // Simulate ping (replace with actual API call)
+                const response = await fetch(`/api/switches/ping/${ip}`, { method: 'POST' });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    updateSwitchStatus(ip, result.status);
+                    showToast(`${name}: ${result.message}`, 'success');
+                } else {
+                    showToast(`${name}: Ping failed`, 'error');
+                    updateSwitchStatus(ip, 'offline');
+                }
+            } catch (error) {
+                showToast(`${name}: Network error`, 'error');
+                updateSwitchStatus(ip, 'offline');
+            }
+        }
+
+        // Ping all switches
+        async function pingAllSwitches() {
+            const button = event.target.closest('button');
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Pinging...';
+            button.disabled = true;
+            
+            showToast('Pinging all switches...', 'info');
+            
+            try {
+                const response = await fetch('/api/switches/ping-all', { method: 'POST' });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showToast(`Ping complete: ${result.message}`, 'success');
+                    // Refresh data after ping
+                    setTimeout(refreshData, 2000);
+                } else {
+                    showToast('Ping all failed', 'error');
+                }
+            } catch (error) {
+                showToast('Network error during ping all', 'error');
+            } finally {
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
+        }
+
+        // Update switch status
+        function updateSwitchStatus(ip, status) {
+            const switch_ = switches.find(s => s.ip_address === ip);
+            if (switch_) {
+                switch_.status = status;
+                filterSwitches();
+            }
+        }
+
+        // Refresh data
+        function refreshData() {
+            loadSwitchData();
+            showToast('Data refreshed', 'success');
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            const toastIcon = document.getElementById('toastIcon');
+            
+            toastMessage.textContent = message;
+            
+            // Set icon based on type
+            switch(type) {
+                case 'success':
+                    toastIcon.className = 'fas fa-check-circle text-green-400';
+                    break;
+                case 'error':
+                    toastIcon.className = 'fas fa-exclamation-circle text-red-400';
+                    break;
+                default:
+                    toastIcon.className = 'fas fa-info-circle text-blue-400';
+            }
+            
+            toast.classList.remove('hidden');
+            
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSwitchData();
+        });
+    </script>
+</body>
+</html>

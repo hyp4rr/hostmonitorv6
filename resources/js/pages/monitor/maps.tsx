@@ -78,8 +78,24 @@ export default function Maps() {
         .finally(() => setIsLoadingLocations(false));
     }, [currentBranch?.id]);
 
-    // Use real devices from current branch for map markers (exclude offline_ack devices)
-    const realDevices = (currentBranch?.devices || []).filter(device => device.status !== 'offline_ack');
+    // State for devices loaded from API
+    const [realDevices, setRealDevices] = useState<typeof currentBranch.devices>([]);
+    
+    // Fetch devices from API
+    useEffect(() => {
+        if (!currentBranch?.id) return;
+        
+        fetch(`/api/devices?branch_id=${currentBranch.id}&per_page=10000`, {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' },
+        })
+        .then(res => res.ok ? res.json() : { data: [] })
+        .then(responseData => {
+            const devices = responseData.data || responseData;
+            setRealDevices(devices.filter((device: any) => device.status !== 'offline_ack'));
+        })
+        .catch(err => console.error('Error loading devices:', err));
+    }, [currentBranch?.id]);
     
     // Group devices by location coordinates
     const deviceLocationMap = new Map<string, typeof realDevices>();
@@ -104,14 +120,28 @@ export default function Maps() {
         );
 
         // Determine overall status based on devices at this location
-        let status: 'online' | 'warning' | 'offline' = 'online';
-        if (locationDevices.some(d => d.status === 'offline')) {
+        let status: 'online' | 'warning' | 'offline' = 'offline';
+        
+        if (locationDevices.length === 0) {
+            // No devices = offline
             status = 'offline';
-        } else if (locationDevices.some(d => d.status === 'warning')) {
-            status = 'warning';
+        } else {
+            const onlineCount = locationDevices.filter(d => d.status === 'online').length;
+            const offlineCount = locationDevices.filter(d => d.status === 'offline' || d.status === 'offline_ack').length;
+            
+            if (offlineCount === locationDevices.length) {
+                // All devices offline = offline
+                status = 'offline';
+            } else if (onlineCount === locationDevices.length) {
+                // All devices online = online
+                status = 'online';
+            } else {
+                // Some online, some offline = warning
+                status = 'warning';
+            }
         }
 
-        // Calculate average uptime
+        // Calculate average uptime percentage
         const avgUptime = locationDevices.length > 0
             ? (locationDevices.reduce((sum, d) => sum + (d.uptime_percentage || 0), 0) / locationDevices.length).toFixed(1)
             : '0.0';
@@ -356,16 +386,6 @@ export default function Maps() {
                             
                             <span style="color: #64748b; font-weight: 500;">Avg Uptime:</span>
                             <span style="color: #10b981; font-weight: 600;">${location.uptime}</span>
-                        </div>
-                        
-                        <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e2e8f0;">
-                            <p style="margin: 0 0 8px 0; color: #64748b; font-weight: 500; font-size: 11px; text-transform: uppercase;">Connected Devices</p>
-                            ${location.devices.map(device => `
-                                <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: #475569; margin: 4px 0; padding: 4px 8px; background: #f8fafc; border-radius: 4px;">
-                                    <div style="width: 4px; height: 4px; background: ${color}; border-radius: 50%;"></div>
-                                    ${device}
-                                </div>
-                            `).join('')}
                         </div>
                     </div>
                 `, {

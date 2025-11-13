@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\BrandController;
 use App\Http\Controllers\Api\ModelController;
 use App\Http\Controllers\Api\ActivityLogController;
 use App\Http\Controllers\Api\ReportsController;
+use App\Http\Controllers\Api\MonitoringController;
 use Illuminate\Http\Request;
 
 // Config authentication (no CSRF required for these endpoints)
@@ -45,11 +46,6 @@ Route::middleware('api')->group(function () {
 Route::get('alerts', [AlertController::class, 'index']);
 Route::put('alerts/{alert}', [AlertController::class, 'update']);
 Route::delete('alerts/{alert}', [AlertController::class, 'destroy']);
-
-// Ping routes
-Route::post('/devices/{id}/ping', [DeviceController::class, 'ping']);
-Route::post('/devices/ping-multiple', [DeviceController::class, 'pingMultiple']);
-Route::post('/devices/ping-branch', [DeviceController::class, 'pingBranch']);
 
 // Acknowledge offline
 Route::post('/devices/{id}/acknowledge-offline', [DeviceController::class, 'acknowledgeOffline']);
@@ -93,3 +89,15 @@ Route::get('/reports/uptime-stats', [ReportsController::class, 'uptimeStats']);
 Route::get('/reports/device-events', [ReportsController::class, 'deviceEvents']);
 Route::get('/reports/category-stats', [ReportsController::class, 'categoryStats']);
 Route::get('/reports/alert-summary', [ReportsController::class, 'alertSummary']);
+
+// Monitoring routes (no CSRF required)
+Route::get('/monitoring/status', [MonitoringController::class, 'status']);
+Route::post('/monitoring/ping-all', [MonitoringController::class, 'pingAllDevices']);
+Route::get('/monitoring/ping-status', [MonitoringController::class, 'getPingStatus']);
+Route::post('/monitoring/device/{id}/ping', [MonitoringController::class, 'pingSingleDevice']);
+Route::get('/monitoring/device/{id}/ping', [MonitoringController::class, 'pingSingleDevice']);
+Route::get('/monitoring/device/{id}/history', [MonitoringController::class, 'getDeviceHistory']);
+Route::post('/monitoring/category/{category}/ping', [MonitoringController::class, 'pingByCategory']);
+Route::get('/monitoring/analytics', [MonitoringController::class, 'analytics']);
+Route::post('/monitoring/toggle', [MonitoringController::class, 'toggleMonitoring']);
+Route::get('/monitoring/dashboard', [MonitoringController::class, 'dashboard']);

@@ -1,11 +1,33 @@
-location,name,ip_address,status,response_time
-A5,TAS Main Entrance,10.8.20.1,online,10
-A5,TAS Building A,10.8.20.2,online,12
-A5,TAS Building B,10.8.20.3,online,11
-A5,TAS Building C,10.8.20.4,online,13
-A5,TAS Staff Area,10.8.20.5,online,10
-A5,TAS Parking Gate 1,10.8.20.6,online,15
-A5,TAS Parking Gate 2,10.8.20.7,online,14
-A5,TAS Server Room,10.8.20.8,online,8
-A5,TAS Admin Office,10.8.20.9,online,9
-A5,TAS Security Post,10.8.20.10,online,11
+﻿location,name,ip_address,status,response_time
+A4,A4,10.8.23.155,Alive,1 ms
+A5,A5,10.8.27.222,Alive,2 ms
+BCB,BCB,10.9.159.202,Alive,14 ms
+BENDAHARI,BENDAHARI,10.60.27.205,No answer,
+C16,C16,10.61.27.201,Alive,1 ms
+D15 HEP,D15 HEP,10.60.27.204,Alive,1 ms
+FKAAS,FKAAS,10.67.23.222,Alive,1 ms
+FKEE QA,FKEE QA,10.69.23.201,Alive,1 ms
+FKEE,FKEE,10.61.68.7,Alive,1 ms
+FKMP,FKMP,10.69.23.201,Alive,1 ms
+FPTP,FPTP,10.68.23.201,No answer,
+FPTV,FPTV,10.66.23.216,Alive,1 ms
+FSKTM,FSKTM,10.65.53.158,Alive,1 ms
+LIBRARY,LIBRARY,10.63.23.201,Alive,1 ms
+MASJID,MASJID,10.63.47.209,Alive,1 ms
+PENDAFTAR,PENDAFTAR,10.61.24.138,Alive,1 ms
+PENGAWAL,PENGAWAL,10.8.23.224,Alive,2 ms
+PERWIRA,PERWIRA,10.8.35.205,Alive,1 ms
+PHUI,PHUI,10.8.23.156,Alive,1 ms
+PKU,PKU,10.60.27.221,Alive,1 ms
+PPA,PPA,10.60.34.140,Alive,2 ms
+PPA,PPA,10.63.47.212,Alive,1 ms
+PPP,PPP,10.63.47.212,Alive,1 ms
+PPUK,PPUK,10.60.33.67,Alive,2 ms
+PUMAS,PUMAS,10.100.10.1,Alive,14 ms
+SHIFT KESELAMATAN,SHIFT KESELAMATAN,10.8.23.201,Alive,1 ms
+ANPR Pos 1 Stadium,ANPR Pos 1 Stadium,10.8.23.225,Alive,46 ms
+ANPR Pos 1 Stadium,ANPR Pos 1 Stadium,10.8.23.226,Alive,58 ms
+ANPR Pos 1 Stadium,ANPR Pos 1 Stadium,10.8.23.227,Alive,59 ms
+ANPR Pos 1 Stadium,ANPR Pos 1 Stadium,10.8.23.228,Alive,33 ms
+ANPR Pos Wakaf Gate Tmn U,ANPR Pos Wakaf Gate Tmn U,10.63.47.215,Alive,1 ms
+ANPR Pos Wakaf Gate Tmn U,ANPR Pos Wakaf Gate Tmn U,10.63.47.216,Alive,1 ms

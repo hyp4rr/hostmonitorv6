@@ -132,7 +132,7 @@ export default function MonitorLayout({ children, title }: MonitorLayoutProps) {
             if (response.ok) {
                 const data = await response.json();
                 // Show success message
-                alert(`✅ Reset Complete!\n\n• ${data.devices_updated} devices set to 100% uptime\n• ${data.history_cleared} monitoring records cleared\n• Reports will now show fresh data`);
+                alert(`✅ Reset Complete!\n\n• ${data.devices_updated} devices set to 100% uptime\n• All downtime cleared to 0\n• ${data.history_cleared} monitoring records cleared\n• Reports will now show fresh data`);
                 // Reload the page to show updated data
                 router.reload();
             } else {

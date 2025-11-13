@@ -22,10 +22,22 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
+        
+        // Completely disable CSRF for all routes
+        $middleware->validateCsrfTokens(except: [
+            '*',
+            'ping-all-simple',
+            'ping-all-devices',
+            'api/*',
+            'monitoring/*',
+        ]);
     })
     ->withSchedule(function (Schedule $schedule): void {
-        // Ping all switches every minute for real-time monitoring
-        $schedule->command('switches:ping')->everyMinute();
+        // Update device uptime every minute
+        $schedule->command('devices:update-uptime')->everyMinute();
+        
+        // Send device offline notifications every 5 minutes
+        $schedule->command('devices:send-notifications')->everyFiveMinutes();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ping Integration Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-2xl font-bold mb-6">Ping API Integration Test</h1>
+        
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-lg font-semibold mb-4">Test API Endpoints</h2>
+            
+            <div class="space-y-4">
+                <button onclick="testPingStatus()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                    Test Ping Status
+                </button>
+                
+                <button onclick="testPingAll()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                    Test Ping All Devices
+                </button>
+                
+                <button onclick="testPingSingle()" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">
+                    Test Ping Single Device
+                </button>
+            </div>
+        </div>
+        
+        <div id="results" class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-lg font-semibold mb-4">Results</h2>
+            <div id="output" class="font-mono text-sm bg-gray-100 p-4 rounded">
+                Click a test button to see results...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateOutput(message) {
+            document.getElementById('output').innerHTML = message;
+        }
+        
+        async function testPingStatus() {
+            updateOutput('Testing ping status...');
+            try {
+                const response = await fetch('/api/monitoring/ping-status');
+                const data = await response.json();
+                updateOutput(`✅ Ping Status Test\n\n${JSON.stringify(data, null, 2)}`);
+            } catch (error) {
+                updateOutput(`❌ Error: ${error.message}`);
+            }
+        }
+        
+        async function testPingAll() {
+            updateOutput('Testing ping all devices...');
+            try {
+                const response = await fetch('/api/monitoring/ping-all', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                updateOutput(`✅ Ping All Test\n\n${JSON.stringify(data, null, 2)}`);
+            } catch (error) {
+                updateOutput(`❌ Error: ${error.message}`);
+            }
+        }
+        
+        async function testPingSingle() {
+            updateOutput('Testing ping single device...');
+            try {
+                const response = await fetch('/api/monitoring/device/1/ping', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                updateOutput(`✅ Ping Single Test\n\n${JSON.stringify(data, null, 2)}`);
+            } catch (error) {
+                updateOutput(`❌ Error: ${error.message}`);
+            }
+        }
+    </script>
+</body>
+</html>

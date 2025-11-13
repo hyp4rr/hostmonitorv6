@@ -69,12 +69,8 @@ class MonitorController extends Controller
             $branchId = $allBranches[0]['id'];
         }
 
-        // Get the current branch with relationships (exclude offline_ack devices)
-        $branch = Branch::with(['devices' => function ($query) {
-            $query->where('is_active', true)
-                ->where('status', '!=', 'offline_ack')
-                ->with(['location', 'hardwareDetail.brand', 'hardwareDetail.hardwareModel']);
-        }, 'locations'])->find($branchId);
+        // Get the current branch WITHOUT loading all devices (performance optimization)
+        $branch = Branch::with('locations')->find($branchId);
 
         if (!$branch) {
             return [
@@ -93,32 +89,11 @@ class MonitorController extends Controller
             ];
         }
 
-        // Transform devices to include location data
-        $transformedDevices = $branch->devices->map(function ($device) {
-            return [
-                'id' => $device->id,
-                'branch_id' => $device->branch_id,
-                'location_id' => $device->location_id,
-                'name' => $device->name,
-                'ip_address' => $device->ip_address,
-                'mac_address' => $device->mac_address,
-                'barcode' => $device->barcode,
-                'category' => $device->category,
-                'status' => $device->status,
-                'building' => $device->building,
-                'location' => $device->location ? $device->location->name : $device->building,
-                'latitude' => $device->location ? $device->location->latitude : null,
-                'longitude' => $device->location ? $device->location->longitude : null,
-                'brand' => $device->brand ?? '',
-                'model' => $device->model ?? '',
-                'uptime_percentage' => $device->uptime_percentage ?? 0,
-                'is_active' => $device->is_active,
-                'last_check' => $device->last_ping,
-                'response_time' => $device->response_time,
-                'last_ping' => $device->last_ping,
-                'updated_at' => $device->updated_at?->toIso8601String(),
-            ];
-        })->toArray();
+        // Get device count only (much faster than loading all devices)
+        $deviceCount = Device::where('branch_id', $branchId)
+            ->where('is_active', true)
+            ->where('status', '!=', 'offline_ack')
+            ->count();
 
         return [
             'id' => $branch->id,
@@ -129,8 +104,8 @@ class MonitorController extends Controller
             'latitude' => $branch->latitude,
             'longitude' => $branch->longitude,
             'is_active' => $branch->is_active,
-            'devices' => $transformedDevices,
-            'deviceCount' => count($transformedDevices),
+            'devices' => [], // Don't load devices here, use API pagination instead
+            'deviceCount' => $deviceCount,
             'locations' => $branch->locations->pluck('name')->unique()->values()->toArray(),
             'branches' => $allBranches,
         ];
@@ -311,9 +286,10 @@ class MonitorController extends Controller
     public function devices(Request $request)
     {
         $branchId = $this->getCurrentBranchId($request);
+        $branchData = $this->getBranchData($branchId);
         
         return Inertia::render('monitor/devices', [
-            'currentBranch' => $this->getBranchData($branchId),
+            'currentBranch' => $branchData,
         ]);
     }
 
