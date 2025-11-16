@@ -2,7 +2,7 @@ import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFo
 /**
 * @see \App\Http\Controllers\Api\SwitchController::index
  * @see app/Http/Controllers/Api/SwitchController.php:15
- * @route '/api/switches'
+ * @route '/switches'
  */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
@@ -11,13 +11,13 @@ export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 index.definition = {
     methods: ["get","head"],
-    url: '/api/switches',
+    url: '/switches',
 } satisfies RouteDefinition<["get","head"]>
 
 /**
 * @see \App\Http\Controllers\Api\SwitchController::index
  * @see app/Http/Controllers/Api/SwitchController.php:15
- * @route '/api/switches'
+ * @route '/switches'
  */
 index.url = (options?: RouteQueryOptions) => {
     return index.definition.url + queryParams(options)
@@ -26,7 +26,7 @@ index.url = (options?: RouteQueryOptions) => {
 /**
 * @see \App\Http\Controllers\Api\SwitchController::index
  * @see app/Http/Controllers/Api/SwitchController.php:15
- * @route '/api/switches'
+ * @route '/switches'
  */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
@@ -35,7 +35,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 /**
 * @see \App\Http\Controllers\Api\SwitchController::index
  * @see app/Http/Controllers/Api/SwitchController.php:15
- * @route '/api/switches'
+ * @route '/switches'
  */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: index.url(options),
@@ -45,7 +45,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     /**
 * @see \App\Http\Controllers\Api\SwitchController::index
  * @see app/Http/Controllers/Api/SwitchController.php:15
- * @route '/api/switches'
+ * @route '/switches'
  */
     const indexForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
         action: index.url(options),
@@ -55,7 +55,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
             /**
 * @see \App\Http\Controllers\Api\SwitchController::index
  * @see app/Http/Controllers/Api/SwitchController.php:15
- * @route '/api/switches'
+ * @route '/switches'
  */
         indexForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: index.url(options),
@@ -64,7 +64,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
             /**
 * @see \App\Http\Controllers\Api\SwitchController::index
  * @see app/Http/Controllers/Api/SwitchController.php:15
- * @route '/api/switches'
+ * @route '/switches'
  */
         indexForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: index.url({
@@ -80,7 +80,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 /**
 * @see \App\Http\Controllers\Api\SwitchController::stats
  * @see app/Http/Controllers/Api/SwitchController.php:36
- * @route '/api/switches/stats'
+ * @route '/switches/stats'
  */
 export const stats = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: stats.url(options),
@@ -89,13 +89,13 @@ export const stats = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 stats.definition = {
     methods: ["get","head"],
-    url: '/api/switches/stats',
+    url: '/switches/stats',
 } satisfies RouteDefinition<["get","head"]>
 
 /**
 * @see \App\Http\Controllers\Api\SwitchController::stats
  * @see app/Http/Controllers/Api/SwitchController.php:36
- * @route '/api/switches/stats'
+ * @route '/switches/stats'
  */
 stats.url = (options?: RouteQueryOptions) => {
     return stats.definition.url + queryParams(options)
@@ -104,7 +104,7 @@ stats.url = (options?: RouteQueryOptions) => {
 /**
 * @see \App\Http\Controllers\Api\SwitchController::stats
  * @see app/Http/Controllers/Api/SwitchController.php:36
- * @route '/api/switches/stats'
+ * @route '/switches/stats'
  */
 stats.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: stats.url(options),
@@ -113,7 +113,7 @@ stats.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 /**
 * @see \App\Http\Controllers\Api\SwitchController::stats
  * @see app/Http/Controllers/Api/SwitchController.php:36
- * @route '/api/switches/stats'
+ * @route '/switches/stats'
  */
 stats.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: stats.url(options),
@@ -123,7 +123,7 @@ stats.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     /**
 * @see \App\Http\Controllers\Api\SwitchController::stats
  * @see app/Http/Controllers/Api/SwitchController.php:36
- * @route '/api/switches/stats'
+ * @route '/switches/stats'
  */
     const statsForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
         action: stats.url(options),
@@ -133,7 +133,7 @@ stats.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
             /**
 * @see \App\Http\Controllers\Api\SwitchController::stats
  * @see app/Http/Controllers/Api/SwitchController.php:36
- * @route '/api/switches/stats'
+ * @route '/switches/stats'
  */
         statsForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: stats.url(options),
@@ -142,7 +142,7 @@ stats.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
             /**
 * @see \App\Http\Controllers\Api\SwitchController::stats
  * @see app/Http/Controllers/Api/SwitchController.php:36
- * @route '/api/switches/stats'
+ * @route '/switches/stats'
  */
         statsForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
             action: stats.url({
@@ -158,7 +158,7 @@ stats.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 /**
 * @see \App\Http\Controllers\Api\SwitchController::pingAll
  * @see app/Http/Controllers/Api/SwitchController.php:54
- * @route '/api/switches/ping-all'
+ * @route '/switches/ping-all'
  */
 export const pingAll = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: pingAll.url(options),
@@ -167,13 +167,13 @@ export const pingAll = (options?: RouteQueryOptions): RouteDefinition<'post'> =>
 
 pingAll.definition = {
     methods: ["post"],
-    url: '/api/switches/ping-all',
+    url: '/switches/ping-all',
 } satisfies RouteDefinition<["post"]>
 
 /**
 * @see \App\Http\Controllers\Api\SwitchController::pingAll
  * @see app/Http/Controllers/Api/SwitchController.php:54
- * @route '/api/switches/ping-all'
+ * @route '/switches/ping-all'
  */
 pingAll.url = (options?: RouteQueryOptions) => {
     return pingAll.definition.url + queryParams(options)
@@ -182,7 +182,7 @@ pingAll.url = (options?: RouteQueryOptions) => {
 /**
 * @see \App\Http\Controllers\Api\SwitchController::pingAll
  * @see app/Http/Controllers/Api/SwitchController.php:54
- * @route '/api/switches/ping-all'
+ * @route '/switches/ping-all'
  */
 pingAll.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: pingAll.url(options),
@@ -192,7 +192,7 @@ pingAll.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     /**
 * @see \App\Http\Controllers\Api\SwitchController::pingAll
  * @see app/Http/Controllers/Api/SwitchController.php:54
- * @route '/api/switches/ping-all'
+ * @route '/switches/ping-all'
  */
     const pingAllForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: pingAll.url(options),
@@ -202,7 +202,7 @@ pingAll.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
             /**
 * @see \App\Http\Controllers\Api\SwitchController::pingAll
  * @see app/Http/Controllers/Api/SwitchController.php:54
- * @route '/api/switches/ping-all'
+ * @route '/switches/ping-all'
  */
         pingAllForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: pingAll.url(options),
@@ -213,7 +213,7 @@ pingAll.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 /**
 * @see \App\Http\Controllers\Api\SwitchController::pingSingle
  * @see app/Http/Controllers/Api/SwitchController.php:71
- * @route '/api/switches/{id}/ping'
+ * @route '/switches/{id}/ping'
  */
 export const pingSingle = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: pingSingle.url(args, options),
@@ -222,13 +222,13 @@ export const pingSingle = (args: { id: string | number } | [id: string | number 
 
 pingSingle.definition = {
     methods: ["post"],
-    url: '/api/switches/{id}/ping',
+    url: '/switches/{id}/ping',
 } satisfies RouteDefinition<["post"]>
 
 /**
 * @see \App\Http\Controllers\Api\SwitchController::pingSingle
  * @see app/Http/Controllers/Api/SwitchController.php:71
- * @route '/api/switches/{id}/ping'
+ * @route '/switches/{id}/ping'
  */
 pingSingle.url = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
@@ -256,7 +256,7 @@ pingSingle.url = (args: { id: string | number } | [id: string | number ] | strin
 /**
 * @see \App\Http\Controllers\Api\SwitchController::pingSingle
  * @see app/Http/Controllers/Api/SwitchController.php:71
- * @route '/api/switches/{id}/ping'
+ * @route '/switches/{id}/ping'
  */
 pingSingle.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: pingSingle.url(args, options),
@@ -266,7 +266,7 @@ pingSingle.post = (args: { id: string | number } | [id: string | number ] | stri
     /**
 * @see \App\Http\Controllers\Api\SwitchController::pingSingle
  * @see app/Http/Controllers/Api/SwitchController.php:71
- * @route '/api/switches/{id}/ping'
+ * @route '/switches/{id}/ping'
  */
     const pingSingleForm = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
         action: pingSingle.url(args, options),
@@ -276,7 +276,7 @@ pingSingle.post = (args: { id: string | number } | [id: string | number ] | stri
             /**
 * @see \App\Http\Controllers\Api\SwitchController::pingSingle
  * @see app/Http/Controllers/Api/SwitchController.php:71
- * @route '/api/switches/{id}/ping'
+ * @route '/switches/{id}/ping'
  */
         pingSingleForm.post = (args: { id: string | number } | [id: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
             action: pingSingle.url(args, options),

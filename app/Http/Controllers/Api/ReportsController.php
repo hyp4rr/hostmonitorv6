@@ -20,19 +20,27 @@ class ReportsController extends Controller
     {
         $branchId = $request->input('branch_id');
         $dateRange = $request->input('date_range', '7days');
+        $category = $request->input('category', 'all');
         
-        $cacheKey = "reports.uptime.branch.{$branchId}.range.{$dateRange}";
+        $cacheKey = "reports.uptime.branch.{$branchId}.range.{$dateRange}.cat." . ($category === 'all' ? 'all' : strtolower($category));
         
         // Cache for 2 minutes (120 seconds)
-        $stats = Cache::remember($cacheKey, 120, function () use ($branchId, $dateRange) {
+        $stats = Cache::remember($cacheKey, 120, function () use ($branchId, $dateRange, $category) {
             // Calculate date range
             $startDate = $this->getStartDate($dateRange);
             
             // Get devices with their actual uptime data
-            $devices = Device::where('branch_id', $branchId)
+            $devicesQuery = Device::where('branch_id', $branchId)
                 ->where('is_active', true)
-                ->where('status', '!=', 'offline_ack')
-                ->select('id', 'name', 'category', 'uptime_percentage', 'offline_duration_minutes')
+                ->where('status', '!=', 'offline_ack');
+            
+            // Apply category filter if not 'all'
+            if ($category !== 'all') {
+                $categoryFilter = $this->normalizeCategory($category);
+                $devicesQuery->where('category', $categoryFilter);
+            }
+            
+            $devices = $devicesQuery->select('id', 'name', 'category', 'uptime_percentage', 'offline_duration_minutes')
                 ->get();
             
             // Get all monitoring history for these devices in one query
@@ -237,18 +245,27 @@ class ReportsController extends Controller
     {
         $branchId = $request->input('branch_id');
         $dateRange = $request->input('date_range', '7days');
+        $category = $request->input('category', 'all');
         
-        $cacheKey = "reports.summary.branch.{$branchId}.range.{$dateRange}";
+        $cacheKey = "reports.summary.branch.{$branchId}.range.{$dateRange}.cat." . ($category === 'all' ? 'all' : strtolower($category));
         
         // Cache for 2 minutes (120 seconds)
-        return Cache::remember($cacheKey, 120, function () use ($branchId, $dateRange) {
+        return Cache::remember($cacheKey, 120, function () use ($branchId, $dateRange, $category) {
             $startDate = $this->getStartDate($dateRange);
             
-            // Get aggregate stats in a single query
-            $deviceStats = Device::where('branch_id', $branchId)
+            // Build device query with category filter
+            $devicesQuery = Device::where('branch_id', $branchId)
                 ->where('is_active', true)
-                ->where('status', '!=', 'offline_ack')
-                ->select([
+                ->where('status', '!=', 'offline_ack');
+            
+            // Apply category filter if not 'all'
+            if ($category !== 'all') {
+                $categoryFilter = $this->normalizeCategory($category);
+                $devicesQuery->where('category', $categoryFilter);
+            }
+            
+            // Get aggregate stats in a single query
+            $deviceStats = $devicesQuery->select([
                     DB::raw('COUNT(*) as total_devices'),
                     DB::raw('AVG(uptime_percentage) as avg_uptime'),
                     DB::raw('SUM(offline_duration_minutes) as total_downtime_minutes')
@@ -260,11 +277,17 @@ class ReportsController extends Controller
             $totalDowntimeMinutes = $deviceStats->total_downtime_minutes ?? 0;
             
             // Count incidents using a more efficient query
-            // Get device IDs for this branch
-            $deviceIds = Device::where('branch_id', $branchId)
+            // Get device IDs for this branch with category filter
+            $deviceIdsQuery = Device::where('branch_id', $branchId)
                 ->where('is_active', true)
-                ->where('status', '!=', 'offline_ack')
-                ->pluck('id');
+                ->where('status', '!=', 'offline_ack');
+            
+            if ($category !== 'all') {
+                $categoryFilter = $this->normalizeCategory($category);
+                $deviceIdsQuery->where('category', $categoryFilter);
+            }
+            
+            $deviceIds = $deviceIdsQuery->pluck('id');
             
             // Count status transitions in a single query using window functions
             $totalIncidents = DB::table('monitoring_history as mh1')
@@ -325,6 +348,21 @@ class ReportsController extends Controller
             'cctv' => 'CCTV',
             'wifi' => 'WiFi',
             default => ucfirst($category),
+        };
+    }
+    
+    /**
+     * Normalize category name for filtering (convert display name to database value)
+     */
+    private function normalizeCategory($category)
+    {
+        return match(strtolower($category)) {
+            'switches' => 'switches',
+            'servers' => 'servers',
+            'wifi' => 'wifi',
+            'tas' => 'tas',
+            'cctv' => 'cctv',
+            default => strtolower($category),
         };
     }
 }

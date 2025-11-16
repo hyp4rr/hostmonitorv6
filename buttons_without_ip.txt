@@ -1,0 +1,81 @@
+BUTTONS WITHOUT IP ADDRESSES
+================================================================================
+
+Total: 14 buttons
+
+DEVICES WITHOUT IP (have showInfo):
+--------------------------------------------------------------------------------
+
+
+UI BUTTONS WITHOUT IP:
+--------------------------------------------------------------------------------
+
+Button #21:
+  Value: B4-Surau
+  Title: B4-Surau
+  Class: 
+
+Button #25:
+  Value: C10-Makmal FKEE
+  Title: C10-Makmal FKEE
+  Class: 
+
+Button #28:
+  Value: C13-Makmal Bahasa Disti
+  Title: C13-Makmal Bahasa Disti
+  Class: 
+
+Button #31:
+  Value: C15-1stFloor
+  Title: C15-1stFloor
+  Class: 
+
+Button #33:
+  Value: C16-1stfloor
+  Title: C16-1stfloor
+  Class: 
+
+Button #35:
+  Value: C17-1stfloor
+  Title: C17-1stfloor
+  Class: 
+
+Button #39:
+  Value: C2-CCTV Rack Server
+  Title: C2-CCTV Rack Server
+  Class: 
+
+Button #40:
+  Value: C2-Makmal Bahasa
+  Title: C2-Makmal Bahasa
+  Class: 
+
+Button #41:
+  Value: C2-Makmal CAD FKEE
+  Title: C2-Makmal CAD FKEE
+  Class: 
+
+Button #47:
+  Value: C7-Kabin
+  Title: C7-Kabin
+  Class: 
+
+Button #48:
+  Value: C8-Bilik Pensyarah
+  Title: C8-Bilik Pensyarah
+  Class: 
+
+Button #49:
+  Value: C9-Bilik Pensyarah
+  Title: C9-Bilik Pensyarah
+  Class: 
+
+Button #97:
+  Value: G1-A-Server UCiTV
+  Title: G1-A-Server UCiTV
+  Class: 
+
+Button #105:
+  Value: G2-G Makmal CADCAM2
+  Title: G2-G Makmal CADCAM2
+  Class: 

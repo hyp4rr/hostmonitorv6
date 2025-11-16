@@ -15,6 +15,7 @@ import {
     MapPin,
     Menu,
     Moon,
+    Network,
     Server,
     Settings,
     Sun,
@@ -50,6 +51,7 @@ interface NavItem {
 const navigation: NavItem[] = [
     { name: 'Dashboard', href: '/monitor/dashboard', icon: LayoutDashboard },
     { name: 'Devices', href: '/monitor/devices', icon: Server },
+    { name: 'Topology', href: '/monitor/topology', icon: Network },
     { name: 'Maps', href: '/monitor/maps', icon: MapPin },
     { name: 'Alerts', href: '/monitor/alerts', icon: Bell },
     { name: 'Reports', href: '/monitor/reports', icon: FileText },

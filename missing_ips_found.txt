@@ -1,0 +1,51 @@
+DEVICES THAT APPEARED TO HAVE NO IP
+================================================================================
+
+DEVICES WITH IPs FOUND:
+--------------------------------------------------------------------------------
+
+
+DEVICES STILL WITHOUT IP:
+--------------------------------------------------------------------------------
+B4-Surau
+  Onclick: No onclick
+
+C10-Makmal FKEE
+  Onclick: No onclick
+
+C13-Makmal Bahasa Disti
+  Onclick: No onclick
+
+C15-1stFloor
+  Onclick: No onclick
+
+C16-1stfloor
+  Onclick: No onclick
+
+C17-1stfloor
+  Onclick: No onclick
+
+C2-CCTV Rack Server
+  Onclick: No onclick
+
+C2-Makmal Bahasa
+  Onclick: No onclick
+
+C2-Makmal CAD FKEE
+  Onclick: No onclick
+
+C7-Kabin
+  Onclick: No onclick
+
+C8-Bilik Pensyarah
+  Onclick: No onclick
+
+C9-Bilik Pensyarah
+  Onclick: No onclick
+
+G1-A-Server UCiTV
+  Onclick: No onclick
+
+G2-G Makmal CADCAM2
+  Onclick: No onclick
+

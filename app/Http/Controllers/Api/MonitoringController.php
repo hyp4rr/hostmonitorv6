@@ -215,7 +215,7 @@ class MonitoringController extends Controller
         $allResults = [];
         $processedCount = 0;
         $totalDevices = $devices->count();
-        $pingTimeout = 500; // 500ms timeout per device (increased for slower networks)
+        $pingTimeout = 2000; // 2000ms (2 seconds) timeout per device for better accuracy
         
         $batches = $devices->chunk($batchSize);
         $batchCount = $batches->count();
@@ -261,12 +261,12 @@ class MonitoringController extends Controller
             $deviceMap[$device->id] = $device;
             
             if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-                // Windows: -w is timeout in milliseconds
-                $pingCommand = "ping -n 1 -w {$timeout} {$ip} 2>nul";
+                // Windows: -n 2 sends 2 packets for better accuracy, -w is timeout in milliseconds
+                $pingCommand = "ping -n 2 -w {$timeout} {$ip} 2>nul";
             } else {
-                // Linux/Mac: -W is timeout in seconds (convert ms to seconds)
+                // Linux/Mac: -c 2 sends 2 packets, -W is timeout in seconds
                 $timeoutSeconds = round($timeout / 1000, 1);
-                $pingCommand = "ping -c 1 -W {$timeoutSeconds} {$ip} 2>/dev/null";
+                $pingCommand = "ping -c 2 -W {$timeoutSeconds} {$ip} 2>/dev/null";
             }
             
             $descriptorspec = [
@@ -321,8 +321,8 @@ class MonitoringController extends Controller
         
         // Wait for all processes with timeout
         // Increased wait time to allow for network congestion and slower devices
-        // Wait time = ping timeout (500ms) + buffer (1000ms) = 1500ms total
-        $maxWaitTime = 1.5; // 1.5 seconds max wait (allows for slower network responses)
+        // Wait time = ping timeout (2000ms) + buffer (1000ms) = 3000ms total
+        $maxWaitTime = 3.0; // 3 seconds max wait (allows for slower network responses and timeout)
         $startWait = microtime(true);
         
         while (!empty($processes) && (microtime(true) - $startWait) < $maxWaitTime) {
@@ -447,21 +447,21 @@ class MonitoringController extends Controller
      */
     private function pingSingleDeviceFast($device)
     {
-        $timeout = 1000; // 1000ms (1 second) timeout for single device ping
+        $timeout = 2000; // 2000ms (2 seconds) timeout for single device ping for better accuracy
         $startTime = microtime(true);
         
         // Use optimized ping command with timeout
         if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-            // Windows: -w is timeout in milliseconds
-            $command = "ping -n 1 -w " . $timeout . " " . escapeshellarg($device->ip_address) . " 2>nul";
+            // Windows: -n 2 sends 2 packets for better accuracy, -w is timeout in milliseconds
+            $command = "ping -n 2 -w " . $timeout . " " . escapeshellarg($device->ip_address) . " 2>nul";
             $output = [];
             $returnCode = 0;
             exec($command, $output, $returnCode);
             $isOnline = ($returnCode === 0);
         } else {
-            // Linux/Mac: -W is timeout in seconds
+            // Linux/Mac: -c 2 sends 2 packets, -W is timeout in seconds
             $timeoutSeconds = round($timeout / 1000, 1);
-            $command = "ping -c 1 -W {$timeoutSeconds} " . escapeshellarg($device->ip_address) . " 2>/dev/null";
+            $command = "ping -c 2 -W {$timeoutSeconds} " . escapeshellarg($device->ip_address) . " 2>/dev/null";
             $output = [];
             $returnCode = 0;
             exec($command, $output, $returnCode);

@@ -40,6 +40,7 @@ Route::middleware('api')->group(function () {
     Route::apiResource('users', UserController::class);
     Route::apiResource('brands', BrandController::class);
     Route::apiResource('models', ModelController::class);
+    Route::apiResource('topologies', App\Http\Controllers\Api\TopologyController::class);
 });
 
 // Alert routes (only index, update, destroy - alerts are created by system)

@@ -80,14 +80,14 @@ export default function Reports() {
             })
             .catch(err => console.error('Error fetching devices:', err));
         
-        // Fetch summary
-        fetch(`/api/reports/summary?branch_id=${currentBranch.id}&date_range=${dateRange}`)
+        // Fetch summary with category filter
+        fetch(`/api/reports/summary?branch_id=${currentBranch.id}&date_range=${dateRange}&category=${selectedCategory}`)
             .then(res => res.json())
             .then(data => setSummary(data))
             .catch(err => console.error('Error fetching summary:', err));
         
-        // Fetch uptime stats
-        fetch(`/api/reports/uptime-stats?branch_id=${currentBranch.id}&date_range=${dateRange}`)
+        // Fetch uptime stats with category filter
+        fetch(`/api/reports/uptime-stats?branch_id=${currentBranch.id}&date_range=${dateRange}&category=${selectedCategory}`)
             .then(res => res.json())
             .then(data => setUptimeStats(data))
             .catch(err => console.error('Error fetching uptime stats:', err));
@@ -116,7 +116,7 @@ export default function Reports() {
             .then(data => setAlertSummary(data))
             .catch(err => console.error('Error fetching alert summary:', err))
             .finally(() => setIsLoading(false));
-    }, [currentBranch?.id, dateRange]);
+    }, [currentBranch?.id, dateRange, selectedCategory]);
 
     const filteredStats = selectedCategory === 'all' 
         ? uptimeStats 
@@ -176,24 +176,38 @@ export default function Reports() {
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         const branchName = currentBranch.name.replace(/[^a-zA-Z0-9]/g, '_');
         
-        // Summary statistics
-        const totalDevices = filteredStats.length;
-        const onlineDevices = allDevices.filter(d => d.status === 'online').length;
-        const offlineDevices = allDevices.filter(d => d.status === 'offline').length;
-        const warningDevices = allDevices.filter(d => d.status === 'warning').length;
-        const acknowledgedDevices = allDevices.filter(d => d.status === 'offline_ack').length;
-        const avgUptime = totalDevices > 0 
-            ? (filteredStats.reduce((sum, stat) => sum + (stat.uptime || 0), 0) / totalDevices).toFixed(2)
-            : '0.00';
-        const totalIncidents = filteredStats.reduce((sum, stat) => sum + stat.incidents, 0);
+        // Use real summary data from API (respects date range and category filters)
+        const totalDevices = summary?.devicesMonitored || filteredStats.length;
+        const avgUptime = summary?.avgUptime || (filteredStats.length > 0 
+            ? (filteredStats.reduce((sum, stat) => sum + (stat.uptime || 0), 0) / filteredStats.length).toFixed(2)
+            : '0.00');
+        const totalIncidents = summary?.totalIncidents || filteredStats.reduce((sum, stat) => sum + stat.incidents, 0);
+        const totalDowntime = summary?.totalDowntime?.formatted || '0m';
+        
+        // Filter devices based on category for accurate counts
+        const filteredDevices = selectedCategory === 'all' 
+            ? allDevices 
+            : allDevices.filter(d => {
+                const deviceCategory = d.category?.toLowerCase();
+                const selectedCat = selectedCategory.toLowerCase();
+                return deviceCategory === selectedCat || 
+                       (selectedCat === 'wifi' && deviceCategory === 'wifi') ||
+                       (selectedCat === 'tas' && deviceCategory === 'tas') ||
+                       (selectedCat === 'cctv' && deviceCategory === 'cctv');
+            });
+        
+        const onlineDevices = filteredDevices.filter(d => d.status === 'online').length;
+        const offlineDevices = filteredDevices.filter(d => d.status === 'offline').length;
+        const warningDevices = filteredDevices.filter(d => d.status === 'warning').length;
+        const acknowledgedDevices = filteredDevices.filter(d => d.status === 'offline_ack').length;
 
-        // Category breakdown
+        // Category breakdown (only for filtered devices)
         const categoryBreakdown = {
-            'Switches': allDevices.filter(d => d.category === 'switches').length,
-            'Servers': allDevices.filter(d => d.category === 'servers').length,
-            'WiFi': allDevices.filter(d => d.category === 'wifi').length,
-            'TAS': allDevices.filter(d => d.category === 'tas').length,
-            'CCTV': allDevices.filter(d => d.category === 'cctv').length,
+            'Switches': filteredDevices.filter(d => d.category?.toLowerCase() === 'switches').length,
+            'Servers': filteredDevices.filter(d => d.category?.toLowerCase() === 'servers').length,
+            'WiFi': filteredDevices.filter(d => d.category?.toLowerCase() === 'wifi').length,
+            'TAS': filteredDevices.filter(d => d.category?.toLowerCase() === 'tas').length,
+            'CCTV': filteredDevices.filter(d => d.category?.toLowerCase() === 'cctv').length,
         };
 
         // Build comprehensive CSV content with better formatting
@@ -227,6 +241,7 @@ export default function Reports() {
             ['Acknowledged Offline', acknowledgedDevices, `${((acknowledgedDevices/totalDevices)*100).toFixed(1)}%`],
             ['Average Uptime', `${avgUptime}%`, ''],
             ['Total Incidents', totalIncidents, ''],
+            ['Total Downtime', totalDowntime, `${summary?.totalDowntime?.percentage || 0}%`],
             [''],
 
             // Category Distribution with borders
@@ -252,7 +267,7 @@ export default function Reports() {
             ],
             ['---', '---', '---', '---', '---', '---', '---', '---', '---', '---', '---', '---', '---', '---', '---', '---', '---'],
             ...filteredStats.sort((a, b) => b.uptime - a.uptime).map(stat => {
-                const device = allDevices.find(d => d.name === stat.device);
+                const device = filteredDevices.find(d => d.name === stat.device);
                 const healthStatus = 
                     stat.uptime >= 99.9 ? 'EXCELLENT ★★★★★' :
                     stat.uptime >= 99.5 ? 'GOOD ★★★★' :
@@ -306,19 +321,27 @@ export default function Reports() {
             }),
             [''],
 
-            // Location Analysis
+            // Location Analysis (only filtered devices)
             [separator],
             ['LOCATION ANALYSIS'],
             [separator],
-            ['Location', 'Device Count', 'Avg Uptime %', 'Status'],
-            ['---', '---', '---', '---'],
-            ...Array.from(new Set(allDevices.map(d => d.location).filter(Boolean))).map(location => {
-                const locationDevices = allDevices.filter(d => d.location === location);
+            ['Location', 'Device Count', 'Avg Uptime %', 'Online', 'Offline', 'Status'],
+            ['---', '---', '---', '---', '---', '---'],
+            ...Array.from(new Set(filteredDevices.map(d => d.location).filter(Boolean))).map(location => {
+                const locationDevices = filteredDevices.filter(d => d.location === location);
                 const avgLocUptime = locationDevices.length > 0
-                    ? (locationDevices.reduce((sum, d) => sum + (d.uptime_percentage || 0), 0) / locationDevices.length).toFixed(2)
+                    ? (locationDevices.reduce((sum, d) => {
+                        const deviceStat = filteredStats.find(s => {
+                            const device = filteredDevices.find(fd => fd.name === s.device);
+                            return device?.location === location;
+                        });
+                        return sum + (deviceStat?.uptime || d.uptime_percentage || 0);
+                    }, 0) / locationDevices.length).toFixed(2)
                     : '0.00';
+                const onlineCount = locationDevices.filter(d => d.status === 'online').length;
+                const offlineCount = locationDevices.filter(d => d.status === 'offline').length;
                 const status = parseFloat(avgLocUptime) >= 99 ? 'Healthy' : 'Needs Attention';
-                return [location, locationDevices.length, `${avgLocUptime}%`, status];
+                return [location, locationDevices.length, `${avgLocUptime}%`, onlineCount, offlineCount, status];
             }),
             [''],
 
@@ -329,7 +352,7 @@ export default function Reports() {
             ['Device Name', 'IP Address', 'Category', 'Location', 'Uptime %', 'Status', 'Priority', 'Action Required'],
             ['---', '---', '---', '---', '---', '---', '---', '---'],
             ...filteredStats.filter(stat => stat.uptime < 99).map(stat => {
-                const device = allDevices.find(d => d.name === stat.device);
+                const device = filteredDevices.find(d => d.name === stat.device);
                 const priority = stat.uptime < 95 ? '🔴 CRITICAL' : stat.uptime < 97 ? '🟡 HIGH' : '🟢 MEDIUM';
                 const action = stat.uptime < 95 ? 'IMMEDIATE ACTION REQUIRED' : stat.uptime < 97 ? 'INVESTIGATE SOON' : 'MONITOR CLOSELY';
                 return [
@@ -345,13 +368,13 @@ export default function Reports() {
             }),
             [''],
 
-            // Offline Devices
+            // Offline Devices (only filtered devices)
             [separator],
             ['CURRENTLY OFFLINE DEVICES'],
             [separator],
             ['Device Name', 'IP Address', 'Category', 'Location', 'Barcode', 'Last Seen', 'Offline Duration', 'Reason'],
             ['---', '---', '---', '---', '---', '---', '---', '---'],
-            ...allDevices.filter(d => d.status === 'offline' || d.status === 'offline_ack').map(device => [
+            ...filteredDevices.filter(d => d.status === 'offline' || d.status === 'offline_ack').map(device => [
                 device.name,
                 device.ip_address,
                 device.category.charAt(0).toUpperCase() + device.category.slice(1),

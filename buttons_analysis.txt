@@ -1,0 +1,227 @@
+ANALYSIS OF ALL 355 BUTTONS
+================================================================================
+
+Total buttons: 355
+Devices with IPs: 322
+Buttons without IPs: 31
+
+
+BUTTONS WITHOUT IPs:
+--------------------------------------------------------------------------------
+
+Button #21:
+  Value: B4-Surau
+  Title: B4-Surau
+  Class: 
+  Has showInfo: False
+  HTML: <input type=button class=Alive value='B4-Surau' title="B4-Surau" onmouseover="javascript:showHint('B4-Surau<br>
+
+Button #25:
+  Value: C10-Makmal FKEE
+  Title: C10-Makmal FKEE
+  Class: 
+  Has showInfo: False
+  HTML: <input type=button class=Alive value='C10-Makmal FKEE' title="C10-Makmal FKEE" onmouseover="javascript:showHint('C10-Makmal FKEE<br>
+
+Button #26:
+  Value: C11-10.8.3.39
+  Title: C11-10.8.3.39
+  Class: 
+  Has showInfo: False
+  HTML: <input type=button class=Alive value='C11-10.8.3.39' title="C11-10.8.3.39" onmouseover="javascript:showHint('C11-10.8.3.39<br>
+
+Button #27:
+  Value: C12-Makmal Fizik Kimia - 48x2 - 10.8....
+  Title: C12-Makmal Fizik Kimia - 48x2 - 10.8.3.10
+  Class: 
+  Has showInfo: False
+  HTML: <input type=button class=Alive value='C12-Makmal Fizik Kimia - 48x2 - 10.8....' title="C12-Makmal Fizik Kimia - 48x2 - 10.8.3.10" onmouseover="javascr
+
+Button #28:
+  Value: C13-Makmal Bahasa Disti
+  Title: C13-Makmal Bahasa Disti
+  Class: 
+  Has showInfo: False
+  HTML: <input type=button class=Alive value='C13-Makmal Bahasa Disti' title="C13-Makmal Bahasa Disti" onmouseover="javascript:showHint('C13-Makmal Bahasa Dis
+
+Button #31:
+  Value: C15-1stFloor
+  Title: C15-1stFloor
+  Class: 
+  Has showInfo: False
+  HTML: <input type=button class=Alive value='C15-1stFloor' title="C15-1stFloor" onmouseover="javascript:showHint('C15-1stFloor<br>
+
+Button #33:
+  Value: C16-1stfloor
+  Title: C16-1stfloor
+  Class: 
+  Has showInfo: False
+  HTML: <input type=button class=Alive value='C16-1stfloor' title="C16-1stfloor" onmouseover="javascript:showHint('C16-1stfloor<br>
+
+Button #35:
+  Value: C17-1stfloor
+  Title: C17-1stfloor
+  Class: 
+  Has showInfo: False
+  HTML: <input type=button class=Alive value='C17-1stfloor' title="C17-1stfloor" onmouseover="javascript:showHint('C17-1stfloor<br>
+
+Button #39:
+  Value: C2-CCTV Rack Server
+  Title: C2-CCTV Rack Server
+  Class: 
+  Has showInfo: False
+  HTML: <input type=button class=Alive value='C2-CCTV Rack Server' title="C2-CCTV Rack Server" onmouseover="javascript:showHint('C2-CCTV Rack Server<br>
+
+Button #40:
+  Value: C2-Makmal Bahasa
+  Title: C2-Makmal Bahasa
+  Class: 
+  Has showInfo: False
+  HTML: <input type=button class=Alive value='C2-Makmal Bahasa' title="C2-Makmal Bahasa" onmouseover="javascript:showHint('C2-Makmal Bahasa<br>
+
+Button #41:
+  Value: C2-Makmal CAD FKEE
+  Title: C2-Makmal CAD FKEE
+  Class: 
+  Has showInfo: False
+  HTML: <input type=button class=ACK value='C2-Makmal CAD FKEE' title="C2-Makmal CAD FKEE" onmouseover="javascript:showHint('C2-Makmal CAD FKEE<br>
+
+Button #44:
+  Value: C3 Stor PKSK 10.8.3.12 Avaya
+  Title: C3 Stor PKSK 10.8.3.12 Avaya
+  Class: 
+  Has showInfo: False
+  HTML: <input type=button class=Alive value='C3 Stor PKSK 10.8.3.12 Avaya' title="C3 Stor PKSK 10.8.3.12 Avaya" onmouseover="javascript:showHint('C3 Stor PKS
+
+Button #47:
+  Value: C7-Kabin
+  Title: C7-Kabin
+  Class: 
+  Has showInfo: False
+  HTML: <input type=button class=Alive value='C7-Kabin' title="C7-Kabin" onmouseover="javascript:showHint('C7-Kabin<br>
+
+Button #48:
+  Value: C8-Bilik Pensyarah
+  Title: C8-Bilik Pensyarah
+  Class: 
+  Has showInfo: False
+  HTML: <input type=button class=Alive value='C8-Bilik Pensyarah' title="C8-Bilik Pensyarah" onmouseover="javascript:showHint('C8-Bilik Pensyarah<br>
+
+Button #49:
+  Value: C9-Bilik Pensyarah
+  Title: C9-Bilik Pensyarah
+  Class: 
+  Has showInfo: False
+  HTML: <input type=button class=Alive value='C9-Bilik Pensyarah' title="C9-Bilik Pensyarah" onmouseover="javascript:showHint('C9-Bilik Pensyarah<br>
+
+Button #97:
+  Value: G1-A-Server UCiTV
+  Title: G1-A-Server UCiTV
+  Class: 
+  Has showInfo: False
+  HTML: <input type=button class=Alive value='G1-A-Server UCiTV' title="G1-A-Server UCiTV" onmouseover="javascript:showHint('G1-A-Server UCiTV<br>
+
+Button #105:
+  Value: G2-G Makmal CADCAM2
+  Title: G2-G Makmal CADCAM2
+  Class: 
+  Has showInfo: False
+  HTML: <input type=button class=Alive value='G2-G Makmal CADCAM2' title="G2-G Makmal CADCAM2" onmouseover="javascript:showHint('G2-G Makmal CADCAM2<br>
+
+Button #118:
+  Value: A 1stFlr FKAAS Block A (South East) 1...
+  Title: A 1stFlr FKAAS Block A (South East) 10.8.3.45
+  Class: 
+  Has showInfo: False
+  HTML: <input type=button class=Alive value='A 1stFlr FKAAS Block A (South East) 1...' title="A 1stFlr FKAAS Block A (South East) 10.8.3.45" onmouseover="jav
+
+Button #119:
+  Value: A 2ndFlr FKAAS Block A (South East) 1...
+  Title: A 2ndFlr FKAAS Block A (South East) 10.8.3.69
+  Class: 
+  Has showInfo: False
+  HTML: <input type=button class=Alive value='A 2ndFlr FKAAS Block A (South East) 1...' title="A 2ndFlr FKAAS Block A (South East) 10.8.3.69" onmouseover="jav
+
+Button #120:
+  Value: A 3rdFlr FKAAS Block A (South East) 1...
+  Title: A 3rdFlr FKAAS Block A (South East) 10.8.3.88
+  Class: 
+  Has showInfo: False
+  HTML: <input type=button class=Alive value='A 3rdFlr FKAAS Block A (South East) 1...' title="A 3rdFlr FKAAS Block A (South East) 10.8.3.88" onmouseover="jav
+
+Button #121:
+  Value: A 4thFlr FKAAS Block A (South East) 1...
+  Title: A 4thFlr FKAAS Block A (South East) 10.8.3.127
+  Class: 
+  Has showInfo: False
+  HTML: <input type=button class=Alive value='A 4thFlr FKAAS Block A (South East) 1...' title="A 4thFlr FKAAS Block A (South East) 10.8.3.127" onmouseover="ja
+
+Button #122:
+  Value: A 5thFlrFKAAS Block A (South East) 10...
+  Title: A 5thFlrFKAAS Block A (South East) 10.8.3.128
+  Class: 
+  Has showInfo: False
+  HTML: <input type=button class=Alive value='A 5thFlrFKAAS Block A (South East) 10...' title="A 5thFlrFKAAS Block A (South East) 10.8.3.128" onmouseover="jav
+
+Button #123:
+  Value: A 6thFlr FKAAS Block A (South East) 1...
+  Title: A 6thFlr FKAAS Block A (South East) 10.8.3.129
+  Class: 
+  Has showInfo: False
+  HTML: <input type=button class=Alive value='A 6thFlr FKAAS Block A (South East) 1...' title="A 6thFlr FKAAS Block A (South East) 10.8.3.129" onmouseover="ja
+
+Button #124:
+  Value: A 7thFlr FKAAS Block A (South East) 1...
+  Title: A 7thFlr FKAAS Block A (South East) 10.8.3.139
+  Class: 
+  Has showInfo: False
+  HTML: <input type=button class=Alive value='A 7thFlr FKAAS Block A (South East) 1...' title="A 7thFlr FKAAS Block A (South East) 10.8.3.139" onmouseover="ja
+
+Button #125:
+  Value: A 8thFlr FKAAS Block A (South East) 1...
+  Title: A 8thFlr FKAAS Block A (South East) 10.8.3.140
+  Class: 
+  Has showInfo: False
+  HTML: <input type=button class=Alive value='A 8thFlr FKAAS Block A (South East) 1...' title="A 8thFlr FKAAS Block A (South East) 10.8.3.140" onmouseover="ja
+
+Button #126:
+  Value: A GrndFlr FKAAS Block A (South East) ...
+  Title: A GrndFlr FKAAS Block A (South East) 10.8.3.59
+  Class: 
+  Has showInfo: False
+  HTML: <input type=button class=Alive value='A GrndFlr FKAAS Block A (South East) ...' title="A GrndFlr FKAAS Block A (South East) 10.8.3.59" onmouseover="ja
+
+Button #136:
+  Value: C Mezzanine Flr FKAAS C (North Eas...222
+  Title: C Mezzanine Flr FKAAS C (North East) 10.8.3.222
+  Class: 
+  Has showInfo: False
+  HTML: <input type=button class=Alive value='C Mezzanine Flr FKAAS C (North Eas...222' title="C Mezzanine Flr FKAAS C (North East) 10.8.3.222" onmouseover="j
+
+Button #191:
+  Value: KC-FPTV-1stFloorPusat Sumber FPTV 10....
+  Title: KC-FPTV-1stFloorPusat Sumber FPTV 10.8.2.11
+  Class: 
+  Has showInfo: False
+  HTML: <input type=button class=Alive value='KC-FPTV-1stFloorPusat Sumber FPTV 10....' title="KC-FPTV-1stFloorPusat Sumber FPTV 10.8.2.11" onmouseover="javas
+
+Button #339:
+  Value: Nursery Master UBNT (mounting at G...207
+  Title: Nursery Master UBNT (mounting at G9 Biodiesel GF 3.234) 10.8.207.207
+  Class: 
+  Has showInfo: False
+  HTML: <input type=button class=Alive value='Nursery Master UBNT (mounting at G...207' title="Nursery Master UBNT (mounting at G9 Biodiesel GF 3.234) 10.8.20
+
+Button #341:
+  Value: Pos 6 Pengawal Master UBNTBalkoni ...207
+  Title: Pos 6 Pengawal Master UBNTBalkoni Library to Tmn U - 10.63.43.207
+  Class: 
+  Has showInfo: False
+  HTML: <input type=button class=Alive value='Pos 6 Pengawal Master UBNTBalkoni ...207' title="Pos 6 Pengawal Master UBNTBalkoni Library to Tmn U - 10.63.43.2
+
+Button #342:
+  Value: Pos 6 Pengawal Remote UBNT Tmn U t...208
+  Title: Pos 6 Pengawal Remote UBNT Tmn U to Balkoni  Library - 10.63.43.208
+  Class: 
+  Has showInfo: False
+  HTML: <input type=button class=Alive value='Pos 6 Pengawal Remote UBNT Tmn U t...208' title="Pos 6 Pengawal Remote UBNT Tmn U to Balkoni  Library - 10.63.43

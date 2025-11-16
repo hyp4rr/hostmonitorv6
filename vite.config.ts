@@ -24,7 +24,7 @@ export default defineConfig({
         host: '0.0.0.0',
         port: 3000, // Changed from 5174 to 3000
         hmr: {
-            host: 'localhost',
+            host: '192.168.1.128',
         },
     },
     esbuild: {

@@ -249,7 +249,7 @@ export default function Configuration() {
     
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
-    const [perPage, setPerPage] = useState(50);
+    const [perPage, setPerPage] = useState(300);
     const [totalItems, setTotalItems] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
 
@@ -520,17 +520,31 @@ export default function Configuration() {
             const formData = new FormData(document.querySelector('form') as HTMLFormElement);
             const data: Record<string, any> = {};
             
-            // Convert FormData to object, handling checkboxes properly
-            formData.forEach((value, key) => {
+            // Convert FormData to object, handling arrays and checkboxes properly
+            formData.forEach((value, rawKey) => {
+                const key = rawKey.endsWith('[]') ? rawKey.slice(0, -2) : rawKey;
                 // Skip empty values for optional foreign keys
-                if (key === 'location_id' && value === '') {
-                    return;
+                if (key === 'location_id' && value === '') return;
+                if (key === 'hardware_detail_id' && value === '') return;
+
+                // Collect array fields (e.g., managed_by_ids[])
+                if (rawKey.endsWith('[]')) {
+                    if (!Array.isArray(data[key])) {
+                        data[key] = [];
+                    }
+                    if (value !== '') {
+                        data[key].push(value);
+                    }
+                } else {
+                    data[key] = value;
                 }
-                if (key === 'hardware_detail_id' && value === '') {
-                    return;
-                }
-                data[key] = value;
             });
+
+            // Normalize specific types
+            if (Array.isArray(data.managed_by_ids)) {
+                // Convert to numbers and dedupe
+                data.managed_by_ids = Array.from(new Set(data.managed_by_ids.map((v: any) => Number(v)).filter((v: any) => !Number.isNaN(v))));
+            }
             
             // Convert boolean checkboxes - must check if key exists in form
             const form = document.querySelector('form') as HTMLFormElement;
@@ -1692,6 +1706,19 @@ export default function Configuration() {
                                                 }`}>
                                                     {viewDevice.managed_by_user.role}
                                                 </span>
+                                                {Array.isArray((viewDevice as any).managed_by_users) && (viewDevice as any).managed_by_users.length > 0 && (
+                                                    <div className="mt-3 space-y-1">
+                                                        <div className="text-xs font-medium text-slate-600 dark:text-slate-400">Additional Managers</div>
+                                                        <ul className="space-y-1">
+                                                            {(viewDevice as any).managed_by_users.map((u: any) => (
+                                                                <li key={u.id} className="flex items-center justify-between text-sm">
+                                                                    <span className="text-slate-900 dark:text-white">{u.name}</span>
+                                                                    <span className="text-xs text-slate-500 dark:text-slate-400">{u.email}</span>
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                )}
                                             </div>
                                         ) : (
                                             <p className="mt-1 text-slate-400 dark:text-slate-600">Not assigned</p>
@@ -1729,6 +1756,28 @@ export default function Configuration() {
                                                 Response Time
                                             </label>
                                             <p className="mt-1 text-slate-900 dark:text-white">{viewDevice.response_time}ms</p>
+                                        </div>
+                                    )}
+
+                                    {viewDevice.status === 'offline_ack' && viewDevice.offline_reason && (
+                                        <div>
+                                            <label className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                                                Offline Reason
+                                            </label>
+                                            <div className="mt-1 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-900/30 dark:bg-blue-950/30">
+                                                <p className="text-sm text-blue-900 dark:text-blue-200">{viewDevice.offline_reason}</p>
+                                                {viewDevice.offline_acknowledged_by && (
+                                                    <div className="mt-2 flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400">
+                                                        <span>Acknowledged by {viewDevice.offline_acknowledged_by}</span>
+                                                        {viewDevice.offline_acknowledged_at && (
+                                                            <>
+                                                                <span>•</span>
+                                                                <span>{new Date(viewDevice.offline_acknowledged_at).toLocaleString()}</span>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -2141,6 +2190,7 @@ function DevicesTable({
                         </div>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Active</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Managed By</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Branch</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Location</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Brand/Model</th>
@@ -2202,6 +2252,24 @@ function DevicesTable({
                                     </>
                                 )}
                             </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">
+                            {device.managed_by_user || (device as any).managed_by_users ? (
+                                <div className="flex flex-wrap items-center gap-1">
+                                    {device.managed_by_user && (
+                                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium dark:bg-slate-700">
+                                            {device.managed_by_user.name}
+                                        </span>
+                                    )}
+                                    {Array.isArray((device as any).managed_by_users) && (device as any).managed_by_users.map((u: any) => (
+                                        <span key={u.id} className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium dark:bg-slate-700">
+                                            {u.name}
+                                        </span>
+                                    ))}
+                                </div>
+                            ) : (
+                                <span className="text-slate-400 dark:text-slate-500">-</span>
+                            )}
                         </td>
                         <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
                             <div className="flex items-center gap-2">
@@ -3896,6 +3964,32 @@ function EntityForm({
         const selectedModel = models.find(m => m.id === selectedModelId);
         const selectedBrand = selectedModel?.brand;
 
+        // Additional Managers UI state (dynamic selects)
+        const [managerIds, setManagerIds] = useState<Array<number | null>>(() => {
+            const initial = Array.isArray((deviceData as any)?.managed_by_users)
+                ? (deviceData as any).managed_by_users.map((u: any) => Number(u.id))
+                : [];
+            return initial.length ? initial : [];
+        });
+        // Keep primary manager controlled so it updates when switching items
+        const [selectedManagedBy, setSelectedManagedBy] = useState<number | ''>(deviceData?.managed_by ?? '');
+        useEffect(() => {
+            setSelectedManagedBy(deviceData?.managed_by ?? '');
+            const initial = Array.isArray((deviceData as any)?.managed_by_users)
+                ? (deviceData as any).managed_by_users.map((u: any) => Number(u.id))
+                : [];
+            setManagerIds(initial);
+        }, [deviceData]);
+        const addManagerSelect = () => setManagerIds(ids => [...ids, null]);
+        const removeManagerAt = (idx: number) =>
+            setManagerIds(ids => ids.filter((_, i) => i !== idx));
+        const updateManagerAt = (idx: number, value: string) =>
+            setManagerIds(ids => {
+                const copy = [...ids];
+                copy[idx] = value ? Number(value) : null;
+                return copy;
+            });
+
         const filteredModels = brandFilter 
             ? models.filter(m => m.brand_id === brandFilter)
             : models;
@@ -3936,7 +4030,12 @@ function EntityForm({
                         </div>
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Managed By</label>
-                            <select name="managed_by" defaultValue={deviceData?.managed_by || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white">
+                            <select 
+                                name="managed_by" 
+                                value={selectedManagedBy} 
+                                onChange={(e) => setSelectedManagedBy(e.target.value ? Number(e.target.value) : '')}
+                                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                            >
                                 <option value="">Not Assigned</option>
                                 {users && users.length > 0 && users.map((user: UserData) => (
                                     <option key={user.id} value={user.id}>
@@ -3944,6 +4043,48 @@ function EntityForm({
                                     </option>
                                 ))}
                             </select>
+                        </div>
+                        <div>
+                            <div className="mb-2 flex items-center justify-between">
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Additional Managers</label>
+                                <button
+                                    type="button"
+                                    onClick={addManagerSelect}
+                                    className="rounded-md bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                >
+                                    + Add Manager
+                                </button>
+                            </div>
+                            <div className="space-y-2">
+                                {managerIds.length === 0 && (
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">No additional managers. Click “Add Manager”.</p>
+                                )}
+                                {managerIds.map((val, idx) => (
+                                    <div key={idx} className="flex items-center gap-2">
+                                        <select
+                                            name="managed_by_ids[]"
+                                            value={val ?? ''}
+                                            onChange={(e) => updateManagerAt(idx, e.target.value)}
+                                            className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                                        >
+                                            <option value="">Select user</option>
+                                            {users && users.length > 0 && users.map((user: UserData) => (
+                                                <option key={user.id} value={user.id}>
+                                                    {user.name} ({user.role})
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <button
+                                            type="button"
+                                            onClick={() => removeManagerAt(idx)}
+                                            className="rounded-md border border-slate-300 px-2.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
+                                            title="Remove"
+                                        >
+                                            Remove
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">IP Address *</label>
@@ -4551,10 +4692,10 @@ function Pagination({
                         onChange={(e) => onPerPageChange(Number(e.target.value))}
                         className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
                     >
-                        <option value={25}>25 per page</option>
-                        <option value={50}>50 per page</option>
-                        <option value={100}>100 per page</option>
-                        <option value={200}>200 per page</option>
+                        <option value={300}>300 per page</option>
+                        <option value={500}>500 per page</option>
+                        <option value={800}>800 per page</option>
+                        <option value={1000}>1000 per page</option>
                     </select>
                 </div>
                 <div>

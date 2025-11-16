@@ -1,151 +1,178 @@
-﻿location,name,ip_address,status,response_time
-A5,eoffice.uthm.edu.my : Ping,161.139.246.177,online,1
-A5,epayment.uthm.edu.my : Ping,161.139.246.237,online,1
-A5,eplm.uthm.edu.my : Ping,161.139.246.220,online,1
-A5,lpu.uthm.edu.my : Ping,161.139.246.180,online,1
-A5,saas idrac :,192.168.242.121,online,1
-A5,telefon.uthm.edu.my,161.139.246.60,online,1
-A5,01 senafizikal,192.168.241.231,online,1
-A5,02 netapp,161.139.246.104,online,1
-A5,07 oricc physical,192.168.241.174,online,1
-A5,071 dms,192.168.241.190,online,1
-A5,072 orric win server:,192.168.241.175,online,1
-A5,192.168.240.1 smtpgw,192.168.240.1,online,1
-A5,192.168.240.244 ldap,192.168.240.244,online,1
-A5,comsol,192.168.241.206,online,1
-A5,cst license,192.168.241.186,online,1
-A5,helpdesk,161.139.246.227,online,1
-A5,matlab,192.168.241.166,online,1
-A5,Ping: 192.168.240.2 mxout,192.168.240.2,online,1
-A5,rhev manager,161.139.246.70,online,1
-A5,rhev03,161.139.246.73,online,1
-A5,rhev04,161.139.246.76,online,1
-A5,sap,192.168.241.215,online,1
-A5,solidwork fkee,192.168.242.207,online,1
-A5,vmha01,192.168.241.1,online,1
-A5,vmha04,192.168.241.4,online,1
-A5,vmha06,192.168.242.206,online,1
-A5,vmha08,192.168.242.243,online,1
-A5,01 fortigate,192.168.2.253,online,1
-PUMAS,02 hypergrid 01,10.100.141.11,online,1
-PUMAS,02 hypergrid 02,10.100.141.12,online,1
-PUMAS,02 hypergrid 03,10.100.141.13,online,1
-PUMAS,02 hypergrid host,10.100.141.10,online,1
-A5,02 sangfor,10.8.46.117,online,1
-A5,04 sena speed,192.168.6.41,online,1
-A5,04 sena uptime,192.168.240.189,online,1
-A5,06 fortianalyzer,192.168.2.8,online,1
-A5,07 senaserver,192.168.6.42,online,1
-A5,08 b TCP 192.168.6.50,192.168.6.50,online,1
-A5,09 mdrfkmp,192.168.6.51,online,1
-PUMAS,13 timetable,10.100.141.35,online,1
-PUMAS,14 titmetabledb,10.100.141.36,online,1
-PUMAS,Ping: 10.100.141.70 umpstaging,10.100.141.70,online,1
-A5,HCI Sangfor Node 1,192.168.242.2,online,1
-A5,HCI Sangfor Node 2,192.168.242.3,online,1
-A5,acronis:,192.168.241.221,online,1
-A5,author,192.168.241.122,online,1
-A5,plaxis lesen server,10.8.201.205,online,1
-A5,vmha03,192.168.241.3,online,1
-A5,vmha05:,192.168.241.5,online,1
-A5,vmha07,192.168.242.212,online,1
-A5,BCKP SVR,161.139.246.158,online,1
-A5,CS,161.139.246.150,online,1
-A5,CS,161.139.246.151,online,1
-A5,MPR,161.139.246.155,online,1
-A5,Rack EMC A,10.8.2.244,online,1
-A5,SAN SW,161.139.246.154,online,1
-A5,SP A,161.139.246.152,online,1
-A5,SP B,161.139.246.153,online,1
-A5,TAPE LIB,161.139.246.159,online,1
-A5,CS,192.168.240.150,online,1
-A5,CS,192.168.240.151,online,1
-A5,EMC RACK C,10.8.2.245,online,1
-A5,MPR,192.168.240.155,online,1
-A5,SAN SW,192.168.240.154,online,1
-A5,SP A,192.168.240.152,online,1
-A5,SP B,192.168.240.153,online,1
-A5,01 firewall,192.168.1.1,online,1
-A5,02 firewall port 2,103.31.35.2,online,1
-A5,02 fw port 1,103.31.34.2,online,1
-A5,03 bgp,103.31.34.1,online,1
-A5,04 ipcore hq,10.250.250.97,online,1
-A5,05 ipcore gateway,198.19.19.2,online,1
-A5,06 ipcore google myix,218.100.44.92,online,1
-A5,07 vpn internal,10.8.45.7,online,1
-A5,041 10.8.2.82 dnswifi01 ping,10.8.2.82,online,1
-A5,042 10.8.2.83 dnswifi,10.8.2.83,online,1
-A5,043 10.8.2.201 dnswifi,10.8.2.201,online,1
-A5,044 10.8.2.202 dnswifi,10.8.2.202,online,1
-A5,05 192.168.241.181 AD,192.168.241.181,online,1
-A5,,192.168.0.10,online,1
-A5,,192.168.0.238,online,1
-A5,,192.168.0.242,online,1
-A5,,192.168.0.243,online,1
-A5,,192.168.0.244,online,1
-A5,,192.168.0.245,online,1
-A5,,192.168.0.248,online,1
-A5,,192.168.0.8,online,1
-A5,,192.168.0.9,online,1
-A5,A01,203.80.22.66,online,1
-A5,A02 103.17.78.137 myren router,103.17.78.137,online,1
-A5,A03 103.130.13.129 maxis ip router,103.130.13.129,online,1
-A5,A03 182.23.148.207 upstream,182.23.148.207,online,1
-A5,dell idrac pagoh 2,10.5.32.121,online,1
-A5,idrac dellpagoh1,10.5.32.120,online,1
-PUMAS,peplink pumas internal,10.100.2.1,online,1
-A5,pumas 01,202.188.211.129,online,1
-PUMAS,sangfor pumas,10.100.2.2,online,1
-PUMAS,server terminal,10.100.1.1,online,1
-A5,Ping: 10.9.155.254 gw vlan,10.9.155.254,online,1
-A5,Ping: 10.9.159.254 gw vlan,10.9.159.254,online,1
-A5,Ping: 10.9.163.254 gw vlan,10.9.163.254,online,1
-A5,Ping: 10.9.167.254 gw vlan,10.9.167.254,online,1
-A5,Ping: 10.9.207.254 gw vlan,10.9.207.254,online,1
-A5,Ping: 10.9.211.254 gw vlan,10.9.211.254,online,1
-A5,Ping: 124.13.44.33 firewall bcb,124.13.44.33,online,1
-A5,Ping: 172.16.250.254 gw server vlan,172.16.250.254,online,1
-A5,Ping: 192.168.40.1 lan firewall bcb,192.168.40.1,online,1
-A5,Ping: 10.64.3.254 lan port,10.64.3.254,online,1
-A5,Ping: 58.26.136.25 firewall,58.26.136.25,online,1
-A5,,198.19.19.0,online,1
-A5,,198.19.19.255,online,1
-A5,04 google mxyix,218.100.44.158,online,1
-A5,ArubaLab Academy FSKTM 2ndFloor Switc,10.8.2.12,online,1
-A5,fsktm,10.65.201.205,online,1
-A5,fsktm2,10.65.201.207,online,1
-A5,linux,10.65.201.21,online,1
-A5,,10.65.201.23,online,1
-A5,printer hp laserjet,10.65.200.3,online,1
-A5,supermicro,10.65.201.17,online,1
-A5,SW 48x2 Bilik Seminar 1 Infosys Lv,10.65.85.183,online,1
-A5,SW 48x2 Bilik Seminar 1 Infosys Lvl,10.8.2.51,online,1
-A5,SW Makmal Inffosys,10.8.2.85,online,1
-A5,windows10,10.65.201.206,online,1
-A5,elibrary,10.8.200.4,online,1
-A5,koha,10.63.200.2,online,1
-A5,memory,10.8.200.10,online,1
-A5,vmware,10.63.201.201,online,1
-A5,vmware,10.63.201.49,online,1
-A5,vmware dev,10.63.200.6,online,1
-A5,10G RACK7,10.8.3.159,online,1
-A5,EMS,10.8.2.4,online,1
-A5,FARM,10.8.3.1,online,1
-A5,R,10.8.2.251,online,1
-A5,R1-,10.8.2.233,online,1
-A5,R,10.8.2.252,online,1
-A5,R,10.8.2.204,online,1
-A5,R,10.8.2.249,online,1
-A5,R4-,10.8.2.240,online,1
-A5,R,10.8.2.224,online,1
-A5,R5-,10.8.2.239,online,1
-A5,R,10.8.2.235,online,1
-A5,R,10.8.2.253,online,1
-A5,R8-,10.8.2.234,online,1
-A5,STAGING,10.8.2.236,online,1
-A5,R,10.8.3.16,online,1
-A5,R,10.8.2.227,online,1
-A5,R14-,10.8.2.248,online,1
-A5,R,10.8.2.226,online,1
-A5,R,10.8.2.225,online,1
-A5,R3-,10.8.2.238,online,1
+location,name,ip_address,status,response_time
+,E02,10.5.7.254,unknown,
+,idrac dellpagoh1 10.5.32.120,10.5.32.120,unknown,
+,dell idrac pagoh 2 10.5.32.121,10.5.32.121,unknown,
+,iD02,10.5.32.131,unknown,
+,M02,10.5.32.132,unknown,
+,N02,10.5.32.133,unknown,
+,P02,10.5.32.134,unknown,
+,EMS,10.8.2.4,unknown,
+,ArubaLab Academy FSKTM 2ndFloor Switch,10.8.2.12,unknown,
+,SW 48x2 Bilik Seminar 1 Infosys Lvl 1,10.8.2.51,unknown,
+,Ping: 10.8.2.82,10.8.2.82,unknown,
+,Ping: 10.8.2.83,10.8.2.83,unknown,
+,SW Makmal Inffosys,10.8.2.85,unknown,
+,Ping: 10.8.2.201,10.8.2.201,unknown,
+,Ping: 10.8.2.202,10.8.2.202,unknown,
+,R3,10.8.2.204,unknown,
+,R5,10.8.2.224,unknown,
+,R3,10.8.2.225,unknown,
+,R2,10.8.2.226,unknown,
+,R14,10.8.2.227,unknown,
+,R1-1,10.8.2.233,unknown,
+,R8-1,10.8.2.234,unknown,
+,R7,10.8.2.235,unknown,
+,STAGING,10.8.2.236,unknown,
+,R3-1,10.8.2.238,unknown,
+,R5-1,10.8.2.239,unknown,
+,R4-1,10.8.2.240,unknown,
+,EMC RACK A5,10.8.2.244,unknown,
+,R EMC C2,10.8.2.245,unknown,
+,R14-1,10.8.2.248,unknown,
+,R4,10.8.2.249,unknown,
+,R1,10.8.2.251,unknown,
+,R2,10.8.2.252,unknown,
+,R8,10.8.2.253,unknown,
+,FARM,10.8.3.1,unknown,
+,R1,10.8.3.16,unknown,
+,10G RACK7 10.8.3.159,10.8.3.159,unknown,
+,07 vpn internal 10.8.45.7,10.8.45.7,unknown,
+,sangfor vpn2 10.8.46.117,10.8.46.117,unknown,
+,elibrary 10.8.200.4,10.8.200.4,unknown,
+,memory 10.8.200.10,10.8.200.10,unknown,
+,plaxis lesen server 10.8.201.205,10.8.201.205,unknown,
+,Ping: 10.9.155.254 gw vlan 700,10.9.155.254,unknown,
+,Ping: 10.9.159.254 gw vlan701,10.9.159.254,unknown,
+,Ping: 10.9.163.254 gw vlan 710,10.9.163.254,unknown,
+,Ping: 10.9.167.254 gw vlan 710,10.9.167.254,unknown,
+,Ping: 10.9.207.254 gw vlan730,10.9.207.254,unknown,
+,Ping: 10.9.211.254 gw vlan731,10.9.211.254,unknown,
+,koha 10.63.200.2,10.63.200.2,unknown,
+,vmware dev 10.63.200.6,10.63.200.6,unknown,
+,vmware 10.63.201.49,10.63.201.49,unknown,
+,vmware 10.63.201.201,10.63.201.201,unknown,
+,Ping: 10.64.3.254 lan port,10.64.3.254,unknown,
+,SW 48x2 Bilik Seminar 1 Infosys Lvl 1,10.65.85.183,unknown,
+,printer hp laserjet 10.65.200.3,10.65.200.3,unknown,
+,supermicro 10.65.201.17,10.65.201.17,unknown,
+,linux 10.65.201.21,10.65.201.21,unknown,
+,Ping: 10.65.201.23,10.65.201.23,unknown,
+,fsktm 10.65.201.205,10.65.201.205,unknown,
+,windows10 10.65.201.206,10.65.201.206,unknown,
+,fsktm2 10.65.201.207,10.65.201.207,unknown,
+,server terminal 10.100.1.1,10.100.1.1,unknown,
+,peplink pumas internal 10.100.2.1,10.100.2.1,unknown,
+,sangfor pumas 10.100.2.2,10.100.2.2,unknown,
+,02 hypergrid host 10.100.141.10,10.100.141.10,unknown,
+,02 hypergrid 01 10.100.141.11,10.100.141.11,unknown,
+,02 hypergrid 02 10.100.141.12,10.100.141.12,unknown,
+,02 hypergrid 03 10.100.141.13,10.100.141.13,unknown,
+,13 timetable 10.100.141.35,10.100.141.35,unknown,
+,14 titmetabledb 10.100.141.36,10.100.141.36,unknown,
+,Ping: 10.100.141.70 umpstaging,10.100.141.70,unknown,
+,01,10.250.250.97,unknown,
+,Ping: 58.26.136.25 firewall,58.26.136.25,unknown,
+,B03 103.17.78.137,103.17.78.137,unknown,
+,nro2.eduroam.my ping,103.31.34.1,unknown,
+,02 fw port 1 103.31.34.2,103.31.34.2,unknown,
+,02 firewall port 2 103.31.35.2,103.31.35.2,unknown,
+,A03 103.130.13.129 maxis ip router,103.130.13.129,unknown,
+,ftkqms public ip,103.130.13.134,unknown,
+,Ping: 124.13.44.33 firewall bcb,124.13.44.33,unknown,
+,Ping: archibus.uthm.edu.my,150.129.186.7,unknown,
+,telefon.uthm.edu.my,161.139.246.60,unknown,
+,rhev manager 161.139.246.70,161.139.246.70,unknown,
+,rhev03 161.139.246.73,161.139.246.73,unknown,
+,rhev04 161.139.246.76,161.139.246.76,unknown,
+,02 netapp 161.139.246.104,161.139.246.104,unknown,
+,CS 0,161.139.246.150,unknown,
+,CS 1,161.139.246.151,unknown,
+,SP A,161.139.246.152,unknown,
+,SP B,161.139.246.153,unknown,
+,SAN SW,161.139.246.154,unknown,
+,MPR,161.139.246.155,unknown,
+,BCKP SVRPing: 161.139.246.158,161.139.246.158,unknown,
+,TAPE LIB,161.139.246.159,unknown,
+,eoffice.uthm.edu.my,161.139.246.177,unknown,
+,lpu.uthm.edu.my,161.139.246.180,unknown,
+,itinfo itinfo.uthm.edu.my 1,161.139.246.200,unknown,
+,eplm.uthm.edu.my,161.139.246.220,unknown,
+,helpdesk 161.139.246.227,161.139.246.227,unknown,
+,epayment.uthm.edu.my,161.139.246.237,unknown,
+,Ping: 172.16.250.254 gw server vlan,172.16.250.254,unknown,
+,A03 182.23.148.207 upstream,182.23.148.207,unknown,
+,02 USW Switch,192.168.0.2,unknown,
+,Ping: 192.168.0.8,192.168.0.8,unknown,
+,Ping: 192.168.0.9,192.168.0.9,unknown,
+,Ping: 192.168.0.10,192.168.0.10,unknown,
+,Ping: 192.168.0.238,192.168.0.238,unknown,
+,Ping: 192.168.0.242,192.168.0.242,unknown,
+,Ping: 192.168.0.243,192.168.0.243,unknown,
+,Ping: 192.168.0.244,192.168.0.244,unknown,
+,Ping: 192.168.0.245,192.168.0.245,unknown,
+,Ping: 192.168.0.248,192.168.0.248,unknown,
+,03 cloudkey ui,192.168.0.254,unknown,
+,www PDSA,192.168.1.1,unknown,
+,06 fortianalyzer 192.168.2.8,192.168.2.8,unknown,
+,01 fortigate,192.168.2.253,unknown,
+,04 sena speed,192.168.6.41,unknown,
+,07 senaserver 192.168.6.42,192.168.6.42,unknown,
+,08 esteem 192.168.6.50,192.168.6.50,unknown,
+,09 mdrfkmp 192.168.6.51,192.168.6.51,unknown,
+,Ping: 192.168.40.1 lan firewall bcb,192.168.40.1,unknown,
+,192.168.240.1 smtpgw,192.168.240.1,unknown,
+,Ping: 192.168.240.2 mxout,192.168.240.2,unknown,
+,CS 0,192.168.240.150,unknown,
+,CS 1,192.168.240.151,unknown,
+,SP A,192.168.240.152,unknown,
+,SP B,192.168.240.153,unknown,
+,SAN SW,192.168.240.154,unknown,
+,MPR,192.168.240.155,unknown,
+,04 sena uptime,192.168.240.189,unknown,
+,02 mis.uthm.edu.my port 1521 running,192.168.240.239,unknown,
+,06 v remote,192.168.240.240,unknown,
+,192.168.240.244 ldap2,192.168.240.244,unknown,
+,vmha01 192.168.241.1,192.168.241.1,unknown,
+,vmha03 192.168.241.3,192.168.241.3,unknown,
+,vmha04  192.168.241.4,192.168.241.4,unknown,
+,vmha05: 192.168.241.5,192.168.241.5,unknown,
+,author 192.168.241.122,192.168.241.122,unknown,
+,M03,192.168.241.154,unknown,
+,ansys fkaas,192.168.241.159,unknown,
+,matlab 192.168.241.166,192.168.241.166,unknown,
+,07 oricc physical 192.168.241.174,192.168.241.174,unknown,
+,072 orric win server: 192.168.241.175,192.168.241.175,unknown,
+,05 192.168.241.181 AD1,192.168.241.181,unknown,
+,cst license 192.168.241.186,192.168.241.186,unknown,
+,071 dms 192.168.241.190,192.168.241.190,unknown,
+,comsol 192.168.241.206,192.168.241.206,unknown,
+,P03,192.168.241.214,unknown,
+,sap 192.168.241.215,192.168.241.215,unknown,
+,N03,192.168.241.217,unknown,
+,acronis: 192.168.241.221,192.168.241.221,unknown,
+,ansys lesen,192.168.241.229,unknown,
+,M01,192.168.241.230,unknown,
+,01 senafizikal 192.168.241.231,192.168.241.231,unknown,
+,P01,192.168.241.238,unknown,
+,N01,192.168.241.239,unknown,
+,HCI Sangfor Node 1 192.168.242.2,192.168.242.2,unknown,
+,HCI Sangfor Node 2 192.168.242.3,192.168.242.3,unknown,
+,saas idrac : 192.168.242.121,192.168.242.121,unknown,
+,vmha06 192.168.242.206,192.168.242.206,unknown,
+,solidwork fkee 192.168.242.207,192.168.242.207,unknown,
+,vmha07 192.168.242.212,192.168.242.212,unknown,
+,Ping: vmnetwork03.uthm.edu.my,192.168.242.213,unknown,
+,Ping: vmnetwork02.uthm.edu.my,192.168.242.220,unknown,
+,Ping: author.uthm.edu.my,192.168.242.231,unknown,
+,iD01,192.168.242.241,unknown,
+,vmha08 192.168.242.243,192.168.242.243,unknown,
+,fams fams.uthm.edu.my,192.168.242.246,unknown,
+,Ping: vmnetwork01.uthm.edu.my,192.168.242.247,unknown,
+,02,198.19.19.0,unknown,
+,05 ipcore gateway  198.19.19.2,198.19.19.2,unknown,
+,03,198.19.19.255,unknown,
+,pumas 01 202.188.211.129,202.188.211.129,unknown,
+,A01 203.80.22.66,203.80.22.66,unknown,
+,01 router MSA,203.106.223.225,unknown,
+,06 ipcore google myix 218.100.44.92,218.100.44.92,unknown,
+,04 google mxyix,218.100.44.158,unknown,

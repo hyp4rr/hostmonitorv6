@@ -1,511 +1,529 @@
-﻿location,name,ip_address,status,response_time
-A4,A4 - Pusat Pembelajaran Latihan Ak,10.8.8.105,online,1
-A4,A4 - TAS Aras Bawah,10.8.8.20,online,1
-A5,A5 – Bilik Server,10.8.8.11,online,1
-A5,A5 – Bilik URS,10.8.8.14,online,1
-A5,A5 - TAS PTM Koridor,10.8.8.123,online,1
-A5,A5-Parkir,10.8.8.4,online,1
-A6,A6  SLIDE,10.8.8.190,online,1
-A8,A8 - Pakir Kolam Renang,10.60.8.115,online,1
-A8,A8 – Stadium,10.60.8.82,online,1
-A8,A8 Laluan Gym,10.60.8.113,online,1
-A8,A8 Pejabat Sukan,10.60.31.244,online,1
-A8,A8 Pintu Masuk Kolam Renang,10.60.8.68,online,1
-ATM,ATM - Perhentian Bas ATM,10.60.8.127,online,1
-ATM,ATM - Perhentian Bas ATM,10.60.8.128,online,1
-CCTV,CCTV Trafik Depan Dataran Terbuka Pin,10.60.8.15,online,1
-B1,B1 – Laluan MKPTM,10.8.8.78,online,1
-B1,B1 – Laluan MKPTM,10.8.8.77,online,1
-B1,B1 – MKPTM1 Belakang,10.8.8.30,online,1
-B1,B1 – MKPTM,10.8.8.22,online,1
-B1,B1 – MKPTM2 - Belakang,10.8.8.27,online,1
-B1,B1 - MKPTM,10.8.8.16,online,1
-B1,B1 - MKPTM,10.8.8.17,online,1
-B1,B1 – Pusat Niaga,10.8.8.85,online,1
-B1,B1 - Pusat Niaga,10.8.8.2,online,1
-B3,B3 - Laluan Pejalan Kaki,10.8.8.1,online,1
-B4,B4 -  Masjid Lama,10.60.8.1,online,1
-B5,B5 – Dataran Masjid,10.60.8.73,online,1
-B5,B5 - Office Pintu Belakang / Aras Ata,10.60.8.11,online,1
-B5,B5 - Office Pintu Depan / Aras Atas,10.60.8.12,online,1
-B5,B5 – Pej Bendahari Tingkat Bawah tas,10.60.8.81,online,1
-B7,B7-Parkir Makmal Kimia,10.8.8.109,online,1
-FSTPI,FSTPI - Pintu Belakang,10.60.8.14,online,1
-FSTPI,FSTPI - Pintu Hadapan,10.60.8.13,online,1
-C1,C1 - Inventory Dalam PTM,10.8.8.3,online,1
-C1,C1- Inventori  PTM,10.8.8.28,online,1
-C15,C15 – Pintu Keluar,10.61.8.167,online,1
-C15,C15 – Pintu Masuk,10.61.8.160,online,1
-C15,C15 – Pintu Sisi,10.61.8.86,online,1
-C15,C15 – Pintu Sisi,10.61.8.87,online,1
-C16,C16 – Blok Persyarah,10.61.8.117,online,1
-C16,C16 – Pintu Keluar,10.61.8.170,online,1
-C16,C16 – Pintu Masuk,10.61.8.169,online,1
-C16,C16 – Pintu Sisi,10.61.8.88,online,1
-C17,C17 – Pintu Masuk,10.61.8.168,online,1
-C17,C17 – Pintu Sisi,10.61.8.90,online,1
-C17,C17 – Pintu Sisi,10.61.8.91,online,1
-C1,C1-Kaunter Inventori PTM,10.8.8.19,online,1
-C2,C2 – Bilik Server,10.8.8.12,online,1
-C2,C2 – Laluan B1-C,10.8.8.80,online,1
-C3A,C3A – Simpang PKSK,10.8.8.69,online,1
-C4,C4 - Dewan Badminton,10.8.207.215,online,1
-C4,C4 - Stor Dewan Badminton,10.8.207.216,online,1
-A5,Modifikasi Kamera Dataran Kenanga Pin,10.8.8.79,online,1
-D1,D1 – TSN,10.60.8.70,online,1
-D10,D10 – Stor PPH,10.60.8.106,online,1
-D15,D15 - Pintu Masuk,10.60.8.123,online,1
-D15,D15- PKU,10.60.8.107,online,1
-D4,D4 - Pintu Kedua TSN,10.61.8.166,online,1
-D5,D5 - Parkir,10.60.8.110,online,1
-D5,D5 - TSN Border Asrama,10.60.8.132,online,1
-D5,D5 - TSN Kaunter Pejabat,10.60.8.18,online,1
-D5,D5 - TSN Laluan Kafeteria,10.60.8.114,online,1
-D5,D5 - TSN Pintu Masuk,10.60.8.111,online,1
-D5,D5 - TSN Pintu Masuk Blok A,10.60.8.112,online,1
-D5,D5 - TSN Siswi Belakang,10.60.8.131,online,1
-D6,D6 - Simpang HEP,10.60.8.135,online,1
-E16,E16 - Contorl Room,10.61.201.126,online,1
-E16,E16 - Pakir Bangunan Gunasama,10.61.8.65,online,1
-E16,E16 - Pej Pendaftar Attendence Mac,10.61.8.158,online,1
-E16,E16 - Stor Pusat,10.61.8.1,online,1
-E17,E17 - Pintu Pagar Ketiga,10.61.8.100,online,1
-E4,E4  STOR PUSAT INDOOR PTM,10.60.8.32,online,1
-E4,E4 - Stor Pusat_PTM,10.60.8.118,online,1
-F1,F1-  Foyer,10.60.8.108,online,1
-F2,F2 - Attendance PPA,10.60.8.64,online,1
-F2,F2 - Bulatan,10.60.8.3,online,1
-F2,F2 – Hadapan Bilik Cetak,10.60.8.93,online,1
-F2,F2 – PPA Kanan,10.60.8.65,online,1
-F2,F2 – PPA Kiri,10.60.8.66,online,1
-F2,F2 Aras Atas Kanan,10.60.8.125,online,1
-F2,F2 Aras Atas Kiri,10.60.8.126,online,1
-F4,F4 -EMC,10.60.8.129,online,1
-G1,G1 - Bilik Seminar FKEE,10.61.8.171,online,1
-G1,G1 - FKEE Attendence Machine  Ping,10.61.8.157,online,1
-G1,G1 - FKEE Pakir,10.61.8.62,online,1
-G1,G1 - Foyer FKEE,10.61.8.172,online,1
-G1,G1 – Parkir FKEE,10.61.8.84,online,1
-G1,G1 – Rakaman Video,10.61.8.159,online,1
-G1,G1 – Simpang,10.61.8.162,online,1
-G2,G2 - FKMP Attendence Machine,10.61.8.156,online,1
-G2,G2 - Foyer FKMP,10.61.8.174,online,1
-G2,G2 - Makmal CAD,10.61.8.175,online,1
-G2,G2 - Makmal CAE 1 &,10.61.8.173,online,1
-G4,G4 – PC TDI Siswa,10.62.8.21,online,1
-G4/G5,G4/G5 – Keluar/Masuk /  Dataran KKTF/,10.62.8.49,online,1
-G5,G5 – Block C-D,10.62.8.52,online,1
-G5,G5 – Keluar Masuk Pusat PPP,10.62.8.51,online,1
-G5,G5 PC TF,10.62.8.46,online,1
-TDI,TDI- Foyer,10.62.8.83,online,1
-TDI,TDI Siswa Border,10.62.8.48,online,1
-TF,TF- Foyer,10.62.8.50,online,1
-Biodesel,Biodesel Aras 1 Tangga,10.65.8.82,online,1
-Biodesel,Biodesel 4 Bawah,10.65.8.83,online,1
-Biodesel,Biodesel Aras 1 Kanan,10.65.8.81,online,1
-Biodesel,Biodesel Aras 1 Kiri,10.65.8.80,online,1
-Biodesel,Biodesel Parkir,10.65.8.85,online,1
-FKAAB,FKAAB - Bilik Kebal,10.67.8.1,online,1
-FKAAB,FKAAB - Lift Aras 1 North East,10.67.8.13,online,1
-FKAAB,FKAAB - Lift Aras 1 South East,10.67.8.3,online,1
-FKAAB,FKAAB - Lift Aras 2 North East,10.67.8.14,online,1
-FKAAB,FKAAB - Lift Aras 2 South East (depan,10.67.8.4,online,1
-FKAAB,FKAAB - Lift Aras 3 North East,10.67.8.15,online,1
-FKAAB,FKAAB - Lift Aras 3 South East,10.67.8.5,online,1
-FKAAB,FKAAB - Lift Aras 4 North East,10.67.8.16,online,1
-FKAAB,FKAAB - Lift Aras 4 South East,10.67.8.6,online,1
-FKAAB,FKAAB - Lift Aras 5 North East,10.67.8.17,online,1
-FKAAB,FKAAB - Lift Aras 5 South East,10.67.8.7,online,1
-FKAAB,FKAAB - Lift Aras 6 North East,10.67.8.18,online,1
-FKAAB,FKAAB - Lift Aras 6 South East,10.67.8.8,online,1
-FKAAB,FKAAB - Lift Aras 7 South East,10.67.8.9,online,1
-FKAAB,FKAAB - Lift Aras 8 South East,10.67.8.10,online,1
-FKAAB,FKAAB - Lift Aras Bawah North East Pi,10.67.8.11,online,1
-FKAAB,FKAAB - Lift Aras Bawah South East Pi,10.67.8.2,online,1
-FKAAB,FKAAB - Lift Aras Mezznine North East,10.67.8.12,online,1
-FKAAB,FKAAS Roof Top,10.67.8.19,online,1
-FKAAB,Kamera FKAAB Tower - Pemantauan Proje,10.67.8.20,online,1
-FKEE,FKEE Aras 1 CAM,10.69.8.3,online,1
-FKEE,FKEE Aras 1 CAM,10.69.8.4,online,1
-FKEE,FKEE Aras 2 CAM,10.69.8.5,online,1
-FKEE,FKEE Aras 2 CAM,10.69.8.6,online,1
-FKEE,FKEE Aras Bawah CAM,10.69.8.1,online,1
-FKEE,FKEE Aras Bawah CAM,10.69.8.2,online,1
-FPTP,FPTP - Hall,10.68.8.4,online,1
-FPTP,FPTP - Makmal Komputer Pengeluaran da,10.68.8.3,online,1
-FPTP,FPTP - Makmal Multimedia dan GIS Ping,10.68.8.1,online,1
-FPTP,FPTP - Makmal Sains Pengurusan,10.68.8.2,online,1
-FPTP,FPTP - Tangga,10.68.8.7,online,1
-FPTP,FPTP - Tangga,10.68.8.8,online,1
-FPTP,FPTP - Tangga,10.68.8.9,online,1
-FPTP,FPTP - Tangga,10.68.8.10,online,1
-FPTP,FPTP - Tangga,10.68.8.11,online,1
-FPTP,FPTP - Tangga,10.68.8.13,online,1
-FPTP,FPTP - Tangga,10.68.8.12,online,1
-FPTV,FPTV - Bilik Fail Sulit Pejabat,10.66.8.1,online,1
-FPTV,FPTV - Blok A Lift Ground,10.66.8.2,online,1
-FPTV,FPTV - Blok A Lift Tingkat,10.66.8.3,online,1
-FPTV,FPTV - Blok A Lift Tingkat,10.66.8.4,online,1
-FPTV,FPTV - Blok A Lift Tingkat,10.66.8.5,online,1
-FPTV,FPTV - Blok A Lift Tingkat,10.66.8.6,online,1
-FPTV,FPTV - Blok A Lift Tingkat,10.66.8.7,online,1
-FPTV,FPTV - Blok B Lift Tingkat,10.66.8.8,online,1
-FPTV,FPTV - Blok C Lift Ground,10.66.8.9,online,1
-FPTV,FPTV - Blok C Lift Tingkat,10.66.8.10,online,1
-FPTV,FPTV - Blok C Lift Tingkat,10.66.8.11,online,1
-FPTV,FPTV - Blok D Lift Ground,10.66.8.12,online,1
-FPTV,FPTV - Blok D Lift Tingkat,10.66.8.13,online,1
-FPTV,FPTV Roof Top,10.66.8.14,online,1
-FSKTM,FSKTM - Auditorium Belakang,10.65.8.32,online,1
-FSKTM,FSKTM - Bilik Kebal,10.65.8.2,online,1
-FSKTM,FSKTM - Bilik Mesyuarat Pengurusan Pi,10.65.8.92,online,1
-FSKTM,FSKTM - BIlik Mesyuarat Utama Ping,10.65.8.103,online,1
-FSKTM,FSKTM - Bilik Server ICT,10.65.8.15,online,1
-FSKTM,FSKTM - Hadapan Makmal Grafik Animasi,10.65.8.1,online,1
-FSKTM,FSKTM - Lift A Aras,10.65.8.40,online,1
-FSKTM,FSKTM - Lift Aras,10.65.8.12,online,1
-FSKTM,FSKTM - Lift Aras,10.65.8.19,online,1
-FSKTM,FSKTM - Lift Aras,10.65.8.35,online,1
-FSKTM,FSKTM - Lift Aras,10.65.8.41,online,1
-FSKTM,FSKTM - Lift B Aras,10.65.8.28,online,1
-FSKTM,FSKTM - Lift B Aras,10.65.8.38,online,1
-FSKTM,FSKTM - Lift B Aras,10.65.8.42,online,1
-FSKTM,FSKTM - Lift,10.65.8.3,online,1
-FSKTM,FSKTM - Lorong Auditorium,10.65.8.29,online,1
-FSKTM,FSKTM - Lorong Bilik Seminar,10.65.8.90,online,1
-FSKTM,FSKTM - Lorong Bilik Server PTM,10.65.8.4,online,1
-FSKTM,FSKTM - Lorong Bilik Tutorial,10.65.8.95,online,1
-FSKTM,FSKTM - Lorong Cisco,10.65.8.21,online,1
-FSKTM,FSKTM - Lorong Hadapan Bilik Tutorial,10.65.8.20,online,1
-FSKTM,FSKTM - Lorong Infosys Belakang,10.65.8.11,online,1
-FSKTM,FSKTM - Lorong Makmal Kejuruteraan Pe,10.65.8.13,online,1
-FSKTM,FSKTM - Lorong Makmal Keselamatan Kom,10.65.8.22,online,1
-FSKTM,FSKTM - Lorong Makmal Perisian,10.65.8.36,online,1
-FSKTM,FSKTM - Lorong Makmal Teknologi Web P,10.65.8.30,online,1
-FSKTM,FSKTM - Lorong Pensyarah Belakang Ara,10.65.8.97,online,1
-FSKTM,FSKTM - Lorong Pensyarah Belakang Ara,10.65.8.99,online,1
-FSKTM,FSKTM - Lorong Pensyarah Belakang,10.65.8.101,online,1
-FSKTM,FSKTM - Lorong Pensyarah Belakang Pin,10.65.8.93,online,1
-FSKTM,FSKTM - Lorong Pensyarah Depan Aras,10.65.8.96,online,1
-FSKTM,FSKTM - Lorong Pensyarah Depan Aras,10.65.8.98,online,1
-FSKTM,FSKTM - Lorong Pensyarah Depan Ara,10.65.8.100,online,1
-FSKTM,FSKTM - Lorong Pensyarah Depan Ara,10.65.8.102,online,1
-FSKTM,FSKTM - Lorong Pusat Data,10.65.8.14,online,1
-FSKTM,FSKTM - Lorong Ruang Membaca Pelajar,10.65.8.88,online,1
-FSKTM,FSKTM - Lorong Studio Multimedia Ping,10.65.8.6,online,1
-FSKTM,FSKTM - Lorong Tengah Aras,10.65.8.91,online,1
-FSKTM,FSKTM - Lorong Tengah Aras,10.65.8.94,online,1
-FSKTM,FSKTM - Makmal Animasi Grafik Belakan,10.65.8.8,online,1
-FSKTM,FSKTM - Makmal Cisco Belakang,10.65.8.25,online,1
-FSKTM,FSKTM - Makmal Digital Forensik Belak,10.65.8.24,online,1
-FSKTM,FSKTM - Makmal Infosys Aras,10.65.8.39,online,1
-FSKTM,FSKTM - Makmal Kejuruteraan Perisian,10.65.8.16,online,1
-FSKTM,FSKTM - Makmal Keselamatan Komputer B,10.65.8.26,online,1
-FSKTM,FSKTM - Makmal Pembangunan Perisian B,10.65.8.17,online,1
-FSKTM,FSKTM - Makmal Pengaturcaraan Belakan,10.65.8.18,online,1
-FSKTM,FSKTM - Makmal Pengaturcaraan Interne,10.65.8.31,online,1
-FSKTM,FSKTM - Makmal Penyelidikan Belakang,10.65.8.27,online,1
-FSKTM,FSKTM - Makmal Pintar Belakang,10.65.8.10,online,1
-FSKTM,FSKTM - Makmal Realiti Maya Belakang,10.65.8.9,online,1
-FSKTM,FSKTM - Makmal Sistem Komputer Belaka,10.65.8.23,online,1
-FSKTM,FSKTM - Makmal Teknologi Web Belakang,10.65.8.34,online,1
-FSKTM,FSKTM - Parkir,10.65.8.84,online,1
-FSKTM,FSKTM - Pigeon Hole Pejabat Am,10.65.8.86,online,1
-FSKTM,FSKTM - Pintu Luar Pejabat,10.65.8.87,online,1
-FSKTM,FSKTM - Ruang Membaca Pelajar Aras 1,10.65.8.37,online,1
-FSKTM,FSKTM - Studio Multimedia Belakang Pi,10.65.8.7,online,1
-KB,KB – Bilik Server,172.16.72.106,online,1
-KB,KB - Parkir PPD,172.16.72.104,online,1
-KB,KB – Pintu Masuk,172.16.72.103,online,1
-KB,KB - PPD,172.16.72.115,online,1
-KB,KB Blok B koridor,172.16.72.111,online,1
-RECESS,RECESS,10.60.8.38,online,1
-RECESS,RECESS,10.60.8.43,online,1
-RECESS,RECESS 3 Border,10.60.31.249,online,1
-RECESS,RECESS Data Lab,10.60.8.41,online,1
-RECESS,RECESS Garage,10.60.8.42,online,1
-RECESS,RECESS Office,10.60.8.39,online,1
-RECESS,RECESS Sample Lab,10.60.8.40,online,1
-A5,Aras 1 - Lift,10.8.23.214,online,1
-A5,Aras 2 - Lift,10.8.23.211,online,1
-A5,Aras 3 - Lift,10.8.23.212,online,1
-A5,Aras 4 - Lift,10.8.23.217,online,1
-A5,Aras Bawah  - Tangga,10.8.23.208,online,1
-A5,Aras Bawah - Pintu Keluar,10.8.23.207,online,1
-A5,Aras Bawah - Pintu Keluar,10.8.23.209,online,1
-A5,Aras Bawah - Pintu Keluar,10.8.23.210,online,1
-A5,Aras Bawah - Pintu Masuk,10.8.23.215,online,1
-A5,Aras Bawah - Pintu Masuk,10.8.23.206,online,1
-A5,Aras Bawah - Server Room,10.8.23.216,online,1
-A5,Aras Bawah - Tangga,10.8.23.213,online,1
-HEP,HEP Kafe - Aras 1 Hadapan Lift,10.66.8.16,online,1
-HEP,HEP Kafe - Aras 2 Hadapan Lift,10.66.8.17,online,1
-HEP,HEP Kafe - Aras 2 Sebelah Kanan  Ping,10.66.8.19,online,1
-HEP,HEP Kafe - Aras Bawah Hadapan Lift  P,10.66.8.15,online,1
-HEP,HEP Kafe - Aras Bawah Sebelah Kanan P,10.66.8.18,online,1
-HEP,HEP Kafe - Foyer,10.66.8.20,online,1
-HEP,HEP Kafe – Laluan Belakang Cafeteria,10.66.8.22,online,1
-HEP,HEP Kafe - Ruang Makan Cafeteria Ping,10.66.8.21,online,1
-A5,Anjung Barat - Dewan,10.63.8.12,online,1
-A5,Bilik Mesyuarat VIP,10.63.8.80,online,1
-Library,Library   - Berhampiran Lift VIP Ping,10.63.8.8,online,1
-Library,Library   - Berhampiran Tandas Lift P,10.63.8.37,online,1
-Library,Library   - Bilik 24 JAM Perempuan Si,10.63.8.27,online,1
-Library,Library   - Bilik 24jam (Perempuan) P,10.63.8.25,online,1
-Library,Library   - Bilik 24Jam,10.63.8.4,online,1
-Library,Library   - Bilik Auditorium,10.63.8.56,online,1
-Library,Library   - Bilik Beg Stor,10.63.8.22,online,1
-Library,Library   - Bilik Jamuan,10.63.8.81,online,1
-Library,Library   - Bilik jurnal,10.63.8.55,online,1
-Library,Library   - Bilik Pameran,10.63.8.32,online,1
-Library,Library   - Bilik Pasca Ijazah,10.63.8.53,online,1
-Library,Library   - Bilik Pencarian Maklumat,10.63.8.45,online,1
-Library,Library   - Bilik Perkhidmatan,10.63.8.31,online,1
-Library,Library   - Bilik Seminar,10.63.8.47,online,1
-Library,Library   - Bilik Seminar,10.63.8.58,online,1
-Library,Library   - Hadapan Bilik Jurnal Ping,10.63.8.54,online,1
-Library,Library   - Hadapan Pintu Keluar Lift,10.63.8.57,online,1
-Library,Library   - Kaunter Sirkulasi,10.63.8.16,online,1
-Library,Library   - Keluar Tangga,10.63.8.82,online,1
-Library,Library   - Laluan ke Tandas Unit Pen,10.63.8.17,online,1
-Library,Library   - Lift Utama,10.63.8.2,online,1
-Library,Library   - Lobby Lift Eksekutif Ping,10.63.8.10,online,1
-Library,Library   - Lobby Pintu Masuk Utama P,10.63.8.19,online,1
-Library,Library   - Makmal Komputer PTM,10.63.8.6,online,1
-Library,Library   - Mesin Ploter,10.63.8.33,online,1
-Library,Library   - Perpustakaan Permata Hikm,10.63.8.24,online,1
-Library,Library   - Pintu Hadapan Pentadbiran,10.63.8.36,online,1
-Library,Library   - Pintu Keluar Ke Lift Bomb,10.63.8.15,online,1
-Library,Library   - Pintu Keluar Kiri Lift Ek,10.63.8.28,online,1
-Library,Library   - Pintu Keluar Masuk Utama,10.63.8.21,online,1
-Library,Library   - Pintu Keluar Utama,10.63.8.18,online,1
-Library,Library   - Pintu Masuk Utama,10.63.8.20,online,1
-Library,Library   - Ruang Bacaan  Akhbar Ping,10.63.8.30,online,1
-Library,Library   - Ruang Bacaan (Bilik Rujuk,10.63.8.26,online,1
-Library,Library   - Ruang Bacaan 10 Aras 4 Pi,10.63.8.61,online,1
-Library,Library   - Ruang Bacaan 11  Aras 4 P,10.63.8.62,online,1
-Library,Library   - Ruang Bacaan 12  Aras 4 P,10.63.8.63,online,1
-Library,Library   - Ruang Bacaan 13  Aras 4 P,10.63.8.64,online,1
-Library,Library   - Ruang Bacaan 2 Aras 3 Pin,10.63.8.49,online,1
-Library,Library   - Ruang Bacaan 3 Aras 4 Pin,10.63.8.69,online,1
-Library,Library   - Ruang Bacaan 4  Aras 4 Pi,10.63.8.70,online,1
-Library,Library   - Ruang Bacaan 5  Aras 4 Pi,10.63.8.71,online,1
-Library,Library   - Ruang Bacaan 6  Aras 4 Pi,10.63.8.72,online,1
-Library,Library   - Ruang Bacaan 7 Aras 4 Pin,10.63.8.73,online,1
-Library,Library   - Ruang Bacaan 8 Aras 4 Pin,10.63.8.59,online,1
-Library,Library   - Ruang Koleksi Kreatif Pin,10.63.8.60,online,1
-Library,Library   - Ruang Kubikal,10.63.8.66,online,1
-Library,Library   - Ruang Terbuka - Dekat Sem,10.63.8.65,online,1
-Library,Library   - Unit Perolehan Serial Pin,10.63.8.34,online,1
-Library,Library   -Bilik 24jam (Lelaki),10.63.8.23,online,1
-Library,Library  - Bilik Rujukan Tesis,10.63.8.29,online,1
-Library,Library  - Garden,10.63.8.11,online,1
-Library,Library  - Hadapan Bilik Carian Maklu,10.63.8.46,online,1
-Library,Library  - Ruang Bacaan Iqra  Aras 2,10.63.8.38,online,1
-Library,Library  - Tangga Keselamatan Escape,10.63.8.7,online,1
-Library,Library - Aras Bawah Tangga Keluar Li,10.63.8.9,online,1
-Library,Library - Berhampiran Pintu Keluar Li,10.63.8.50,online,1
-Library,Library - Bilik 24 Jam Lelaki sisi Pi,10.63.8.51,online,1
-Library,Library - Bilik Server Aras,10.63.8.35,online,1
-Library,Library - Bookdrop,10.63.8.1,online,1
-Library,Library - Canselori Bilik VIP,10.63.8.76,online,1
-Library,Library - Canselori Laluan Bilik Mesy,10.63.8.74,online,1
-Library,Library - Canselori Laluan Lift Bomba,10.63.8.83,online,1
-Library,Library - Laluan Bilik Jemaah Aras 5,10.63.8.78,online,1
-Library,Library - Lift Eksekutif Kanan Aras,10.63.8.40,online,1
-Library,Library - Lift Eksekutif Kanan Aras,10.63.8.67,online,1
-Library,Library - Lift Eksekutif Kiri Aras 3,10.63.8.52,online,1
-Library,Library - Lift Eksekutif Kiri Aras 4,10.63.8.68,online,1
-Library,Library - Lobi Canselori - Hadapan Li,10.63.8.79,online,1
-Library,Library - Ruang Bacaan 1 Aras,10.63.8.42,online,1
-Library,Library - Ruang Bacaan 1 Aras,10.63.8.48,online,1
-Library,Library - Ruang Bacaan 2 Aras,10.63.8.43,online,1
-Library,Library - Ruang Bacaan 3 Aras,10.63.8.44,online,1
-Library,Library - Tangga Keselamatan (Depan B,10.63.8.3,online,1
-Library,Library - Tangga Keselamatan Escape,10.63.8.13,online,1
-Library,Library - Tangga Keselamatan Escape,10.63.8.14,online,1
-Library,Pintu Keluar Lift Eksekutif Level 2 P,10.63.8.39,online,1
-Library,PTTA - Aras 1 Stor Perpustakaan,10.63.8.41,online,1
-Library,PTTA - Tangga Keselamatan Escape 5 Pi,10.63.8.5,online,1
-Library,PTTA - Tower Library belakang,10.63.8.91,online,1
-Library,Tower CCTV - Library,10.63.8.107,online,1
-Perwira,B – PC Pewira,10.8.8.47,online,1
-Perwira,Kolej Kediaman Perwira - Koridor Makm,10.8.8.24,online,1
-Perwira,Perwira Pintu Masuk Utama,10.8.8.23,online,1
-A1,A1 Cam,10.5.87.101,online,1
-A1,A1 Cam,10.5.87.102,online,1
-A1,A1 cam1 (Pagoh),10.5.87.210,online,1
-A1,A1 cam2 (Pagoh),10.5.87.211,online,1
-A10,A10 Cam,10.5.87.110,online,1
-A10,A10 cam1 (Pagoh),10.5.87.221,online,1
-A10,A10 cam2 (Pagoh),10.5.87.222,online,1
-A10,A10 cam3 parking (Pagoh),10.5.87.223,online,1
-A11,A11 cam1 (Pagoh),10.5.87.224,online,1
-A11,A11 cam2 (Pagoh),10.5.87.225,online,1
-A11,A11 cam3 bilik belajar (Pagoh) Pin,10.5.87.226,online,1
-A12,A12 cam1 (Pagoh),10.5.87.228,online,1
-A12,A12 cam2 (Pagoh),10.5.87.229,online,1
-A12,A12 cam3 bilik belajar (Pagoh) Pin,10.5.87.227,online,1
-A13,A13 Cam,10.5.87.114,online,1
-A13,A13 cam1 (Pagoh),10.5.87.230,online,1
-A13,A13 cam2 (Pagoh),10.5.87.231,online,1
-A13,A13 cam3 parking (Pagoh),10.5.87.232,online,1
-A14,A14 Cam,10.5.87.115,online,1
-A14,A14 cam1 (Pagoh),10.5.87.234,online,1
-A14,A14 cam2 (Pagoh),10.5.87.235,online,1
-A15,A15 cam1 (Pagoh),10.5.87.236,online,1
-A15,A15 cam2 (Pagoh),10.5.87.237,online,1
-A16,A16 Cam,10.5.87.118,online,1
-A16,A16 cam1 (Pagoh),10.5.87.238,online,1
-A16,A16 cam2 (Pagoh),10.5.87.239,online,1
-A17,A17 Cam,10.5.87.113,online,1
-A17,A17 cam1 (Pagoh),10.5.87.240,online,1
-A17,A17 cam2 (Pagoh),10.5.87.241,online,1
-A18,A18 Cam,10.5.87.111,online,1
-A18,A18 Cam,10.5.87.112,online,1
-A18,A18 cam1(Pagoh),10.5.87.242,online,1
-A18,A18 cam2 (Pagoh),10.5.87.243,online,1
-A5,A5 cam1 (Pagoh),10.5.87.212,online,1
-A5,A5 cam2 (Pagoh),10.5.87.213,online,1
-A5,A5 cam3 bilik belajar (Pagoh) Ping,10.5.87.214,online,1
-A5,A6 Cam,10.5.87.109,online,1
-A5,A6 cam1 (Pagoh),10.5.87.217,online,1
-A5,A6 cam2 (Pagoh),10.5.87.216,online,1
-A5,A6 cam3 parking (Pagoh),10.5.87.215,online,1
-A5,A7 Cam 2 Kafe,10.5.87.104,online,1
-A5,A7 cam1 Kafe (Pagoh),10.5.87.218,online,1
-A5,A8 Cam 2  Surau,10.5.87.103,online,1
-A5,A8 cam1 Surau (Pagoh),10.5.87.219,online,1
-A5,A9 Cam 2  Dewan,10.5.87.106,online,1
-A5,A9 Cam 3  Dewan,10.5.87.108,online,1
-A5,A9 Cam 4  Dewan,10.5.87.205,online,1
-A5,A9 Cam 5  Dewan,10.5.87.107,online,1
-A5,A9 cam1 Dewan (Pagoh),10.5.87.220,online,1
-A5,Balai Pengawal 2 Cam,10.5.87.116,online,1
-A5,Balai Pengawal 2 Cam,10.5.87.117,online,1
-A5,Cam guard 1 (Pagoh),10.5.87.208,online,1
-A5,Cam guard 2 (Pagoh),10.5.87.209,online,1
-A5,Bridging Pintu Masuk,192.168.0.246,online,1
-A5,Bridging Pondok Pengawal,192.168.0.247,online,1
-A5,Encoder,192.168.0.239,online,1
-A5,Pondok Pengawal,192.168.0.240,online,1
-A5,Right Border,192.168.0.241,online,1
-PUMAS,Blok Lavender,10.100.10.211,online,1
-PUMAS,Digital Video Recorder,10.100.10.207,online,1
-PUMAS,Kabin Stor,10.100.10.210,online,1
-PUMAS,Kafe ke Blok Jasmin,10.100.10.213,online,1
-PUMAS,Kafe ke Blok Lavender,10.100.10.214,online,1
-PUMAS,Kafe Laluan Tidak Berpagar,10.100.10.212,online,1
-PUMAS,Parkir,10.100.10.208,online,1
-PUMAS,Stor Pelupusan,10.100.10.209,online,1
-PUMAS,Attendent TAS,10.100.10.203,online,1
-PUMAS,NVR,10.100.10.201,online,1
-PUMAS,Pintu Masuk/Keluar,10.100.10.204,online,1
-A5,NVR 6 kamera,10.61.8.130,online,1
-A5,CCTV,10.8.23.227,online,1
-A5,CCTV,10.8.23.228,online,1
-A5,CCTV,10.8.23.229,online,1
-A5,NVR,10.8.23.230,online,1
-A5,DVR Analog,10.61.8.163,online,1
-A5,CCTV,10.63.8.108,online,1
-A5,CCTV,10.63.8.109,online,1
-A5,CCTV,10.63.8.110,online,1
-A5,CCTV,10.63.8.111,online,1
-A5,NVR,10.61.8.111,online,1
-A5,Bilik Kebal,10.61.8.199,online,1
-A5,Kaunter,10.61.8.196,online,1
-A5,NVR,10.61.8.195,online,1
-A5,Pintu Masuk Bilik Kebal,10.61.8.198,online,1
-A5,Pintu Masuk Pendaftar,10.61.8.197,online,1
-A5,FKEE AKADEMIA - 1 - Lift Lobby,10.69.8.36,online,1
-A5,FKEE AKADEMIA - 1 - Staircase,10.69.8.33,online,1
-A5,FKEE AKADEMIA - 1 - Staircase,10.69.8.37,online,1
-A5,FKEE AKADEMIA - 1 - Staircase,10.69.8.12,online,1
-A5,FKEE AKADEMIA - 2 - Lift Lobby,10.69.8.34,online,1
-A5,FKEE AKADEMIA - 2 - Staircase,10.69.8.16,online,1
-A5,FKEE AKADEMIA - 2 - Staircase,10.69.8.17,online,1
-A5,FKEE AKADEMIA - 2 - Staircase,10.69.8.18,online,1
-A5,FKEE AKADEMIA - 3 - Lift Lobby,10.69.8.38,online,1
-A5,FKEE AKADEMIA - 3 - Staircase,10.69.8.21,online,1
-A5,FKEE AKADEMIA - 3 - Staircase,10.69.8.20,online,1
-A5,FKEE AKADEMIA - 3 - Staircase,10.69.8.19,online,1
-A5,FKEE AKADEMIA - 4 - Lift Lobby,10.69.8.41,online,1
-A5,FKEE AKADEMIA - 4 - Staircase,10.69.8.10,online,1
-A5,FKEE AKADEMIA - 4 - Staircase,10.69.8.22,online,1
-A5,FKEE AKADEMIA - 4 - Staircase,10.69.8.23,online,1
-A5,FKEE AKADEMIA - 5 - Lift Lobby,10.69.8.40,online,1
-A5,FKEE AKADEMIA - 5 - Staircase,10.69.8.24,online,1
-A5,FKEE AKADEMIA - 5 - Staircase,10.69.8.26,online,1
-A5,FKEE AKADEMIA - 5 - Staircase,10.69.8.25,online,1
-A5,FKEE AKADEMIA - 6 - Lift Lobby,10.69.8.35,online,1
-A5,FKEE AKADEMIA - 6 - Staircase,10.69.8.29,online,1
-A5,FKEE AKADEMIA - 6 - Staircase,10.69.8.28,online,1
-A5,FKEE AKADEMIA - 6 - Staircase,10.69.8.27,online,1
-A5,FKEE AKADEMIA - 7 - Lift Lobby,10.69.8.39,online,1
-A5,FKEE AKADEMIA - 7 - Staircase,10.69.8.31,online,1
-A5,FKEE AKADEMIA - 7 - Staircase,10.69.8.30,online,1
-A5,FKEE AKADEMIA - 7 - Staircase,10.69.8.32,online,1
-A5,FKEE AKADEMIA - GF - Bilik Kebal Ping,10.69.8.13,online,1
-A5,FKEE AKADEMIA - GF - Main Lobby Entra,10.69.8.42,online,1
-A5,FKEE AKADEMIA - GF - Rear Lobby Entra,10.69.8.11,online,1
-A5,FKEE AKADEMIA - GF - Side Entrance -,10.69.8.15,online,1
-A5,FKEE AKADEMIA - GF - Side Entrance -,10.69.8.14,online,1
-A5,DVR  2 kamera,10.8.25.128,online,1
-A5,Bilik Pembelajaran,10.8.8.36,online,1
-A5,Dobi,10.8.8.34,online,1
-A5,Kaunter Pos,10.8.8.35,online,1
-A5,Library Mini,10.8.8.29,online,1
-A5,NVR,10.8.8.33,online,1
-A5,Simpang Blok E-H,10.8.8.25,online,1
-A5,Pintu Keluar Pos,10.63.8.87,online,1
-A5,Pintu Masuk Pos,10.63.8.86,online,1
-A5,NVR,10.61.8.112,online,1
-A5,Pintu Keluar,10.63.43.210,online,1
-A5,Pintu Masuk,10.63.43.209,online,1
-A5,Master ATM to PPA,10.10.10.15,online,1
-A5,Master Bridging CPE BLOK G,10.61.8.96,online,1
-A5,Master Parkir ke A,10.8.8.7,online,1
-A5,Remote ATM to PPA,10.10.10.16,online,1
-A5,Remote Bridging CPE PINTU MASUK 3 Pin,10.61.8.97,online,1
-A5,Remote Parkir ke A,10.8.8.8,online,1
-A5,Aras 1 Koridor  BKE,10.61.8.78,online,1
-A5,Aras 1 Koridor  DKBA,10.61.8.76,online,1
-A5,Aras 1 Koridor  DKBF,10.61.8.80,online,1
-A5,Aras 1 Koridor  MKMLM,10.61.8.57,online,1
-A5,Aras 1 Koridor BKB,10.61.8.59,online,1
-A5,Aras 1 Koridor BKB,10.61.8.72,online,1
-A5,Aras 1 Koridor DKB D,10.61.8.66,online,1
-A5,Aras 1 Tangga DKA Kiri,10.61.8.83,online,1
-A5,Aras 1 Tangga Kanan,10.61.8.67,online,1
-A5,Aras 1 Tangga Kiri,10.61.8.55,online,1
-A5,Aras 1 Tangga Tengah,10.61.8.69,online,1
-A5,Aras 2 Koridor  BKE,10.61.8.63,online,1
-A5,Aras 2 Koridor  BKE,10.61.8.77,online,1
-A5,Aras 2 Koridor BKB,10.61.8.58,online,1
-A5,Aras 2 Koridor BKB,10.61.8.53,online,1
-A5,Aras 2 Koridor BKB,10.61.8.54,online,1
-A5,Aras 2 Tangga Kanan BF,10.61.8.79,online,1
-A5,Aras 2 Tangga Kiri,10.61.8.56,online,1
-A5,Aras 3 Tangga Tengah,10.61.8.61,online,1
-A5,Aras Bawah  Koridor DKB D,10.61.8.60,online,1
-A5,Aras Bawah G3 Foyer,10.61.8.75,online,1
-A5,Aras Bawah Kafeteria,10.61.8.81,online,1
-A5,Aras Bawah Koridor  DKBA Kanan,10.61.8.85,online,1
-A5,Aras Bawah Koridor BK-B,10.61.8.70,online,1
-A5,Aras Bawah Koridor BKE,10.61.8.82,online,1
-A5,Aras Bawah Koridor DKB C,10.61.8.68,online,1
-A5,Aras Bawah Laluan Blok B-A,10.61.8.71,online,1
-A5,Aras Bawah Laluan DKBF,10.61.8.89,online,1
-A5,Blok D Belakang,10.61.8.74,online,1
-A5,Blok D Tengah,10.61.8.73,online,1
-A5,NVR,10.61.8.95,online,1
-A5,PTZ Blok A,10.61.8.92,online,1
-A5,PTZ Parkir Blok E (Susur Gajah),10.61.8.94,online,1
-A5,PTZ Parkir Blok G,10.61.8.93,online,1
-A5,DSI - Lobi Kanan,10.63.8.88,online,1
-A5,DSI - Lobi Kiri,10.63.8.89,online,1
-A5,DSI - Lobi Tengah,10.63.8.90,online,1
-A5,Makmal Komputer alkhawarizmi,10.63.8.84,online,1
-A5,CAMERA,192.168.254.2,online,1
-A5,Camera,192.168.254.3,online,1
-A5,NVR,10.60.8.4,online,1
+name,ip_address,category,status,location,brand
+A1 Cam 3,10.5.87.101,cctv,unknown,,
+A1 Cam 4,10.5.87.102,cctv,unknown,,
+A8 Cam 2  Surau,10.5.87.103,cctv,unknown,,
+A7 Cam 2 Kafe,10.5.87.104,cctv,unknown,,
+A9 Cam 2  Dewan,10.5.87.106,cctv,unknown,,
+A9 Cam 5  Dewan,10.5.87.107,cctv,unknown,,
+A9 Cam 3  Dewan,10.5.87.108,cctv,unknown,,
+A6 Cam 4,10.5.87.109,cctv,unknown,,
+A10 Cam 4,10.5.87.110,cctv,unknown,,
+A18 Cam 3,10.5.87.111,cctv,unknown,,
+A18 Cam 4,10.5.87.112,cctv,unknown,,
+A17 Cam 3,10.5.87.113,cctv,unknown,,
+A13 Cam 4,10.5.87.114,cctv,unknown,,
+A14 Cam 3,10.5.87.115,cctv,unknown,,
+Balai Pengawal 2 Cam 1,10.5.87.116,cctv,unknown,,
+Balai Pengawal 2 Cam 2,10.5.87.117,cctv,unknown,,
+A16 Cam 3,10.5.87.118,cctv,unknown,,
+A9 Cam 4  Dewan,10.5.87.205,cctv,unknown,,
+Cam guard 1 (Pagoh),10.5.87.208,cctv,unknown,,
+Cam guard 2 (Pagoh),10.5.87.209,cctv,unknown,,
+A1 cam1 (Pagoh),10.5.87.210,cctv,unknown,,
+A1 cam2 (Pagoh),10.5.87.211,cctv,unknown,,
+A5 cam1 (Pagoh),10.5.87.212,cctv,unknown,,
+A5 cam2 (Pagoh),10.5.87.213,cctv,unknown,,
+A5 cam3 bilik belajar (Pagoh),10.5.87.214,cctv,unknown,,
+A6 cam3 parking (Pagoh),10.5.87.215,cctv,unknown,,
+A6 cam2 (Pagoh),10.5.87.216,cctv,unknown,,
+A6 cam1 (Pagoh),10.5.87.217,cctv,unknown,,
+A7 cam1 Kafe (Pagoh),10.5.87.218,cctv,unknown,,
+A8 cam1 Surau (Pagoh),10.5.87.219,cctv,unknown,,
+A9 cam1 Dewan (Pagoh),10.5.87.220,cctv,unknown,,
+A10 cam1 (Pagoh),10.5.87.221,cctv,unknown,,
+A10 cam2 (Pagoh),10.5.87.222,cctv,unknown,,
+A10 cam3 parking (Pagoh),10.5.87.223,cctv,unknown,,
+A11 cam1 (Pagoh),10.5.87.224,cctv,unknown,,
+A11 cam2 (Pagoh),10.5.87.225,cctv,unknown,,
+A11 cam3 bilik belajar (Pagoh),10.5.87.226,cctv,unknown,,
+A12 cam3 bilik belajar (Pagoh),10.5.87.227,cctv,unknown,,
+A12 cam1 (Pagoh),10.5.87.228,cctv,unknown,,
+A12 cam2 (Pagoh),10.5.87.229,cctv,unknown,,
+A13 cam1 (Pagoh),10.5.87.230,cctv,unknown,,
+A13 cam2 (Pagoh),10.5.87.231,cctv,unknown,,
+A13 cam3 parking (Pagoh),10.5.87.232,cctv,unknown,,
+A14 cam1 (Pagoh),10.5.87.234,cctv,unknown,,
+A14 cam2 (Pagoh),10.5.87.235,cctv,unknown,,
+A15 cam1 (Pagoh),10.5.87.236,cctv,unknown,,
+A15 cam2 (Pagoh),10.5.87.237,cctv,unknown,,
+A16 cam1 (Pagoh),10.5.87.238,cctv,unknown,,
+A16 cam2 (Pagoh),10.5.87.239,cctv,unknown,,
+A17 cam1 (Pagoh),10.5.87.240,cctv,unknown,,
+A17 cam2 (Pagoh),10.5.87.241,cctv,unknown,,
+A18 cam1(Pagoh),10.5.87.242,cctv,unknown,,
+A18 cam2 (Pagoh),10.5.87.243,cctv,unknown,,
+B3 - Laluan Pejalan Kaki,10.8.8.1,cctv,unknown,,
+B1 - Pusat Niaga2,10.8.8.2,cctv,unknown,,
+C1 - Inventory Dalam PTM,10.8.8.3,cctv,unknown,,
+A5-Parkir 2,10.8.8.4,cctv,unknown,,
+Master Parkir ke A5,10.8.8.7,cctv,unknown,,
+Remote Parkir ke A5,10.8.8.8,cctv,unknown,,
+A - Pintu Keluar utama 1,10.8.8.9,cctv,unknown,,
+A - Pintu Masuk utama 1,10.8.8.10,cctv,unknown,,
+A5  Bilik Server,10.8.8.11,cctv,unknown,,
+C2  Bilik Server,10.8.8.12,cctv,unknown,,
+A5  Bilik URS,10.8.8.14,cctv,unknown,,
+B1 - MKPTM3,10.8.8.16,cctv,unknown,,
+B1 - MKPTM4,10.8.8.17,cctv,unknown,,
+A - Pos Pengawal,10.8.8.18,cctv,unknown,,
+C1-Kaunter Inventori PTM,10.8.8.19,cctv,unknown,,
+A4 - TAS Aras Bawah,10.8.8.20,cctv,unknown,,
+B1  MKPTM1,10.8.8.22,cctv,unknown,,
+Perwira Pintu Masuk Utama,10.8.8.23,cctv,unknown,,
+Kolej Kediaman Perwira - Koridor Makmal,10.8.8.24,cctv,unknown,,
+Simpang Blok E-H,10.8.8.25,cctv,unknown,,
+B1  MKPTM2 - Belakang,10.8.8.27,cctv,unknown,,
+C1- Inventori  PTM,10.8.8.28,cctv,unknown,,
+Library Mini,10.8.8.29,cctv,unknown,,
+B1  MKPTM1 Belakang,10.8.8.30,cctv,unknown,,
+NVR,10.8.8.33,cctv,unknown,,
+Dobi,10.8.8.34,cctv,unknown,,
+Kaunter Pos,10.8.8.35,cctv,unknown,,
+Bilik Pembelajaran,10.8.8.36,cctv,unknown,,
+B  PC Pewira 2,10.8.8.47,cctv,unknown,,
+C3A  Simpang PKSK,10.8.8.69,cctv,unknown,,
+A - Pintu Keluar utama 2,10.8.8.74,cctv,unknown,,
+B1  Laluan MKPTM 4,10.8.8.77,cctv,unknown,,
+B1  Laluan MKPTM 1,10.8.8.78,cctv,unknown,,
+Modifikasi Kamera Dataran Kenanga,10.8.8.79,cctv,unknown,,
+C2  Laluan B1-C2,10.8.8.80,cctv,unknown,,
+B1  Pusat Niaga,10.8.8.85,cctv,unknown,,
+A4 - Pejabat FPTP,10.8.8.93,cctv,unknown,,
+A4 - Pejabat PTM,10.8.8.94,cctv,unknown,,
+A4 - Pusat Pembelajaran Latihan Akademik,10.8.8.105,cctv,unknown,,
+B7-Parkir Makmal Kimia,10.8.8.109,cctv,unknown,,
+A4  PTM Pakir,10.8.8.119,cctv,unknown,,
+A4  Parkir VIP,10.8.8.120,cctv,unknown,,
+A4  Pintu Masuk,10.8.8.121,cctv,unknown,,
+A5 - TAS PTM Koridor,10.8.8.123,cctv,unknown,,
+A4 - Pejabat FPTP,10.8.8.128,cctv,unknown,,
+A6  SLIDE,10.8.8.190,cctv,unknown,,
+Aras Bawah - Pintu Masuk,10.8.23.206,cctv,unknown,,
+Aras Bawah - Pintu Keluar 2,10.8.23.207,cctv,unknown,,
+Aras Bawah  - Tangga 1,10.8.23.208,cctv,unknown,,
+Aras Bawah - Pintu Keluar 2,10.8.23.209,cctv,unknown,,
+Aras Bawah - Pintu Keluar 3,10.8.23.210,cctv,unknown,,
+Aras 2 - Lift,10.8.23.211,cctv,unknown,,
+Aras 3 - Lift,10.8.23.212,cctv,unknown,,
+Aras Bawah - Tangga 2,10.8.23.213,cctv,unknown,,
+Aras 1 - Lift,10.8.23.214,cctv,unknown,,
+Aras Bawah - Pintu Masuk 2,10.8.23.215,cctv,unknown,,
+Aras Bawah - Server Room,10.8.23.216,cctv,unknown,,
+Aras 4 - Lift,10.8.23.217,cctv,unknown,,
+CCTV 1,10.8.23.227,cctv,unknown,,
+CCTV 2,10.8.23.228,cctv,unknown,,
+CCTV 3,10.8.23.229,cctv,unknown,,
+NVR,10.8.23.230,cctv,unknown,,
+DVR  2 kamera,10.8.25.128,cctv,unknown,,
+C4 - Dewan Badminton,10.8.207.215,cctv,unknown,,
+C4 - Stor Dewan Badminton,10.8.207.216,cctv,unknown,,
+Master ATM to PPA,10.10.10.15,cctv,unknown,,
+Remote ATM to PPA,10.10.10.16,cctv,unknown,,
+B4 -  Masjid Lama,10.60.8.1,cctv,unknown,,
+F2 - Bulatan,10.60.8.3,cctv,unknown,,
+NVR,10.60.8.4,cctv,unknown,,
+B5 - Office Pintu Belakang / Aras Atas,10.60.8.11,cctv,unknown,,
+B5 - Office Pintu Depan / Aras Atas,10.60.8.12,cctv,unknown,,
+FSTPI - Pintu Hadapan,10.60.8.13,cctv,unknown,,
+FSTPI - Pintu Belakang,10.60.8.14,cctv,unknown,,
+CCTV Trafik Depan Dataran Terbuka,10.60.8.15,cctv,unknown,,
+D5 - TSN Kaunter Pejabat,10.60.8.18,cctv,unknown,,
+E4  STOR PUSAT INDOOR PTM,10.60.8.32,cctv,unknown,,
+RECESS 1,10.60.8.38,cctv,unknown,,
+RECESS Office,10.60.8.39,cctv,unknown,,
+RECESS Sample Lab,10.60.8.40,cctv,unknown,,
+RECESS Data Lab,10.60.8.41,cctv,unknown,,
+RECESS Garage,10.60.8.42,cctv,unknown,,
+RECESS 2,10.60.8.43,cctv,unknown,,
+F2 - Attendance PPA,10.60.8.64,cctv,unknown,,
+F2  PPA Kanan,10.60.8.65,cctv,unknown,,
+F2  PPA Kiri,10.60.8.66,cctv,unknown,,
+A8 Pintu Masuk Kolam Renang,10.60.8.68,cctv,unknown,,
+D1  TSN,10.60.8.70,cctv,unknown,,
+B5  Dataran Masjid,10.60.8.73,cctv,unknown,,
+B5  Pej Bendahari Tingkat Bawah tas,10.60.8.81,cctv,unknown,,
+A8  Stadium,10.60.8.82,cctv,unknown,,
+F2  Hadapan Bilik Cetak,10.60.8.93,cctv,unknown,,
+D10  Stor PPH,10.60.8.106,cctv,unknown,,
+D15- PKU,10.60.8.107,cctv,unknown,,
+F1-  Foyer,10.60.8.108,cctv,unknown,,
+D5 - Parkir,10.60.8.110,cctv,unknown,,
+D5 - TSN Pintu Masuk,10.60.8.111,cctv,unknown,,
+D5 - TSN Pintu Masuk Blok A,10.60.8.112,cctv,unknown,,
+A8 Laluan Gym,10.60.8.113,cctv,unknown,,
+D5 - TSN Laluan Kafeteria,10.60.8.114,cctv,unknown,,
+A8 - Pakir Kolam Renang,10.60.8.115,cctv,unknown,,
+E4 - Stor Pusat_PTM,10.60.8.118,cctv,unknown,,
+D15 - Pintu Masuk,10.60.8.123,cctv,unknown,,
+F2 Aras Atas Kanan,10.60.8.125,cctv,unknown,,
+F2 Aras Atas Kiri,10.60.8.126,cctv,unknown,,
+ATM - Perhentian Bas ATM 1,10.60.8.127,cctv,unknown,,
+ATM - Perhentian Bas ATM 2,10.60.8.128,cctv,unknown,,
+F4 -EMC,10.60.8.129,cctv,unknown,,
+D5 - TSN Siswi Belakang,10.60.8.131,cctv,unknown,,
+D5 - TSN Border Asrama,10.60.8.132,cctv,unknown,,
+D6 - Simpang HEP,10.60.8.135,cctv,unknown,,
+A8 Pejabat Sukan,10.60.31.244,cctv,unknown,,
+RECESS 3 Border,10.60.31.249,cctv,unknown,,
+E16 - Stor Pusat,10.61.8.1,cctv,unknown,,
+Aras 2 Koridor BKB 8,10.61.8.53,cctv,unknown,,
+Aras 2 Koridor BKB 9,10.61.8.54,cctv,unknown,,
+Aras 1 Tangga Kiri,10.61.8.55,cctv,unknown,,
+Aras 2 Tangga Kiri,10.61.8.56,cctv,unknown,,
+Aras 1 Koridor  MKMLM 2,10.61.8.57,cctv,unknown,,
+Aras 2 Koridor BKB 7,10.61.8.58,cctv,unknown,,
+Aras 1 Koridor BKB 3,10.61.8.59,cctv,unknown,,
+Aras Bawah  Koridor DKB D,10.61.8.60,cctv,unknown,,
+Aras 3 Tangga Tengah,10.61.8.61,cctv,unknown,,
+G1 - FKEE Pakir 2,10.61.8.62,cctv,unknown,,
+Aras 2 Koridor  BKE10,10.61.8.63,cctv,unknown,,
+E16 - Pakir Bangunan Gunasama,10.61.8.65,cctv,unknown,,
+Aras 1 Koridor DKB D,10.61.8.66,cctv,unknown,,
+Aras 1 Tangga Kanan,10.61.8.67,cctv,unknown,,
+Aras Bawah Koridor DKB C,10.61.8.68,cctv,unknown,,
+Aras 1 Tangga Tengah,10.61.8.69,cctv,unknown,,
+Aras Bawah Koridor BK-B1,10.61.8.70,cctv,unknown,,
+Aras Bawah Laluan Blok B-A,10.61.8.71,cctv,unknown,,
+Aras 1 Koridor BKB 6,10.61.8.72,cctv,unknown,,
+Blok D Tengah,10.61.8.73,cctv,unknown,,
+Blok D Belakang,10.61.8.74,cctv,unknown,,
+Aras Bawah G3 Foyer,10.61.8.75,cctv,unknown,,
+Aras 1 Koridor  DKBA,10.61.8.76,cctv,unknown,,
+Aras 2 Koridor  BKE7,10.61.8.77,cctv,unknown,,
+Aras 1 Koridor  BKE6,10.61.8.78,cctv,unknown,,
+Aras 2 Tangga Kanan BF,10.61.8.79,cctv,unknown,,
+Aras 1 Koridor  DKBF,10.61.8.80,cctv,unknown,,
+Aras Bawah Kafeteria,10.61.8.81,cctv,unknown,,
+Aras Bawah Koridor BKE4,10.61.8.82,cctv,unknown,,
+Aras 1 Tangga DKA Kiri,10.61.8.83,cctv,unknown,,
+G1  Parkir FKEE,10.61.8.84,cctv,unknown,,
+Aras Bawah Koridor  DKBA Kanan,10.61.8.85,cctv,unknown,,
+C15  Pintu Sisi 1,10.61.8.86,cctv,unknown,,
+C15  Pintu Sisi 2,10.61.8.87,cctv,unknown,,
+C16  Pintu Sisi 1,10.61.8.88,cctv,unknown,,
+Aras Bawah Laluan DKBF,10.61.8.89,cctv,unknown,,
+C17  Pintu Sisi 1,10.61.8.90,cctv,unknown,,
+C17  Pintu Sisi 2,10.61.8.91,cctv,unknown,,
+PTZ Blok A,10.61.8.92,cctv,unknown,,
+PTZ Parkir Blok G,10.61.8.93,cctv,unknown,,
+PTZ Parkir Blok E (Susur Gajah),10.61.8.94,cctv,unknown,,
+NVR,10.61.8.95,cctv,unknown,,
+Master Bridging CPE BLOK G1,10.61.8.96,cctv,unknown,,
+Remote Bridging CPE PINTU MASUK 3,10.61.8.97,cctv,unknown,,
+E17 - Pintu Pagar Ketiga,10.61.8.100,cctv,unknown,,
+NVR,10.61.8.111,cctv,unknown,,
+NVR,10.61.8.112,cctv,unknown,,
+C16  Blok Persyarah,10.61.8.117,cctv,unknown,,
+NVR 6 kamera,10.61.8.130,cctv,unknown,,
+G2 - FKMP Attendence Machine,10.61.8.156,cctv,unknown,,
+G1 - FKEE Attendence Machine,10.61.8.157,cctv,unknown,,
+E16 - Pej Pendaftar Attendence Machine,10.61.8.158,cctv,unknown,,
+G1  Rakaman Video,10.61.8.159,cctv,unknown,,
+C15  Pintu Masuk,10.61.8.160,cctv,unknown,,
+G1  Simpang,10.61.8.162,cctv,unknown,,
+DVR Analog,10.61.8.163,cctv,unknown,,
+D4 - Pintu Kedua TSN,10.61.8.166,cctv,unknown,,
+C15  Pintu Keluar,10.61.8.167,cctv,unknown,,
+C17  Pintu Masuk,10.61.8.168,cctv,unknown,,
+C16  Pintu Masuk,10.61.8.169,cctv,unknown,,
+C16  Pintu Keluar,10.61.8.170,cctv,unknown,,
+G1 - Bilik Seminar FKEE,10.61.8.171,cctv,unknown,,
+G1 - Foyer FKEE,10.61.8.172,cctv,unknown,,
+G2 - Makmal CAE 1 & 2,10.61.8.173,cctv,unknown,,
+G2 - Foyer FKMP,10.61.8.174,cctv,unknown,,
+G2 - Makmal CAD 2,10.61.8.175,cctv,unknown,,
+NVR,10.61.8.195,cctv,unknown,,
+Kaunter,10.61.8.196,cctv,unknown,,
+Pintu Masuk Pendaftar,10.61.8.197,cctv,unknown,,
+Pintu Masuk Bilik Kebal,10.61.8.198,cctv,unknown,,
+Bilik Kebal,10.61.8.199,cctv,unknown,,
+E16 - Contorl Room 2,10.61.201.126,cctv,unknown,,
+G4  PC TDI Siswa,10.62.8.21,cctv,unknown,,
+G5 PC TF 1,10.62.8.46,cctv,unknown,,
+TDI Siswa Border,10.62.8.48,cctv,unknown,,
+G4/G5  Keluar/Masuk /  Dataran KKTF/KKTDI,10.62.8.49,cctv,unknown,,
+TF- Foyer,10.62.8.50,cctv,unknown,,
+G5  Keluar Masuk Pusat PPP,10.62.8.51,cctv,unknown,,
+G5  Block C-D,10.62.8.52,cctv,unknown,,
+TDI- Foyer,10.62.8.83,cctv,unknown,,
+Library - Bookdrop,10.63.8.1,cctv,unknown,,
+Library   - Lift Utama,10.63.8.2,cctv,unknown,,
+Library - Tangga Keselamatan (Depan Bilik IT HUB),10.63.8.3,cctv,unknown,,
+Library   - Bilik 24Jam,10.63.8.4,cctv,unknown,,
+PTTA - Tangga Keselamatan Escape 5,10.63.8.5,cctv,unknown,,
+Library   - Makmal Komputer PTM,10.63.8.6,cctv,unknown,,
+Library  - Tangga Keselamatan Escape 6,10.63.8.7,cctv,unknown,,
+Library   - Berhampiran Lift VIP,10.63.8.8,cctv,unknown,,
+Library - Aras Bawah Tangga Keluar Lift Eksekutif,10.63.8.9,cctv,unknown,,
+Library   - Lobby Lift Eksekutif,10.63.8.10,cctv,unknown,,
+Library  - Garden,10.63.8.11,cctv,unknown,,
+Anjung Barat - Dewan,10.63.8.12,cctv,unknown,,
+Library - Tangga Keselamatan Escape 1,10.63.8.13,cctv,unknown,,
+Library - Tangga Keselamatan Escape 2,10.63.8.14,cctv,unknown,,
+Library   - Pintu Keluar Ke Lift Bomba,10.63.8.15,cctv,unknown,,
+Library   - Kaunter Sirkulasi,10.63.8.16,cctv,unknown,,
+Library   - Laluan ke Tandas Unit Pengindeksan,10.63.8.17,cctv,unknown,,
+Library   - Pintu Keluar Utama,10.63.8.18,cctv,unknown,,
+Library   - Lobby Pintu Masuk Utama,10.63.8.19,cctv,unknown,,
+Library   - Pintu Masuk Utama,10.63.8.20,cctv,unknown,,
+Library   - Pintu Keluar Masuk Utama,10.63.8.21,cctv,unknown,,
+Library   - Bilik Beg Stor,10.63.8.22,cctv,unknown,,
+Library   -Bilik 24jam (Lelaki),10.63.8.23,cctv,unknown,,
+Library   - Perpustakaan Permata Hikmah,10.63.8.24,cctv,unknown,,
+Library   - Bilik 24jam (Perempuan),10.63.8.25,cctv,unknown,,
+Library   - Ruang Bacaan (Bilik Rujukan Tesis),10.63.8.26,cctv,unknown,,
+Library   - Bilik 24 JAM Perempuan Sisi,10.63.8.27,cctv,unknown,,
+Library   - Pintu Keluar Kiri Lift Eksekutif,10.63.8.28,cctv,unknown,,
+Library  - Bilik Rujukan Tesis,10.63.8.29,cctv,unknown,,
+Library   - Ruang Bacaan  Akhbar,10.63.8.30,cctv,unknown,,
+Library   - Bilik Perkhidmatan,10.63.8.31,cctv,unknown,,
+Library   - Bilik Pameran,10.63.8.32,cctv,unknown,,
+Library   - Mesin Ploter,10.63.8.33,cctv,unknown,,
+Library   - Unit Perolehan Serial,10.63.8.34,cctv,unknown,,
+Library - Bilik Server Aras 2,10.63.8.35,cctv,unknown,,
+Library   - Pintu Hadapan Pentadbiran,10.63.8.36,cctv,unknown,,
+Library   - Berhampiran Tandas Lift,10.63.8.37,cctv,unknown,,
+Library  - Ruang Bacaan Iqra  Aras 2,10.63.8.38,cctv,unknown,,
+Pintu Keluar Lift Eksekutif Level 2,10.63.8.39,cctv,unknown,,
+Library - Lift Eksekutif Kanan Aras 2,10.63.8.40,cctv,unknown,,
+PTTA - Aras 1 Stor Perpustakaan,10.63.8.41,cctv,unknown,,
+Library - Ruang Bacaan 1 Aras 2,10.63.8.42,cctv,unknown,,
+Library - Ruang Bacaan 2 Aras 2,10.63.8.43,cctv,unknown,,
+Library - Ruang Bacaan 3 Aras 2,10.63.8.44,cctv,unknown,,
+Library   - Bilik Pencarian Maklumat,10.63.8.45,cctv,unknown,,
+Library  - Hadapan Bilik Carian Maklumat,10.63.8.46,cctv,unknown,,
+Library   - Bilik Seminar 1,10.63.8.47,cctv,unknown,,
+Library - Ruang Bacaan 1 Aras 3,10.63.8.48,cctv,unknown,,
+Library   - Ruang Bacaan 2 Aras 3,10.63.8.49,cctv,unknown,,
+Library - Berhampiran Pintu Keluar Lift Eks Aras 3,10.63.8.50,cctv,unknown,,
+Library - Bilik 24 Jam Lelaki sisi,10.63.8.51,cctv,unknown,,
+Library - Lift Eksekutif Kiri Aras 3,10.63.8.52,cctv,unknown,,
+Library   - Bilik Pasca Ijazah,10.63.8.53,cctv,unknown,,
+Library   - Hadapan Bilik Jurnal,10.63.8.54,cctv,unknown,,
+Library   - Bilik jurnal,10.63.8.55,cctv,unknown,,
+Library   - Bilik Auditorium,10.63.8.56,cctv,unknown,,
+Library   - Hadapan Pintu Keluar Lift Bomba,10.63.8.57,cctv,unknown,,
+Library   - Bilik Seminar 2,10.63.8.58,cctv,unknown,,
+Library   - Ruang Bacaan 8 Aras 4,10.63.8.59,cctv,unknown,,
+Library   - Ruang Koleksi Kreatif,10.63.8.60,cctv,unknown,,
+Library   - Ruang Bacaan 10 Aras 4,10.63.8.61,cctv,unknown,,
+Library   - Ruang Bacaan 11  Aras 4,10.63.8.62,cctv,unknown,,
+Library   - Ruang Bacaan 12  Aras 4,10.63.8.63,cctv,unknown,,
+Library   - Ruang Bacaan 13  Aras 4,10.63.8.64,cctv,unknown,,
+Library   - Ruang Terbuka - Dekat Seminar 1,10.63.8.65,cctv,unknown,,
+Library   - Ruang Kubikal,10.63.8.66,cctv,unknown,,
+Library - Lift Eksekutif Kanan Aras 4,10.63.8.67,cctv,unknown,,
+Library - Lift Eksekutif Kiri Aras 4,10.63.8.68,cctv,unknown,,
+Library   - Ruang Bacaan 3 Aras 4,10.63.8.69,cctv,unknown,,
+Library   - Ruang Bacaan 4  Aras 4,10.63.8.70,cctv,unknown,,
+Library   - Ruang Bacaan 5  Aras 4,10.63.8.71,cctv,unknown,,
+Library   - Ruang Bacaan 6  Aras 4,10.63.8.72,cctv,unknown,,
+Library   - Ruang Bacaan 7 Aras 4,10.63.8.73,cctv,unknown,,
+Library - Canselori Laluan Bilik Mesyuarat VIP,10.63.8.74,cctv,unknown,,
+Library - Canselori Bilik VIP,10.63.8.76,cctv,unknown,,
+Library - Laluan Bilik Jemaah Aras 5,10.63.8.78,cctv,unknown,,
+Library - Lobi Canselori - Hadapan Lift Eksekutif,10.63.8.79,cctv,unknown,,
+Bilik Mesyuarat VIP,10.63.8.80,cctv,unknown,,
+Library   - Bilik Jamuan,10.63.8.81,cctv,unknown,,
+Library   - Keluar Tangga,10.63.8.82,cctv,unknown,,
+Library - Canselori Laluan Lift Bomba,10.63.8.83,cctv,unknown,,
+Makmal Komputer alkhawarizmi,10.63.8.84,cctv,unknown,,
+Pintu Masuk Pos 4,10.63.8.86,cctv,unknown,,
+Pintu Keluar Pos 4,10.63.8.87,cctv,unknown,,
+DSI - Lobi Kanan,10.63.8.88,cctv,unknown,,
+DSI - Lobi Kiri,10.63.8.89,cctv,unknown,,
+DSI - Lobi Tengah,10.63.8.90,cctv,unknown,,
+PTTA - Tower Library belakang,10.63.8.91,cctv,unknown,,
+Tower CCTV - Library,10.63.8.107,cctv,unknown,,
+CCTV 1,10.63.8.108,cctv,unknown,,
+CCTV 2,10.63.8.109,cctv,unknown,,
+CCTV 3,10.63.8.110,cctv,unknown,,
+CCTV 4,10.63.8.111,cctv,unknown,,
+Pintu Masuk,10.63.43.209,cctv,unknown,,
+Pintu Keluar,10.63.43.210,cctv,unknown,,
+FSKTM - Hadapan Makmal Grafik Animasi,10.65.8.1,cctv,unknown,,
+FSKTM - Bilik Kebal,10.65.8.2,cctv,unknown,,
+FSKTM - Lift,10.65.8.3,cctv,unknown,,
+FSKTM - Lorong Bilik Server PTM,10.65.8.4,cctv,unknown,,
+FSKTM - Lorong Studio Multimedia,10.65.8.6,cctv,unknown,,
+FSKTM - Studio Multimedia Belakang,10.65.8.7,cctv,unknown,,
+FSKTM - Makmal Animasi Grafik Belakang,10.65.8.8,cctv,unknown,,
+FSKTM - Makmal Realiti Maya Belakang,10.65.8.9,cctv,unknown,,
+FSKTM - Makmal Pintar Belakang,10.65.8.10,cctv,unknown,,
+FSKTM - Lorong Infosys Belakang,10.65.8.11,cctv,unknown,,
+FSKTM - Lift Aras 1,10.65.8.12,cctv,unknown,,
+FSKTM - Lorong Makmal Kejuruteraan Perisian,10.65.8.13,cctv,unknown,,
+FSKTM - Lorong Pusat Data,10.65.8.14,cctv,unknown,,
+FSKTM - Bilik Server ICT,10.65.8.15,cctv,unknown,,
+FSKTM - Makmal Kejuruteraan Perisian,10.65.8.16,cctv,unknown,,
+FSKTM - Makmal Pembangunan Perisian Belakang,10.65.8.17,cctv,unknown,,
+FSKTM - Makmal Pengaturcaraan Belakang,10.65.8.18,cctv,unknown,,
+FSKTM - Lift Aras 2,10.65.8.19,cctv,unknown,,
+FSKTM - Lorong Hadapan Bilik Tutorial,10.65.8.20,cctv,unknown,,
+FSKTM - Lorong Cisco,10.65.8.21,cctv,unknown,,
+FSKTM - Lorong Makmal Keselamatan Komputer,10.65.8.22,cctv,unknown,,
+FSKTM - Makmal Sistem Komputer Belakang (ARUBA),10.65.8.23,cctv,unknown,,
+FSKTM - Makmal Digital Forensik Belakang,10.65.8.24,cctv,unknown,,
+FSKTM - Makmal Cisco Belakang,10.65.8.25,cctv,unknown,,
+FSKTM - Makmal Keselamatan Komputer Belakang,10.65.8.26,cctv,unknown,,
+FSKTM - Makmal Penyelidikan Belakang,10.65.8.27,cctv,unknown,,
+FSKTM - Lift B Aras 3,10.65.8.28,cctv,unknown,,
+FSKTM - Lorong Auditorium,10.65.8.29,cctv,unknown,,
+FSKTM - Lorong Makmal Teknologi Web,10.65.8.30,cctv,unknown,,
+FSKTM - Makmal Pengaturcaraan Internet Belakang,10.65.8.31,cctv,unknown,,
+FSKTM - Auditorium Belakang,10.65.8.32,cctv,unknown,,
+FSKTM - Makmal Teknologi Web Belakang,10.65.8.34,cctv,unknown,,
+FSKTM - Lift Aras 4,10.65.8.35,cctv,unknown,,
+FSKTM - Lorong Makmal Perisian,10.65.8.36,cctv,unknown,,
+FSKTM - Ruang Membaca Pelajar Aras 1,10.65.8.37,cctv,unknown,,
+FSKTM - Lift B Aras 5,10.65.8.38,cctv,unknown,,
+FSKTM - Makmal Infosys Aras 1,10.65.8.39,cctv,unknown,,
+FSKTM - Lift A Aras 6,10.65.8.40,cctv,unknown,,
+FSKTM - Lift Aras 7,10.65.8.41,cctv,unknown,,
+FSKTM - Lift B Aras 7,10.65.8.42,cctv,unknown,,
+Biodesel Aras 1 Kiri,10.65.8.80,cctv,unknown,,
+Biodesel Aras 1 Kanan,10.65.8.81,cctv,unknown,,
+Biodese Aras 1 Tangga,10.65.8.82,cctv,unknown,,
+Biodesel 4 Bawah,10.65.8.83,cctv,unknown,,
+FSKTM - Parkir 2,10.65.8.84,cctv,unknown,,
+Biodesel Parkir,10.65.8.85,cctv,unknown,,
+FSKTM - Pigeon Hole Pejabat Am,10.65.8.86,cctv,unknown,,
+FSKTM - Pintu Luar Pejabat,10.65.8.87,cctv,unknown,,
+FSKTM - Lorong Ruang Membaca Pelajar,10.65.8.88,cctv,unknown,,
+FSKTM - Lorong Bilik Seminar 2,10.65.8.90,cctv,unknown,,
+FSKTM - Lorong Tengah Aras 2,10.65.8.91,cctv,unknown,,
+FSKTM - Bilik Mesyuarat Pengurusan,10.65.8.92,cctv,unknown,,
+FSKTM - Lorong Pensyarah Belakang,10.65.8.93,cctv,unknown,,
+FSKTM - Lorong Tengah Aras 3,10.65.8.94,cctv,unknown,,
+FSKTM - Lorong Bilik Tutorial,10.65.8.95,cctv,unknown,,
+FSKTM - Lorong Pensyarah Depan Aras 4,10.65.8.96,cctv,unknown,,
+FSKTM - Lorong Pensyarah Belakang Aras 4,10.65.8.97,cctv,unknown,,
+FSKTM - Lorong Pensyarah Depan Aras 5,10.65.8.98,cctv,unknown,,
+FSKTM - Lorong Pensyarah Belakang Aras 5,10.65.8.99,cctv,unknown,,
+FSKTM - Lorong Pensyarah Depan Aras 6,10.65.8.100,cctv,unknown,,
+FSKTM - Lorong Pensyarah Belakang Aras 6,10.65.8.101,cctv,unknown,,
+FSKTM - Lorong Pensyarah Depan Aras 7,10.65.8.102,cctv,unknown,,
+FSKTM - BIlik Mesyuarat Utama,10.65.8.103,cctv,unknown,,
+FPTV - Bilik Fail Sulit Pejabat,10.66.8.1,cctv,unknown,,
+FPTV - Blok A Lift Ground,10.66.8.2,cctv,unknown,,
+FPTV - Blok A Lift Tingkat 1,10.66.8.3,cctv,unknown,,
+FPTV - Blok A Lift Tingkat 2,10.66.8.4,cctv,unknown,,
+FPTV - Blok A Lift Tingkat 3,10.66.8.5,cctv,unknown,,
+FPTV - Blok A Lift Tingkat 4,10.66.8.6,cctv,unknown,,
+FPTV - Blok A Lift Tingkat 5,10.66.8.7,cctv,unknown,,
+FPTV - Blok B Lift Tingkat 1,10.66.8.8,cctv,unknown,,
+FPTV - Blok C Lift Ground,10.66.8.9,cctv,unknown,,
+FPTV - Blok C Lift Tingkat 1,10.66.8.10,cctv,unknown,,
+FPTV - Blok C Lift Tingkat 2,10.66.8.11,cctv,unknown,,
+FPTV - Blok D Lift Ground,10.66.8.12,cctv,unknown,,
+FPTV - Blok D Lift Tingkat 1,10.66.8.13,cctv,unknown,,
+FPTV Roof Top,10.66.8.14,cctv,unknown,,
+HEP Kafe - Aras Bawah Hadapan Lift,10.66.8.15,cctv,unknown,,
+HEP Kafe - Aras 1 Hadapan Lift,10.66.8.16,cctv,unknown,,
+HEP Kafe - Aras 2 Hadapan Lift,10.66.8.17,cctv,unknown,,
+HEP Kafe - Aras Bawah Sebelah Kanan,10.66.8.18,cctv,unknown,,
+HEP Kafe - Aras 2 Sebelah Kanan,10.66.8.19,cctv,unknown,,
+HEP Kafe - Foyer,10.66.8.20,cctv,unknown,,
+HEP Kafe - Ruang Makan Cafeteria,10.66.8.21,cctv,unknown,,
+HEP Kafe  Laluan Belakang Cafeteria,10.66.8.22,cctv,unknown,,
+FKAAB - Bilik Kebal,10.67.8.1,cctv,unknown,,
+FKAAB - Lift Aras Bawah South East,10.67.8.2,cctv,unknown,,
+FKAAB - Lift Aras 1 South East,10.67.8.3,cctv,unknown,,
+FKAAB - Lift Aras 2 South East (depan pintu MU-205),10.67.8.4,cctv,unknown,,
+FKAAB - Lift Aras 3 South East,10.67.8.5,cctv,unknown,,
+FKAAB - Lift Aras 4 South East,10.67.8.6,cctv,unknown,,
+FKAAB - Lift Aras 5 South East,10.67.8.7,cctv,unknown,,
+FKAAB - Lift Aras 6 South East,10.67.8.8,cctv,unknown,,
+FKAAB - Lift Aras 7 South East,10.67.8.9,cctv,unknown,,
+FKAAB - Lift Aras 8 South East,10.67.8.10,cctv,unknown,,
+FKAAB - Lift Aras Bawah North East,10.67.8.11,cctv,unknown,,
+FKAAB - Lift Aras Mezznine North East,10.67.8.12,cctv,unknown,,
+FKAAB - Lift Aras 1 North East,10.67.8.13,cctv,unknown,,
+FKAAB - Lift Aras 2 North East,10.67.8.14,cctv,unknown,,
+FKAAB - Lift Aras 3 North East,10.67.8.15,cctv,unknown,,
+FKAAB - Lift Aras 4 North East,10.67.8.16,cctv,unknown,,
+FKAAB - Lift Aras 5 North East,10.67.8.17,cctv,unknown,,
+FKAAB - Lift Aras 6 North East,10.67.8.18,cctv,unknown,,
+FKAAS Roof Top,10.67.8.19,cctv,unknown,,
+Kamera FKAAB Tower - Pemantauan Projek Bangunan Pusat Data,10.67.8.20,cctv,unknown,,
+FPTP - Makmal Multimedia dan GIS,10.68.8.1,cctv,unknown,,
+FPTP - Makmal Sains Pengurusan,10.68.8.2,cctv,unknown,,
+FPTP - Makmal Komputer Pengeluaran dan Operasi,10.68.8.3,cctv,unknown,,
+FPTP - Hall,10.68.8.4,cctv,unknown,,
+FPTP - Tangga 2,10.68.8.7,cctv,unknown,,
+FPTP - Tangga 3,10.68.8.8,cctv,unknown,,
+FPTP - Tangga 4,10.68.8.9,cctv,unknown,,
+FPTP - Tangga 5,10.68.8.10,cctv,unknown,,
+FPTP - Tangga 6,10.68.8.11,cctv,unknown,,
+FPTP - Tangga 8,10.68.8.12,cctv,unknown,,
+FPTP - Tangga 7,10.68.8.13,cctv,unknown,,
+FKEE Aras Bawah CAM 1,10.69.8.1,cctv,unknown,,
+FKEE Aras Bawah CAM 2,10.69.8.2,cctv,unknown,,
+FKEE Aras 1 CAM 1,10.69.8.3,cctv,unknown,,
+FKEE Aras 1 CAM 2,10.69.8.4,cctv,unknown,,
+FKEE Aras 2 CAM 1,10.69.8.5,cctv,unknown,,
+FKEE Aras 2 CAM 2,10.69.8.6,cctv,unknown,,
+FKEE AKADEMIA - 4 - Staircase 1,10.69.8.10,cctv,unknown,,
+FKEE AKADEMIA - GF - Rear Lobby Entrance,10.69.8.11,cctv,unknown,,
+FKEE AKADEMIA - 1 - Staircase 3,10.69.8.12,cctv,unknown,,
+FKEE AKADEMIA - GF - Bilik Kebal,10.69.8.13,cctv,unknown,,
+FKEE AKADEMIA - GF - Side Entrance - Staircase 3,10.69.8.14,cctv,unknown,,
+FKEE AKADEMIA - GF - Side Entrance - Staircase 1,10.69.8.15,cctv,unknown,,
+FKEE AKADEMIA - 2 - Staircase 1,10.69.8.16,cctv,unknown,,
+FKEE AKADEMIA - 2 - Staircase 2,10.69.8.17,cctv,unknown,,
+FKEE AKADEMIA - 2 - Staircase 3,10.69.8.18,cctv,unknown,,
+FKEE AKADEMIA - 3 - Staircase 3,10.69.8.19,cctv,unknown,,
+FKEE AKADEMIA - 3 - Staircase 2,10.69.8.20,cctv,unknown,,
+FKEE AKADEMIA - 3 - Staircase 1,10.69.8.21,cctv,unknown,,
+FKEE AKADEMIA - 4 - Staircase 2,10.69.8.22,cctv,unknown,,
+FKEE AKADEMIA - 4 - Staircase 3,10.69.8.23,cctv,unknown,,
+FKEE AKADEMIA - 5 - Staircase 1,10.69.8.24,cctv,unknown,,
+FKEE AKADEMIA - 5 - Staircase 3,10.69.8.25,cctv,unknown,,
+FKEE AKADEMIA - 5 - Staircase 2,10.69.8.26,cctv,unknown,,
+FKEE AKADEMIA - 6 - Staircase 3,10.69.8.27,cctv,unknown,,
+FKEE AKADEMIA - 6 - Staircase 2,10.69.8.28,cctv,unknown,,
+FKEE AKADEMIA - 6 - Staircase 1,10.69.8.29,cctv,unknown,,
+FKEE AKADEMIA - 7 - Staircase 2,10.69.8.30,cctv,unknown,,
+FKEE AKADEMIA - 7 - Staircase 1,10.69.8.31,cctv,unknown,,
+FKEE AKADEMIA - 7 - Staircase 3,10.69.8.32,cctv,unknown,,
+FKEE AKADEMIA - 1 - Staircase 1,10.69.8.33,cctv,unknown,,
+FKEE AKADEMIA - 2 - Lift Lobby,10.69.8.34,cctv,unknown,,
+FKEE AKADEMIA - 6 - Lift Lobby,10.69.8.35,cctv,unknown,,
+FKEE AKADEMIA - 1 - Lift Lobby,10.69.8.36,cctv,unknown,,
+FKEE AKADEMIA - 1 - Staircase 2,10.69.8.37,cctv,unknown,,
+FKEE AKADEMIA - 3 - Lift Lobby,10.69.8.38,cctv,unknown,,
+FKEE AKADEMIA - 7 - Lift Lobby,10.69.8.39,cctv,unknown,,
+FKEE AKADEMIA - 5 - Lift Lobby,10.69.8.40,cctv,unknown,,
+FKEE AKADEMIA - 4 - Lift Lobby,10.69.8.41,cctv,unknown,,
+FKEE AKADEMIA - GF - Main Lobby Entrance,10.69.8.42,cctv,unknown,,
+NVR,10.100.10.201,cctv,unknown,,
+Attendent TAS,10.100.10.203,cctv,unknown,,
+Pintu Masuk/Keluar,10.100.10.204,cctv,unknown,,
+Bridging Master,10.100.10.205,cctv,unknown,,
+Bridging Remote,10.100.10.206,cctv,unknown,,
+Digital Video Recorder,10.100.10.207,cctv,unknown,,
+Parkir,10.100.10.208,cctv,unknown,,
+Stor Pelupusan,10.100.10.209,cctv,unknown,,
+Kabin Stor,10.100.10.210,cctv,unknown,,
+Blok Lavender,10.100.10.211,cctv,unknown,,
+Kafe Laluan Tidak Berpagar,10.100.10.212,cctv,unknown,,
+Kafe ke Blok Jasmin,10.100.10.213,cctv,unknown,,
+Kafe ke Blok Lavender,10.100.10.214,cctv,unknown,,
+KB  Pintu Masuk,172.16.72.103,cctv,unknown,,
+KB - Parkir PPD,172.16.72.104,cctv,unknown,,
+KB  Bilik Server,172.16.72.106,cctv,unknown,,
+KB Blok B koridor,172.16.72.111,cctv,unknown,,
+KB - PPD,172.16.72.115,cctv,unknown,,
+NVR,192.168.0.238,cctv,unknown,,
+Encoder,192.168.0.239,cctv,unknown,,
+Pondok Pengawal,192.168.0.240,cctv,unknown,,
+Right Border,192.168.0.241,cctv,unknown,,
+Left Border,192.168.0.242,cctv,unknown,,
+Pintu Masuk Pejabat,192.168.0.243,cctv,unknown,,
+Ruang Dalam Pejabat,192.168.0.244,cctv,unknown,,
+Laluan Tangga,192.168.0.245,cctv,unknown,,
+Bridging Pintu Masuk,192.168.0.246,cctv,unknown,,
+Bridging Pondok Pengawal,192.168.0.247,cctv,unknown,,
+CCTV Keyboard,192.168.0.248,cctv,unknown,,
+CAMERA 1,192.168.254.2,cctv,unknown,,
+Camera 2,192.168.254.3,cctv,unknown,,

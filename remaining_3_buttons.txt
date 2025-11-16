@@ -1,0 +1,147 @@
+REMAINING 3 BUTTONS ANALYSIS
+================================================================================
+
+Total buttons: 355
+Known devices: 352
+Remaining: 14
+
+
+Button #21:
+  Device Name: B4-Surau
+  Value: B4-Surau
+  Title: B4-Surau
+  Class: 
+  IP: NO IP
+  Has showInfo: False
+  Onclick: No onclick
+  HTML: <input type=button class=Alive value='B4-Surau' title="B4-Surau" onmouseover="javascript:showHint('B4-Surau<br>
+
+Button #25:
+  Device Name: C10-Makmal FKEE
+  Value: C10-Makmal FKEE
+  Title: C10-Makmal FKEE
+  Class: 
+  IP: NO IP
+  Has showInfo: False
+  Onclick: No onclick
+  HTML: <input type=button class=Alive value='C10-Makmal FKEE' title="C10-Makmal FKEE" onmouseover="javascript:showHint('C10-Makmal FKEE<br>
+
+Button #28:
+  Device Name: C13-Makmal Bahasa Disti
+  Value: C13-Makmal Bahasa Disti
+  Title: C13-Makmal Bahasa Disti
+  Class: 
+  IP: NO IP
+  Has showInfo: False
+  Onclick: No onclick
+  HTML: <input type=button class=Alive value='C13-Makmal Bahasa Disti' title="C13-Makmal Bahasa Disti" onmouseover="javascript:showHint('C13-Makmal Bahasa Disti<br>
+
+Button #31:
+  Device Name: C15-1stFloor
+  Value: C15-1stFloor
+  Title: C15-1stFloor
+  Class: 
+  IP: NO IP
+  Has showInfo: False
+  Onclick: No onclick
+  HTML: <input type=button class=Alive value='C15-1stFloor' title="C15-1stFloor" onmouseover="javascript:showHint('C15-1stFloor<br>
+
+Button #33:
+  Device Name: C16-1stfloor
+  Value: C16-1stfloor
+  Title: C16-1stfloor
+  Class: 
+  IP: NO IP
+  Has showInfo: False
+  Onclick: No onclick
+  HTML: <input type=button class=Alive value='C16-1stfloor' title="C16-1stfloor" onmouseover="javascript:showHint('C16-1stfloor<br>
+
+Button #35:
+  Device Name: C17-1stfloor
+  Value: C17-1stfloor
+  Title: C17-1stfloor
+  Class: 
+  IP: NO IP
+  Has showInfo: False
+  Onclick: No onclick
+  HTML: <input type=button class=Alive value='C17-1stfloor' title="C17-1stfloor" onmouseover="javascript:showHint('C17-1stfloor<br>
+
+Button #39:
+  Device Name: C2-CCTV Rack Server
+  Value: C2-CCTV Rack Server
+  Title: C2-CCTV Rack Server
+  Class: 
+  IP: NO IP
+  Has showInfo: False
+  Onclick: No onclick
+  HTML: <input type=button class=Alive value='C2-CCTV Rack Server' title="C2-CCTV Rack Server" onmouseover="javascript:showHint('C2-CCTV Rack Server<br>
+
+Button #40:
+  Device Name: C2-Makmal Bahasa
+  Value: C2-Makmal Bahasa
+  Title: C2-Makmal Bahasa
+  Class: 
+  IP: NO IP
+  Has showInfo: False
+  Onclick: No onclick
+  HTML: <input type=button class=Alive value='C2-Makmal Bahasa' title="C2-Makmal Bahasa" onmouseover="javascript:showHint('C2-Makmal Bahasa<br>
+
+Button #41:
+  Device Name: C2-Makmal CAD FKEE
+  Value: C2-Makmal CAD FKEE
+  Title: C2-Makmal CAD FKEE
+  Class: 
+  IP: NO IP
+  Has showInfo: False
+  Onclick: No onclick
+  HTML: <input type=button class=ACK value='C2-Makmal CAD FKEE' title="C2-Makmal CAD FKEE" onmouseover="javascript:showHint('C2-Makmal CAD FKEE<br>
+
+Button #47:
+  Device Name: C7-Kabin
+  Value: C7-Kabin
+  Title: C7-Kabin
+  Class: 
+  IP: NO IP
+  Has showInfo: False
+  Onclick: No onclick
+  HTML: <input type=button class=Alive value='C7-Kabin' title="C7-Kabin" onmouseover="javascript:showHint('C7-Kabin<br>
+
+Button #48:
+  Device Name: C8-Bilik Pensyarah
+  Value: C8-Bilik Pensyarah
+  Title: C8-Bilik Pensyarah
+  Class: 
+  IP: NO IP
+  Has showInfo: False
+  Onclick: No onclick
+  HTML: <input type=button class=Alive value='C8-Bilik Pensyarah' title="C8-Bilik Pensyarah" onmouseover="javascript:showHint('C8-Bilik Pensyarah<br>
+
+Button #49:
+  Device Name: C9-Bilik Pensyarah
+  Value: C9-Bilik Pensyarah
+  Title: C9-Bilik Pensyarah
+  Class: 
+  IP: NO IP
+  Has showInfo: False
+  Onclick: No onclick
+  HTML: <input type=button class=Alive value='C9-Bilik Pensyarah' title="C9-Bilik Pensyarah" onmouseover="javascript:showHint('C9-Bilik Pensyarah<br>
+
+Button #97:
+  Device Name: G1-A-Server UCiTV
+  Value: G1-A-Server UCiTV
+  Title: G1-A-Server UCiTV
+  Class: 
+  IP: NO IP
+  Has showInfo: False
+  Onclick: No onclick
+  HTML: <input type=button class=Alive value='G1-A-Server UCiTV' title="G1-A-Server UCiTV" onmouseover="javascript:showHint('G1-A-Server UCiTV<br>
+
+Button #105:
+  Device Name: G2-G Makmal CADCAM2
+  Value: G2-G Makmal CADCAM2
+  Title: G2-G Makmal CADCAM2
+  Class: 
+  IP: NO IP
+  Has showInfo: False
+  Onclick: No onclick
+  HTML: <input type=button class=Alive value='G2-G Makmal CADCAM2' title="G2-G Makmal CADCAM2" onmouseover="javascript:showHint('G2-G Makmal CADCAM2<br>

@@ -1,0 +1,59 @@
+14 BUTTONS WITHOUT IP - ANALYSIS
+================================================================================
+
+B4-Surau
+  IP: 10.8.3.43
+  Status: FOUND
+
+C10-Makmal FKEE
+  IP: 10.8.3.36
+  Status: FOUND
+
+C13-Makmal Bahasa Disti
+  IP: 10.8.3.22
+  Status: FOUND
+
+C15-1stFloor
+  IP: 10.8.3.152
+  Status: FOUND
+
+C16-1stfloor
+  IP: 10.8.3.151
+  Status: FOUND
+
+C17-1stfloor
+  IP: 10.8.3.150
+  Status: FOUND
+
+C2-CCTV Rack Server
+  IP: 10.8.3.16
+  Status: FOUND
+
+C2-Makmal Bahasa
+  IP: 10.8.3.41
+  Status: FOUND
+
+C2-Makmal CAD FKEE
+  IP: 10.8.3.40
+  Status: FOUND
+
+C7-Kabin
+  IP: 10.8.3.26
+  Status: FOUND
+
+C8-Bilik Pensyarah
+  IP: 10.8.3.25
+  Status: FOUND
+
+C9-Bilik Pensyarah
+  IP: 10.8.3.37
+  Status: FOUND
+
+G1-A-Server UCiTV
+  IP: 10.8.3.175
+  Status: FOUND
+
+G2-G Makmal CADCAM2
+  IP: 10.8.3.177
+  Status: FOUND
+

@@ -1,0 +1,181 @@
+device_name,ip_address
+HEPA Main Switch,10.8.2.19
+Relasis Pejabat,10.8.2.21
+HEPA Access Switch,10.8.2.27
+Cafe Main Switch,10.8.2.29
+Cafe Access Switch,10.8.2.30
+F6 Gfloor Oricc,10.8.2.32
+F6 1stFloor Oricc,10.8.2.33
+E POE,10.8.2.40
+PPUK Kabin Depan Relasis,10.8.2.41
+C,10.8.2.44
+D,10.8.2.45
+A POE L1 (room A2-05),10.8.2.46
+Kolam Renang,10.8.2.56
+F6 2ndFloor Oricc,10.8.2.57
+F6 3rdFloor Oricc,10.8.2.58
+F6 4thFloor Oricc,10.8.2.59
+B SW2,10.8.2.64
+Stor Kimia 10.8.2.67,10.8.2.67
+PPP Pembangunan,10.8.2.110
+PPP Penyelengaraan,10.8.2.158
+Disti FSKTM GFloor,10.8.2.206
+Disti FSKTM GFloor,10.8.2.207
+A LAN &amp; POE,10.8.2.217
+Disti FKEE QB,10.8.2.220
+QB-Gfloor,10.8.2.221
+QB-1st Floor,10.8.2.222
+QB-2nd Floor,10.8.2.223
+DSI UCiTV,10.8.2.230
+DSI Belakang,10.8.2.231
+Disti FKAAB BlokA-Gfloor,10.8.3.3
+A4 1st Floor,10.8.3.7
+A5 PTM,10.8.3.14
+Disti QA-GFloor,10.8.3.18
+Distribution Sw FPTP,10.8.3.20
+FSKTM Temp Sw to NDC,10.8.3.21
+E2,10.8.3.34
+G4-AB-Switch PoE,10.8.3.38
+F4 Chamber Lab FKEE,10.8.3.42
+E7-Kanzu E7-002-01,10.8.3.48
+E15-Bilik Kuliah E15-001,10.8.3.53
+E14-Bilik Kuliah E14-001,10.8.3.54
+E17-Makmal Bahan FKAAB,10.8.3.55
+E6-Bilik ICT E6-002B-0,10.8.3.56
+B2 Pej. Antarabangsa,10.8.3.57
+E1 Makmal AMMC,10.8.3.60
+D7 Gfloor,10.8.3.61
+D7 2ndFloor,10.8.3.62
+QA-2nd Floor Sw,10.8.3.63
+D10 Unit Awam Lama,10.8.3.64
+D15-Pejabat Alumni &amp; PKU,10.8.3.70
+F2-Pejabat PPA,10.8.3.71
+D13-001 Pej Lestari,10.8.3.73
+D14-Unit Percetakan,10.8.3.74
+D8-Pusat Sukan D08-002,10.8.3.75
+Palapes Pejabat,10.8.3.82
+QA-3rd Floor Sw,10.8.3.85
+B,10.8.3.86
+Reccess,10.8.3.87
+H Lab,10.8.3.89
+D16-PKU2,10.8.3.90
+F,10.8.3.91
+E Disti Gfloor,10.8.3.93
+QA-4th Floor Sw,10.8.3.94
+QA-5th Floor Sw,10.8.3.95
+QA-6th Floor Sw,10.8.3.96
+F3 P.Khidmat Pelajar,10.8.3.97
+QA-7th Floor Sw,10.8.3.98
+Disti G4 Cafe Gfloor,10.8.3.100
+G4-Gnd Cafe,10.8.3.101
+G4-1stFlr-Office,10.8.3.102
+G4-AB Blok Soikongan,10.8.3.103
+G4-CD Blok Sokongan,10.8.3.104
+G5-Gnd Cafe,10.8.3.105
+G5-1stFlr Office,10.8.3.106
+G5-AB Blok Sokongan,10.8.3.107
+G5-CD Sokongan,10.8.3.108
+J,10.8.3.109
+K,10.8.3.110
+M,10.8.3.111
+N,10.8.3.112
+G,10.8.3.113
+L,10.8.3.114
+Palapes Kabin,10.8.3.115
+Suksis Pejabat,10.8.3.116
+E16 2nd Floor,10.8.3.118
+E16 3rd Floor,10.8.3.119
+QA-GFloor Sw,10.8.3.121
+QA-CCTV GFloor sw,10.8.3.122
+Disti QA-CCTV GFloor,10.8.3.124
+QA-CCTV 1st Floor sw,10.8.3.125
+QA-CCTV 2nd Floor sw,10.8.3.126
+Disti FSKTM GFloor,10.8.3.130
+GFloor FSKTM,10.8.3.131
+1stFloor FSKTM,10.8.3.132
+2ndFloor FSKTM,10.8.3.133
+3rdFloor FSKTM,10.8.3.134
+4thtFloor FSKTM,10.8.3.135
+5th Floor FSKTM,10.8.3.136
+6th Floor FSKTM,10.8.3.137
+7th tFloor FSKTM,10.8.3.138
+Gfloor Disti Room,10.8.3.141
+Gfloor,10.8.3.142
+1st Floor,10.8.3.143
+1st Floor Server,10.8.3.144
+2nd Floor,10.8.3.145
+3rd Floor,10.8.3.147
+4th Floor,10.8.3.148
+QA-CCTV 3rd Floor sw,10.8.3.161
+A6 Pos Kawalan,10.8.3.167
+D6-004a-Felo-KKTSN-POE,10.8.3.169
+G2 Disti FKMP Wing F,10.8.3.172
+G1 Disti Wing B,10.8.3.173
+C2 - Inkubator,10.8.3.178
+G3 Disti A-Gfloor,10.8.3.180
+A Gfloor Floor,10.8.3.189
+A 1stFloor,10.8.3.190
+A 2ndFloor,10.8.3.191
+A 3rdFloor,10.8.3.192
+A 4thdFloor,10.8.3.193
+A 5thFloor,10.8.3.194
+B GndFloor,10.8.3.195
+B 1stFloor,10.8.3.196
+C GndFloor,10.8.3.197
+C 1StFloor,10.8.3.198
+C 2ndFloor,10.8.3.199
+QA-CCTV 4th Floor sw,10.8.3.200
+QA-CCTV 5th Floor sw,10.8.3.203
+Gfloor WC01 Blkg Lif,10.8.3.204
+Gfloor WC02,10.8.3.205
+1st Floor WC03 Blkg Lif,10.8.3.206
+1st Floor WC04,10.8.3.207
+2nd Floor WC05 Blkg Lif,10.8.3.208
+2nd Floor WC06,10.8.3.209
+3rd Floor WC07 Blkg Lif,10.8.3.210
+3rd Floor WC08,10.8.3.211
+4th Floor WC09 Blkg Lif,10.8.3.212
+4th Floor WC10,10.8.3.213
+5th Floor WC11 Blkg Lif,10.8.3.214
+5th Floor,10.8.3.216
+6th Floor,10.8.3.217
+7th Floor,10.8.3.218
+8th Floor,10.8.3.219
+E16 3rd Floor CCTV,10.8.3.220
+Masjid,10.8.3.232
+Taska,10.8.3.233
+G9 Biodiesel,10.8.3.234
+H Disti,10.8.3.235
+QA-CCTV 6th Floor sw,10.8.3.236
+A10 KOKO Gfloor sw1,10.8.3.237
+A10 KOKO 1st Flr,10.8.3.239
+QA-CCTV 7th Floor sw,10.8.3.240
+QA-1st Floor Sw,10.8.3.241
+F5 MINT SRC,10.8.3.243
+QA-1st Floor Sw,10.8.3.246
+Disti C15.C16,10.8.3.248
+Disti B3.E6,10.8.3.250
+B-003,10.9.4.6
+A-004-A BK2,10.9.4.7
+MKPTM2,10.9.4.9
+B-103-01,10.9.4.11
+B-104,10.9.4.12
+B-105-01,10.9.4.13
+B-106-02,10.9.4.14
+A-102-02,10.9.4.16
+A-109-02,10.9.4.18
+A-203 Bilik Pensyarah 3,10.9.4.26
+A-001,10.9.4.30
+ATM &amp; Bust Stop Switch,10.10.10.17
+G8 Envirolab,10.10.11.115
+D11 Kabin Pemandu,10.60.35.208
+A20 to A10 Remote UBNT,10.60.35.248
+printer fujixerox IO,10.63.24.225
+H Lab POE for AP,10.64.3.5
+CORE PUMAS,10.100.0.3
+A Blok Pejabat,10.100.0.4
+B Blok Asrama Perempuan,10.100.0.5
+C Blok VIP Asrama,10.100.0.6
+D Blok Asrama Lelaki,10.100.0.7
+E Blok Dewan Makan,10.100.0.8
+PEPLINK PUMAS,10.100.2.1

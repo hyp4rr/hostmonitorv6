@@ -56,12 +56,19 @@ const DevicePingManager = () => {
   const pingAllDevices = async () => {
     try {
       setPingingAll(true);
+      // Increased timeout to 10 minutes to match backend timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 600000); // 10 minutes
+      
       const response = await fetch('/api/monitoring/ping-all', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-        }
+        },
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       const data = await response.json();
       
       if (data.success) {

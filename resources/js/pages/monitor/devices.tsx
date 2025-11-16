@@ -48,6 +48,12 @@ interface Device {
         email: string;
         role: string;
     };
+    managed_by_users?: Array<{
+        id: number;
+        name: string;
+        email: string;
+        role: string;
+    }>;
     type?: string;
     category: DeviceCategory;
     status: DeviceStatus;
@@ -209,6 +215,26 @@ export default function Devices() {
     const [modelFilter, setModelFilter] = useState<string>('all');
     const [managedByFilter, setManagedByFilter] = useState<string>('all');
     const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
+    const [isLoadingSelectedDevice, setIsLoadingSelectedDevice] = useState(false);
+
+    const loadDeviceDetails = useCallback(async (deviceId: number) => {
+        try {
+            setIsLoadingSelectedDevice(true);
+            const res = await fetch(`/api/devices/${deviceId}`, {
+                headers: { Accept: 'application/json' },
+                credentials: 'same-origin',
+            });
+            if (res.ok) {
+                const data = await res.json();
+                // Ensure we only update if it's still the same selected device
+                setSelectedDevice(prev => (prev && prev.id === deviceId ? { ...prev, ...data } : prev));
+            }
+        } catch (e) {
+            console.error('Failed to load device details', e);
+        } finally {
+            setIsLoadingSelectedDevice(false);
+        }
+    }, []);
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
     const [sortField, setSortField] = useState<SortField>('name');
     const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
@@ -226,7 +252,7 @@ export default function Devices() {
     
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
-    const [perPage, setPerPage] = useState(50);
+    const [perPage, setPerPage] = useState(300);
     const [totalItems, setTotalItems] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
     
@@ -250,6 +276,35 @@ export default function Devices() {
         duration: number;
         timestamp: string;
     } | null>(null);
+
+    // View options (persisted)
+    const [viewOptions, setViewOptions] = useState(() => {
+        try {
+            const raw = localStorage.getItem('deviceGridViewOptions');
+            if (raw) return JSON.parse(raw);
+        } catch {}
+        return {
+            showName: false,
+            showIp: false,
+            showStatus: false,
+            showBorders: false,
+            dense: true,
+            tiny: false,
+        } as {
+            showName: boolean;
+            showIp: boolean;
+            showStatus: boolean;
+            showBorders: boolean;
+            dense: boolean;
+            tiny: boolean;
+        };
+    });
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('deviceGridViewOptions', JSON.stringify(viewOptions));
+        } catch {}
+    }, [viewOptions]);
 
     // Update category counts with actual totals
     const updatedCategories = categories.map(cat => ({
@@ -432,6 +487,16 @@ export default function Devices() {
         try {
             console.log('Starting ping all devices...');
             
+            // Calculate dynamic timeout based on device count
+            // With new settings: 50 devices per batch, 2s timeout per device, 3s wait per batch
+            // Formula: (deviceCount / 50) * 3 seconds + 30 seconds buffer
+            const deviceCount = allDevices.length || 0;
+            const estimatedBatches = Math.ceil(deviceCount / 50);
+            const estimatedSeconds = (estimatedBatches * 3) + 30; // 3s per batch + 30s buffer
+            const timeoutMs = Math.max(600000, estimatedSeconds * 1000); // Minimum 10 minutes, or calculated time
+            
+            console.log(`Ping timeout calculated: ${timeoutMs / 1000}s for ${deviceCount} devices (${estimatedBatches} batches)`);
+            
             // Use POST endpoint to actually ping all devices (ultra-fast parallel system)
             const response = await fetch('/ping-all-devices', {
                 method: 'POST',
@@ -439,7 +504,7 @@ export default function Devices() {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
                 },
-                signal: AbortSignal.timeout(60000), // 1 minute timeout for ultra-fast parallel processing
+                signal: AbortSignal.timeout(timeoutMs), // Dynamic timeout based on device count
             });
             
             console.log('Ping all response status:', response.status);
@@ -448,35 +513,37 @@ export default function Devices() {
                 const data = await response.json();
                 console.log('Ping all response data:', data);
                 
-                // Update devices list with fresh data
-                await fetchDevices();
-                
-                // Update ping results with actual ping data
-                setLastPingResults({
-                    total: data.stats.total_devices,
-                    online: data.stats.online_devices,
-                    offline: data.stats.offline_devices,
-                    duration: data.stats.ping_duration,
-                    timestamp: data.timestamp,
-                });
-                
-                // Show success notification
-                const total = data.stats.total_devices;
-                const online = data.stats.online_devices;
-                const offline = data.stats.offline_devices;
-                const uptime = total > 0 ? ((online / total) * 100).toFixed(1) : 0;
-                const devicesPerSecond = data.stats.devices_per_second;
-                const errorCount = data.stats.error_count || 0;
-                
-                let message = `✅ All Devices Pinged Successfully!\n\nTotal Devices: ${total}\nOnline: ${online}\nOffline: ${offline}\nUptime: ${uptime}%\nDuration: ${(data.stats.ping_duration / 1000).toFixed(1)}s\nSpeed: ${devicesPerSecond} devices/sec`;
-                
-                if (errorCount > 0) {
-                    message += `\nErrors: ${errorCount} (devices marked offline)`;
+                // Check if this is a background job response
+                if (data.stats?.status === 'processing') {
+                    const estimatedMinutes = Math.ceil((data.stats.estimated_duration_seconds || 60) / 60);
+                    alert(`✅ ${data.message}\n\n${data.note}\n\n💡 Estimated completion: ${estimatedMinutes} minute(s). Refresh the page after completion to see updated device statuses.`);
+                    
+                    // Auto-refresh after estimated duration
+                    const refreshDelay = (data.stats.estimated_duration_seconds || 60) * 1000;
+                    setTimeout(() => {
+                        fetchDevices();
+                    }, refreshDelay);
+                } else {
+                    // Legacy response format (if queue is not running, it might still work synchronously)
+                    await fetchDevices();
+                    
+                    const total = data.stats?.total_devices || 0;
+                    const online = data.stats?.online_devices || 0;
+                    const offline = data.stats?.offline_devices || 0;
+                    const uptime = total > 0 ? ((online / total) * 100).toFixed(1) : 0;
+                    const devicesPerSecond = data.stats?.devices_per_second || 0;
+                    const errorCount = data.stats?.error_count || 0;
+                    
+                    let message = `✅ All Devices Pinged Successfully!\n\nTotal Devices: ${total}\nOnline: ${online}\nOffline: ${offline}\nUptime: ${uptime}%\nDuration: ${(data.stats?.ping_duration / 1000 || 0).toFixed(1)}s\nSpeed: ${devicesPerSecond} devices/sec`;
+                    
+                    if (errorCount > 0) {
+                        message += `\nErrors: ${errorCount} (devices marked offline)`;
+                    }
+                    
+                    message += `\n\nAll devices including offline ones have been pinged.`;
+                    
+                    alert(message);
                 }
-                
-                message += `\n\nAll devices including offline ones have been pinged.`;
-                
-                alert(message);
             } else {
                 const errorText = await response.text();
                 console.error('Ping all error response:', errorText);
@@ -500,7 +567,7 @@ export default function Devices() {
             console.error('Error pinging all devices:', error);
             
             if (error instanceof Error && error.name === 'AbortError') {
-                alert('❌ Ping operation timed out after 10 minutes. Please try with fewer devices.');
+                alert(`❌ Ping operation timed out. The operation may still be running on the server. Please wait a few minutes and refresh the page to see updated results.`);
             } else {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
                 alert(`❌ Network error while pinging all devices: ${errorMessage}`);
@@ -1092,38 +1159,105 @@ export default function Devices() {
                                     </span>
                                 )}
                             </p>
+                            {/* View options */}
+                            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
+                                <label className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                                    <input
+                                        type="checkbox"
+                                        checked={viewOptions.tiny}
+                                        onChange={e => setViewOptions(v => ({ ...v, tiny: e.target.checked }))}
+                                    />
+                                    Icon-size
+                                </label>
+                                <label className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                                    <input
+                                        type="checkbox"
+                                        checked={viewOptions.dense}
+                                        onChange={e => setViewOptions(v => ({ ...v, dense: e.target.checked }))}
+                                    />
+                                    Dense
+                                </label>
+                                <label className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                                    <input
+                                        type="checkbox"
+                                        checked={viewOptions.showBorders}
+                                        onChange={e => setViewOptions(v => ({ ...v, showBorders: e.target.checked }))}
+                                    />
+                                    Borders
+                                </label>
+                                <label className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                                    <input
+                                        type="checkbox"
+                                        checked={viewOptions.showName}
+                                        onChange={e => setViewOptions(v => ({ ...v, showName: e.target.checked }))}
+                                    />
+                                    Name
+                                </label>
+                                <label className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                                    <input
+                                        type="checkbox"
+                                        checked={viewOptions.showIp}
+                                        onChange={e => setViewOptions(v => ({ ...v, showIp: e.target.checked }))}
+                                    />
+                                    IP
+                                </label>
+                                <label className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                                    <input
+                                        type="checkbox"
+                                        checked={viewOptions.showStatus}
+                                        onChange={e => setViewOptions(v => ({ ...v, showStatus: e.target.checked }))}
+                                    />
+                                    Status
+                                </label>
+                            </div>
                         </div>
-                        <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+                        {/*
+                          Use more columns when in dense/tiny mode to make each card narrower.
+                        */}
+                        <div
+                            className={`grid ${
+                                viewOptions.tiny
+                                    ? 'grid-cols-6 sm:grid-cols-8 md:grid-cols-12 lg:grid-cols-16 xl:grid-cols-20 2xl:grid-cols-24 gap-1'
+                                    : viewOptions.dense
+                                        ? 'grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 2xl:grid-cols-14 gap-1.5'
+                                        : 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-10 gap-3'
+                            }`}
+                        >
                             {filteredDevices.map((device) => (
                                 <div
                                     key={device.id}
-                                    className="group cursor-pointer rounded-xl border border-slate-200/50 bg-white p-3 shadow transition-all hover:scale-105 hover:shadow-lg dark:border-slate-700/50 dark:bg-slate-800"
-                                    onClick={() => setSelectedDevice(device as Device)}
+                                    className={`group cursor-pointer ${viewOptions.tiny ? 'rounded sm:rounded' : 'rounded-md'} ${viewOptions.showBorders ? 'border border-slate-200/40 dark:border-slate-700/20' : 'border border-transparent'} bg-white ${viewOptions.tiny ? 'shadow-none' : 'shadow'} ${viewOptions.tiny ? '' : 'hover:shadow-lg'} transition-all ${viewOptions.tiny ? '' : 'hover:scale-105'} dark:bg-slate-800 ${viewOptions.tiny ? 'p-0.5' : viewOptions.dense ? 'p-1.5' : 'p-2.5'}`}
+                                    onClick={() => {
+                                        setSelectedDevice(device as Device);
+                                        // Fetch full details (including additional managers) after opening
+                                        loadDeviceDetails((device as Device).id);
+                                    }}
                                 >
                                     <div className="flex flex-col items-center text-center">
                                         <div
-                                            className={`mb-2 rounded-lg border p-2 transition-transform group-hover:scale-110 ${getStatusBg(device.status as DeviceStatus)}`}
+                                            className={`mb-0.5 ${viewOptions.tiny ? 'rounded' : 'rounded-md'} ${viewOptions.showBorders ? 'border border-slate-200/40 dark:border-slate-700/20' : 'border border-transparent'} ${viewOptions.tiny ? 'p-0.5' : viewOptions.dense ? 'p-1' : 'p-1.5'} transition-transform ${viewOptions.tiny ? '' : 'group-hover:scale-110'} ${getStatusBg(device.status as DeviceStatus)}`}
                                         >
                                             <Server
-                                                className={`size-6 ${getStatusColor(device.status as DeviceStatus)}`}
+                                                className={`${viewOptions.tiny ? 'size-3' : viewOptions.dense ? 'size-3' : 'size-4'} ${getStatusColor(device.status as DeviceStatus)}`}
                                             />
                                         </div>
-                                        <h3 className="mb-1 text-sm font-semibold text-slate-900 dark:text-white line-clamp-1">
-                                            {device.name}
-                                        </h3>
-                                        <p className="mb-1 text-xs text-slate-600 dark:text-slate-400">
-                                            {device.ip_address}
-                                        </p>
-                                        <div className="mb-2 flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
-                                            <TrendingUp className="size-3" />
-                                            <span>Uptime: {formatUptimeDuration(device.uptime_minutes)}</span>
-                                        </div>
-                                        <span
-                                            className={`mb-2 flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${getStatusBg(device.status as DeviceStatus)} ${getStatusColor(device.status as DeviceStatus)}`}
-                                        >
-                                            {getStatusIcon(device.status as DeviceStatus)}
-                                            {getStatusLabel(device.status as DeviceStatus)}
-                                        </span>
+                                        {!viewOptions.tiny && viewOptions.showName && (
+                                            <h3 className="mb-0 text-[10px] font-medium text-slate-900 dark:text-slate-200 line-clamp-1">
+                                                {device.name}
+                                            </h3>
+                                        )}
+                                        {!viewOptions.tiny && viewOptions.showIp && (
+                                            <div className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400">
+                                                {device.ip_address}
+                                            </div>
+                                        )}
+                                        {!viewOptions.tiny && viewOptions.showStatus && (
+                                            <div className="mt-0.5 text-[10px]">
+                                                <span className={`rounded px-1.5 py-0.5 ${getStatusBg(device.status as DeviceStatus)} ${getStatusColor(device.status as DeviceStatus)}`}>
+                                                    {getStatusLabel(device.status as DeviceStatus)}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -1874,10 +2008,10 @@ function Pagination({
                         onChange={(e) => onPerPageChange(Number(e.target.value))}
                         className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
                     >
-                        <option value={25}>25 per page</option>
-                        <option value={50}>50 per page</option>
-                        <option value={100}>100 per page</option>
-                        <option value={200}>200 per page</option>
+                        <option value={300}>300 per page</option>
+                        <option value={500}>500 per page</option>
+                        <option value={800}>800 per page</option>
+                        <option value={1000}>1000 per page</option>
                     </select>
                 </div>
                 <div>

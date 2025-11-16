@@ -65,7 +65,7 @@ class DeviceController extends Controller
             
             // Cache for 30 seconds (reduced from 5 minutes) since uptime updates frequently
             $result = Cache::remember($cacheKey, 30, function () use ($request, $perPage, $category, $status, $sortBy, $sortOrder, $includeInactive, $search, $activeFilter, $locationFilter, $brandFilter, $modelFilter, $managedByFilter) {
-                $query = Device::with(['branch', 'location', 'hardwareDetail.brand', 'hardwareDetail.hardwareModel', 'managedBy']);
+                $query = Device::with(['branch', 'location', 'hardwareDetail.brand', 'hardwareDetail.hardwareModel', 'managedBy', 'managers']);
                 
                 // Filter by is_active based on active_filter parameter
                 if ($activeFilter === 'active') {
@@ -137,12 +137,17 @@ class DeviceController extends Controller
                     });
                 }
                 
-                // Filter by managed_by
+                // Filter by managed_by (primary or any additional manager)
                 if ($managedByFilter && $managedByFilter !== 'all') {
                     if ($managedByFilter === 'unassigned') {
-                        $query->whereNull('managed_by');
+                        $query->whereNull('managed_by')->whereDoesntHave('managers');
                     } else {
-                        $query->where('managed_by', $managedByFilter);
+                        $query->where(function ($q) use ($managedByFilter) {
+                            $q->where('managed_by', $managedByFilter)
+                              ->orWhereHas('managers', function ($mq) use ($managedByFilter) {
+                                  $mq->where('users.id', $managedByFilter);
+                              });
+                        });
                     }
                 }
                 
@@ -300,7 +305,12 @@ class DeviceController extends Controller
                 'uptime_percentage' => 0,
             ]);
 
-            $device->load(['branch', 'location', 'hardwareDetail.brand', 'hardwareDetail.hardwareModel']);
+            // Sync additional managers if provided
+            if ($request->has('managed_by_ids') && is_array($request->managed_by_ids)) {
+                $device->managers()->sync(array_unique(array_filter($request->managed_by_ids)));
+            }
+
+            $device->load(['branch', 'location', 'hardwareDetail.brand', 'hardwareDetail.hardwareModel', 'managedBy', 'managers']);
             
             // Log activity
             $activityLog = new ActivityLogService();
@@ -332,6 +342,8 @@ class DeviceController extends Controller
                 'location_id' => 'sometimes|required|exists:locations,id',
                 'model_id' => 'sometimes|required|exists:hardware_models,id', // Changed
                 'managed_by' => 'nullable|exists:users,id',
+                'managed_by_ids' => 'sometimes|array',
+                'managed_by_ids.*' => 'integer|exists:users,id',
                 'serial_number' => 'nullable|string|max:255',
                 'building' => 'nullable|string|max:255',
                 'is_active' => 'boolean',
@@ -380,8 +392,14 @@ class DeviceController extends Controller
             }
             
             $device->save();
+
+            // Sync additional managers
+            if ($request->has('managed_by_ids')) {
+                $ids = is_array($request->managed_by_ids) ? $request->managed_by_ids : [];
+                $device->managers()->sync(array_unique(array_filter($ids)));
+            }
             
-            $device->load(['branch', 'location', 'hardwareDetail.brand', 'hardwareDetail.hardwareModel']);
+            $device->load(['branch', 'location', 'hardwareDetail.brand', 'hardwareDetail.hardwareModel', 'managedBy', 'managers']);
 
             // Log activity
             if (!empty($changes)) {
@@ -766,6 +784,16 @@ class DeviceController extends Controller
                 'email' => $device->managedBy->email,
                 'role' => $device->managedBy->role,
             ] : null,
+            'managed_by_users' => $device->relationLoaded('managers')
+                ? $device->managers->map(function ($u) {
+                    return [
+                        'id' => $u->id,
+                        'name' => $u->name,
+                        'email' => $u->email,
+                        'role' => $u->role,
+                    ];
+                })->values()
+                : [],
             'serial_number' => $device->serial_number,
             'category' => $device->category,
             'status' => $device->status,
@@ -780,6 +808,12 @@ class DeviceController extends Controller
             'is_active' => $device->is_active,
             'response_time' => $device->response_time,
             'last_check' => $device->last_ping,
+            'offline_reason' => $device->offline_reason,
+            'offline_acknowledged_by' => $device->offline_acknowledged_by,
+            'offline_acknowledged_at' => $device->offline_acknowledged_at,
+            'offline_since' => $device->offline_since,
+            'offline_duration_minutes' => $device->offline_duration_minutes,
+            'offline_alert_sent' => $device->offline_alert_sent,
             'created_at' => $device->created_at,
             'updated_at' => $device->updated_at,
         ];
