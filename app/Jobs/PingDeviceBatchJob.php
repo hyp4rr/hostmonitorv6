@@ -243,6 +243,11 @@ class PingDeviceBatchJob implements ShouldQueue
                 'last_ping' => now(),
             ];
             
+            // Helper function to check if status is "online" (online or warning)
+            $isOnlineStatus = function($status) {
+                return in_array($status, ['online', 'warning']);
+            };
+            
             // Update online/offline timestamps
             if ($newStatus === 'online' || $newStatus === 'warning') {
                 if ($previousStatus !== 'online' && $previousStatus !== 'warning') {
@@ -262,7 +267,22 @@ class PingDeviceBatchJob implements ShouldQueue
                 $updateFields['last_status_change'] = now();
             }
             
-            $device->update($updateFields);
+            // Only update updated_at if transitioning between online and offline states
+            $wasOnline = $isOnlineStatus($previousStatus);
+            $isNowOnline = $isOnlineStatus($newStatus);
+            
+            if ($wasOnline !== $isNowOnline) {
+                // Status changed from online→offline or offline→online
+                $updateFields['updated_at'] = now();
+                $device->update($updateFields);
+            } else {
+                // Status stayed in same category (online→online or offline→offline)
+                // Disable timestamps to prevent auto-update of updated_at
+                $device->timestamps = false;
+                $device->update($updateFields);
+                $device->timestamps = true;
+            }
+            
             $device->updateUptime();
             
         } catch (\Exception $e) {

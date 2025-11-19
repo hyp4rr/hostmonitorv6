@@ -30,6 +30,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from '@/contexts/i18n-context';
 import { router, usePage } from '@inertiajs/react';
 import { PageProps } from '@/types';
+import { getDeviceCategoryIcon } from '@/utils/device-icons';
 
 type DeviceCategory = 'all' | 'switches' | 'servers' | 'wifi' | 'tas' | 'cctv';
 type DeviceStatus = 'online' | 'offline' | 'warning' | 'unknown' | 'offline_ack';
@@ -225,9 +226,12 @@ export default function Devices() {
                 credentials: 'same-origin',
             });
             if (res.ok) {
-                const data = await res.json();
-                // Ensure we only update if it's still the same selected device
-                setSelectedDevice(prev => (prev && prev.id === deviceId ? { ...prev, ...data } : prev));
+                const data: Device = await res.json();
+                console.log('Loaded device details', data);
+                // Only update if this device is still open
+                setSelectedDevice(prev => (prev && prev.id === deviceId ? data : prev));
+            } else {
+                console.warn('Failed to fetch device details', res.status);
             }
         } catch (e) {
             console.error('Failed to load device details', e);
@@ -287,14 +291,12 @@ export default function Devices() {
             showName: false,
             showIp: false,
             showStatus: false,
-            showBorders: false,
             dense: true,
             tiny: false,
         } as {
             showName: boolean;
             showIp: boolean;
             showStatus: boolean;
-            showBorders: boolean;
             dense: boolean;
             tiny: boolean;
         };
@@ -324,9 +326,13 @@ export default function Devices() {
                 per_page: perPage.toString(),
             });
             
-            // Add branch filter only if available
+            // Add branch filter - use 'all' if currentBranch.id is 'all', otherwise use the branch id
             if (currentBranch?.id) {
-                params.append('branch_id', currentBranch.id.toString());
+                if (currentBranch.id === 'all') {
+                    params.append('branch_id', 'all');
+                } else {
+                    params.append('branch_id', currentBranch.id.toString());
+                }
             }
             
             // Add filters if active
@@ -415,9 +421,14 @@ export default function Devices() {
     const fetchCategoryCounts = useCallback(async () => {
         try {
             // Fetch counts for all categories (with branch filter if available)
-            const url = currentBranch?.id 
-                ? `/api/devices?branch_id=${currentBranch.id}&per_page=1`
-                : `/api/devices?per_page=1`;
+            let url = '/api/devices?per_page=1';
+            if (currentBranch?.id) {
+                if (currentBranch.id === 'all') {
+                    url = `/api/devices?branch_id=all&per_page=1`;
+                } else {
+                    url = `/api/devices?branch_id=${currentBranch.id}&per_page=1`;
+                }
+            }
             
             const response = await fetch(url, {
                 credentials: 'same-origin',
@@ -436,7 +447,9 @@ export default function Devices() {
                     
                     for (const cat of ['switches', 'servers', 'wifi', 'tas', 'cctv']) {
                         const catResponse = await fetch(
-                            `/api/devices?branch_id=${currentBranch.id}&category=${cat}&per_page=1`,
+                            currentBranch?.id === 'all' 
+                                ? `/api/devices?branch_id=all&category=${cat}&per_page=1`
+                                : `/api/devices?branch_id=${currentBranch?.id}&category=${cat}&per_page=1`,
                             {
                                 credentials: 'same-origin',
                                 headers: { 'Accept': 'application/json' },
@@ -481,7 +494,7 @@ export default function Devices() {
     
     // Ping all devices function
     const pingAllDevices = async () => {
-        if (!currentBranch?.id) return;
+        if (!currentBranch?.id || currentBranch.id === 'all') return;
         
         setIsPingingAll(true);
         try {
@@ -710,8 +723,11 @@ export default function Devices() {
     // Fetch filter options from database when branch changes
     useEffect(() => {
         if (currentBranch?.id) {
-            // Fetch locations for current branch
-            fetch(`/api/locations?branch_id=${currentBranch.id}`, {
+            // Fetch locations for current branch (or all branches if 'all')
+            const locationsUrl = currentBranch?.id === 'all' 
+                ? '/api/locations'
+                : `/api/locations?branch_id=${currentBranch.id}`;
+            fetch(locationsUrl, {
                 credentials: 'same-origin',
                 headers: { 'Accept': 'application/json' },
             })
@@ -798,7 +814,7 @@ export default function Devices() {
                             {/* Ping All Devices Button */}
                             <button
                                 onClick={pingAllDevices}
-                                disabled={isPingingAll || isLoadingDevices || !currentBranch?.id}
+                                disabled={isPingingAll || isLoadingDevices || !currentBranch?.id || currentBranch?.id === 'all'}
                                 className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-lg transition-all hover:from-green-600 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
                                 title="Ping all devices in current branch"
                             >
@@ -1055,7 +1071,11 @@ export default function Devices() {
                                     <div className="text-xs text-blue-800 dark:text-blue-300">
                                         <p className="font-semibold">Advanced Filters</p>
                                         <p className="mt-1">
-                                            • Location: Shows locations within <strong>{currentBranch?.name || 'current branch'}</strong> only
+                                            • Location: {currentBranch?.id === 'all' ? (
+                                                <>Shows locations from all branches</>
+                                            ) : (
+                                                <>Shows locations within <strong>{currentBranch?.name || 'current branch'}</strong> only</>
+                                            )}
                                         </p>
                                         <p>• Brand & Model: Loaded from database configuration</p>
                                         <p>• Select brand to filter available models</p>
@@ -1148,9 +1168,28 @@ export default function Devices() {
                 {viewMode === 'grid' && sortedDevices.length > 0 && (
                     <div>
                         <div className="mb-4">
-                            <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
-                                {categories.find(c => c.id === selectedCategory)?.name || 'All Devices'}
-                            </h2>
+                            <div className="flex items-center gap-3 mb-2">
+                                {selectedCategory !== 'all' && (() => {
+                                    const category = categories.find(c => c.id === selectedCategory);
+                                    if (category) {
+                                        const Icon = getDeviceCategoryIcon(selectedCategory);
+                                        return (
+                                            <div className="rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 p-2 shadow-lg">
+                                                <Icon className="size-5 text-white" />
+                                            </div>
+                                        );
+                                    }
+                                    return null;
+                                })()}
+                                {selectedCategory === 'all' && (
+                                    <div className="rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 p-2 shadow-lg">
+                                        <Network className="size-5 text-white" />
+                                    </div>
+                                )}
+                                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
+                                    {categories.find(c => c.id === selectedCategory)?.name || 'All Devices'}
+                                </h2>
+                            </div>
                             <p className="text-sm text-slate-600 dark:text-slate-400">
                                 Showing {filteredDevices.length} device{filteredDevices.length !== 1 ? 's' : ''} on this page
                                 {totalItems > 0 && (
@@ -1167,7 +1206,7 @@ export default function Devices() {
                                         checked={viewOptions.tiny}
                                         onChange={e => setViewOptions(v => ({ ...v, tiny: e.target.checked }))}
                                     />
-                                    Icon-size
+                                    Smallest
                                 </label>
                                 <label className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
                                     <input
@@ -1176,14 +1215,6 @@ export default function Devices() {
                                         onChange={e => setViewOptions(v => ({ ...v, dense: e.target.checked }))}
                                     />
                                     Dense
-                                </label>
-                                <label className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                                    <input
-                                        type="checkbox"
-                                        checked={viewOptions.showBorders}
-                                        onChange={e => setViewOptions(v => ({ ...v, showBorders: e.target.checked }))}
-                                    />
-                                    Borders
                                 </label>
                                 <label className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
                                     <input
@@ -1212,56 +1243,91 @@ export default function Devices() {
                             </div>
                         </div>
                         {/*
-                          Use more columns when in dense/tiny mode to make each card narrower.
+                          Group devices by location and display with location name on top left, devices below
                         */}
-                        <div
-                            className={`grid ${
-                                viewOptions.tiny
-                                    ? 'grid-cols-6 sm:grid-cols-8 md:grid-cols-12 lg:grid-cols-16 xl:grid-cols-20 2xl:grid-cols-24 gap-1'
-                                    : viewOptions.dense
-                                        ? 'grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 2xl:grid-cols-14 gap-1.5'
-                                        : 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-10 gap-3'
-                            }`}
-                        >
-                            {filteredDevices.map((device) => (
-                                <div
-                                    key={device.id}
-                                    className={`group cursor-pointer ${viewOptions.tiny ? 'rounded sm:rounded' : 'rounded-md'} ${viewOptions.showBorders ? 'border border-slate-200/40 dark:border-slate-700/20' : 'border border-transparent'} bg-white ${viewOptions.tiny ? 'shadow-none' : 'shadow'} ${viewOptions.tiny ? '' : 'hover:shadow-lg'} transition-all ${viewOptions.tiny ? '' : 'hover:scale-105'} dark:bg-slate-800 ${viewOptions.tiny ? 'p-0.5' : viewOptions.dense ? 'p-1.5' : 'p-2.5'}`}
-                                    onClick={() => {
-                                        setSelectedDevice(device as Device);
-                                        // Fetch full details (including additional managers) after opening
-                                        loadDeviceDetails((device as Device).id);
-                                    }}
-                                >
-                                    <div className="flex flex-col items-center text-center">
-                                        <div
-                                            className={`mb-0.5 ${viewOptions.tiny ? 'rounded' : 'rounded-md'} ${viewOptions.showBorders ? 'border border-slate-200/40 dark:border-slate-700/20' : 'border border-transparent'} ${viewOptions.tiny ? 'p-0.5' : viewOptions.dense ? 'p-1' : 'p-1.5'} transition-transform ${viewOptions.tiny ? '' : 'group-hover:scale-110'} ${getStatusBg(device.status as DeviceStatus)}`}
-                                        >
-                                            <Server
-                                                className={`${viewOptions.tiny ? 'size-3' : viewOptions.dense ? 'size-3' : 'size-4'} ${getStatusColor(device.status as DeviceStatus)}`}
-                                            />
+                        {(() => {
+                            // Group devices by location
+                            const devicesByLocation = filteredDevices.reduce((acc, device) => {
+                                // Handle different location formats: string, location_name, or location object
+                                const locationName = (device as any).location_name || 
+                                                    (typeof device.location === 'string' ? device.location : null) ||
+                                                    ((device as any).location?.name) || 
+                                                    'No Location';
+                                if (!acc[locationName]) {
+                                    acc[locationName] = [];
+                                }
+                                acc[locationName].push(device);
+                                return acc;
+                            }, {} as Record<string, typeof filteredDevices>);
+
+                            const locations = Object.keys(devicesByLocation).sort();
+
+                            return (
+                                <div className="space-y-6">
+                                    {locations.map((locationName) => (
+                                        <div key={locationName} className="space-y-2">
+                                            {/* Location header - minimalistic */}
+                                            <div>
+                                                <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                                    {locationName}
+                                                </h3>
+                                                <div className="mt-1 border-b border-slate-200 dark:border-slate-700"></div>
+                                            </div>
+                                            {/* Devices grid for this location */}
+                                            <div
+                                                className={`grid ${
+                                                    viewOptions.tiny
+                                                        ? 'grid-cols-6 sm:grid-cols-8 md:grid-cols-12 lg:grid-cols-16 xl:grid-cols-20 2xl:grid-cols-24 gap-1'
+                                                        : viewOptions.dense
+                                                            ? 'grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 2xl:grid-cols-14 gap-1.5'
+                                                            : 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-10 gap-3'
+                                                }`}
+                                            >
+                                                {devicesByLocation[locationName].map((device) => (
+                                                    <div
+                                                        key={device.id}
+                                                        className={`group cursor-pointer ${viewOptions.tiny ? 'rounded sm:rounded' : 'rounded-md'} border border-transparent bg-white ${viewOptions.tiny ? 'shadow-none' : 'shadow'} ${viewOptions.tiny ? '' : 'hover:shadow-lg'} transition-all ${viewOptions.tiny ? '' : 'hover:scale-105'} dark:bg-slate-800 ${viewOptions.tiny ? 'p-0.5' : viewOptions.dense ? 'p-1.5' : 'p-2.5'} overflow-hidden`}
+                                                        onClick={() => {
+                                                            setSelectedDevice(device as Device);
+                                                            // Fetch full details (including additional managers) after opening
+                                                            loadDeviceDetails((device as Device).id);
+                                                        }}
+                                                    >
+                                                        <div className="flex flex-col items-center text-center w-full min-w-0">
+                                                            <div
+                                                                className={`${viewOptions.tiny ? 'mb-0' : 'mb-0.5'} ${viewOptions.tiny ? 'rounded' : 'rounded-md'} border border-transparent ${viewOptions.tiny ? 'p-0.5' : viewOptions.dense ? 'p-1' : 'p-1.5'} transition-transform ${viewOptions.tiny ? '' : 'group-hover:scale-110'} ${getStatusBg(device.status as DeviceStatus)} flex-shrink-0`}
+                                                            >
+                                                                {(() => {
+                                                                    const Icon = getDeviceCategoryIcon(device.category || '');
+                                                                    return <Icon className={`${viewOptions.tiny ? 'size-3' : viewOptions.dense ? 'size-3' : 'size-4'} ${getStatusColor(device.status as DeviceStatus)}`} />;
+                                                                })()}
+                                                            </div>
+                                                            {viewOptions.showName && (
+                                                                <h3 className={`${viewOptions.tiny ? 'mt-0.5 text-[9px]' : 'mb-0 text-[10px]'} font-medium text-slate-900 dark:text-slate-200 line-clamp-1 w-full min-w-0 px-0.5 overflow-hidden text-ellipsis`}>
+                                                                    {device.name}
+                                                                </h3>
+                                                            )}
+                                                            {!viewOptions.tiny && viewOptions.showIp && (
+                                                                <div className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1 w-full min-w-0 px-0.5 overflow-hidden text-ellipsis">
+                                                                    {device.ip_address}
+                                                                </div>
+                                                            )}
+                                                            {!viewOptions.tiny && viewOptions.showStatus && (
+                                                                <div className="mt-0.5 text-[10px] w-full min-w-0 px-0.5">
+                                                                    <span className={`rounded px-1.5 py-0.5 ${getStatusBg(device.status as DeviceStatus)} ${getStatusColor(device.status as DeviceStatus)} inline-block line-clamp-1 overflow-hidden text-ellipsis`}>
+                                                                        {getStatusLabel(device.status as DeviceStatus)}
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
-                                        {!viewOptions.tiny && viewOptions.showName && (
-                                            <h3 className="mb-0 text-[10px] font-medium text-slate-900 dark:text-slate-200 line-clamp-1">
-                                                {device.name}
-                                            </h3>
-                                        )}
-                                        {!viewOptions.tiny && viewOptions.showIp && (
-                                            <div className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400">
-                                                {device.ip_address}
-                                            </div>
-                                        )}
-                                        {!viewOptions.tiny && viewOptions.showStatus && (
-                                            <div className="mt-0.5 text-[10px]">
-                                                <span className={`rounded px-1.5 py-0.5 ${getStatusBg(device.status as DeviceStatus)} ${getStatusColor(device.status as DeviceStatus)}`}>
-                                                    {getStatusLabel(device.status as DeviceStatus)}
-                                                </span>
-                                            </div>
-                                        )}
-                                    </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
+                            );
+                        })()}
                         
                         {/* Pagination */}
                         <Pagination
@@ -1280,9 +1346,19 @@ export default function Devices() {
                     <div className="rounded-2xl border border-slate-200/50 bg-white shadow-lg dark:border-slate-700/50 dark:bg-slate-800 overflow-hidden">
                         <div className="border-b border-slate-200/50 bg-gradient-to-r from-slate-50 to-slate-100 p-6 dark:border-slate-700/50 dark:from-slate-900/50 dark:to-slate-800/50">
                             <div className="flex items-center gap-3">
-                                <div className="rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 p-3 shadow-lg">
-                                    <Server className="size-6 text-white" />
-                                </div>
+                                {selectedCategory !== 'all' && (() => {
+                                    const Icon = getDeviceCategoryIcon(selectedCategory);
+                                    return (
+                                        <div className="rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 p-3 shadow-lg">
+                                            <Icon className="size-6 text-white" />
+                                        </div>
+                                    );
+                                })()}
+                                {selectedCategory === 'all' && (
+                                    <div className="rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 p-3 shadow-lg">
+                                        <Network className="size-6 text-white" />
+                                    </div>
+                                )}
                                 <div>
                                     <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                                         {categories.find(c => c.id === selectedCategory)?.name || 'All Devices'}
@@ -1298,12 +1374,12 @@ export default function Devices() {
                                 </div>
                             </div>
                         </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
+                        <div className="overflow-x-auto -mx-4 sm:mx-0">
+                            <table className="w-full min-w-[800px] sm:min-w-0">
                                 <thead className="bg-slate-50 dark:bg-slate-900/50">
                                     <tr>
                                         <th 
-                                            className="px-6 py-3 text-left cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                            className="px-3 sm:px-6 py-3 text-left cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                                             onClick={() => handleSort('name')}
                                         >
                                             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
@@ -1316,7 +1392,7 @@ export default function Devices() {
                                             </div>
                                         </th>
                                         <th 
-                                            className="px-6 py-3 text-left cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                            className="px-3 sm:px-6 py-3 text-left cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                                             onClick={() => handleSort('ip_address')}
                                         >
                                             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
@@ -1329,7 +1405,7 @@ export default function Devices() {
                                             </div>
                                         </th>
                                         <th 
-                                            className="px-6 py-3 text-left cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                            className="px-3 sm:px-6 py-3 text-left cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                                             onClick={() => handleSort('uptime_percentage')}
                                         >
                                             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
@@ -1342,7 +1418,7 @@ export default function Devices() {
                                             </div>
                                         </th>
                                         <th 
-                                            className="px-6 py-3 text-left cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                            className="px-3 sm:px-6 py-3 text-left cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                                             onClick={() => handleSort('status')}
                                         >
                                             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
@@ -1354,8 +1430,13 @@ export default function Devices() {
                                                 )}
                                             </div>
                                         </th>
+                                        <th className="px-3 sm:px-6 py-3 text-left">
+                                            <div className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                                                Last Ping
+                                            </div>
+                                        </th>
                                         <th 
-                                            className="px-6 py-3 text-left cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                            className="px-3 sm:px-6 py-3 text-left cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                                             onClick={() => handleSort('location')}
                                         >
                                             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
@@ -1368,7 +1449,7 @@ export default function Devices() {
                                             </div>
                                         </th>
                                         <th 
-                                            className="px-6 py-3 text-left cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                            className="px-3 sm:px-6 py-3 text-left cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                                             onClick={() => handleSort('brand')}
                                         >
                                             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
@@ -1387,44 +1468,60 @@ export default function Devices() {
                                         <tr
                                             key={device.id}
                                             className="cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50"
-                                            onClick={() => setSelectedDevice(device as Device)}
+                                            onClick={() => {
+                                                setSelectedDevice(device as Device);
+                                                loadDeviceDetails((device as Device).id);
+                                            }}
                                         >
-                                            <td className="px-6 py-4 whitespace-nowrap">
+                                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                                                 <div className="flex items-center gap-3">
                                                     <div className={`rounded-lg border p-2 ${getStatusBg(device.status as DeviceStatus)}`}>
-                                                        <Server className={`size-4 ${getStatusColor(device.status as DeviceStatus)}`} />
+                                                        {(() => {
+                                                            const Icon = getDeviceCategoryIcon(device.category || '');
+                                                            return <Icon className={`size-4 ${getStatusColor(device.status as DeviceStatus)}`} />;
+                                                        })()}
                                                     </div>
                                                     <span className="text-sm font-medium text-slate-900 dark:text-white">
                                                         {device.name}
                                                     </span>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
+                                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                                                 <span className="text-sm text-slate-600 dark:text-slate-400 font-mono">
                                                     {device.ip_address}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
+                                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                                                 <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                                                     <TrendingUp className="size-4" />
                                                     {formatUptimeDuration(device.uptime_minutes)}
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
+                                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                                                 <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${getStatusBg(device.status as DeviceStatus)} ${getStatusColor(device.status as DeviceStatus)}`}>
                                                     {getStatusIcon(device.status as DeviceStatus)}
                                                     {getStatusLabel(device.status as DeviceStatus)}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
+                                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+                                                <span className="text-sm text-slate-600 dark:text-slate-400">
+                                                    {device.last_ping 
+                                                        ? new Date(device.last_ping).toLocaleString()
+                                                        : 'Never'}
+                                                </span>
+                                            </td>
+                                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                                                 {device.latitude && device.longitude ? (
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            router.visit(`/monitor/maps?deviceId=${device.id}&lat=${device.latitude}&lng=${device.longitude}`);
+                                                            const params = new URLSearchParams();
+                                                            if (device.location_id) params.set('location_id', String(device.location_id));
+                                                            params.set('deviceId', String(device.id));
+                                                            router.visit(`/monitor/plan?${params.toString()}`);
                                                         }}
                                                         className="flex items-center gap-1.5 rounded-lg bg-blue-100 px-2 py-1 text-blue-700 transition-all hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50"
-                                                        title="View on map"
+                                                        title="Open floor plan"
                                                     >
                                                         <MapPin className="size-3.5" />
                                                         <span className="text-xs font-medium">{device.location}</span>
@@ -1435,7 +1532,7 @@ export default function Devices() {
                                                     </span>
                                                 )}
                                             </td>
-                                            <td className="px-6 py-4">
+                                            <td className="px-3 sm:px-6 py-4">
                                                 {(device.brand && device.model) ? (
                                                     <div className="flex flex-col">
                                                         <span className="text-sm font-bold text-slate-900 dark:text-white">
@@ -1481,9 +1578,10 @@ export default function Devices() {
                                     <div
                                         className={`rounded-xl border p-3 ${getStatusBg(selectedDevice.status)}`}
                                     >
-                                        <Server
-                                            className={`size-6 ${getStatusColor(selectedDevice.status)}`}
-                                        />
+                                        {(() => {
+                                            const Icon = getDeviceCategoryIcon(selectedDevice.category || '');
+                                            return <Icon className={`size-6 ${getStatusColor(selectedDevice.status)}`} />;
+                                        })()}
                                     </div>
                                     <div>
                                         <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
@@ -1746,7 +1844,7 @@ export default function Devices() {
                                                     {selectedDevice.serial_number || '-'}
                                                 </span>
                                             </div>
-                                            <div className="flex justify-between items-center">
+                                            <div className="flex justify-between items-start">
                                                 <span className="text-slate-600 dark:text-slate-400">Managed By:</span>
                                                 <div className="text-right">
                                                     {selectedDevice.managed_by_user ? (
@@ -1764,9 +1862,45 @@ export default function Devices() {
                                                             }`}>
                                                                 {selectedDevice.managed_by_user.role}
                                                             </span>
+                                                            {Array.isArray(selectedDevice.managed_by_users) && selectedDevice.managed_by_users.length > 0 && (
+                                                                <div className="mt-2 space-y-1">
+                                                                    {selectedDevice.managed_by_users.map((u) => (
+                                                                        <div key={u.id}>
+                                                                            <p className="font-medium text-slate-900 dark:text-white">{u.name}</p>
+                                                                            <p className="text-xs text-slate-500 dark:text-slate-400">{u.email}</p>
+                                                                            <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                                                                                u.role === 'admin' 
+                                                                                    ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
+                                                                                    : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+                                                                            }`}>
+                                                                                {u.role}
+                                                                            </span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
                                                         </>
                                                     ) : (
-                                                        <span className="text-slate-400 dark:text-slate-600">Not assigned</span>
+                                                        <>
+                                                            <span className="text-slate-400 dark:text-slate-600">Not assigned</span>
+                                                            {Array.isArray(selectedDevice.managed_by_users) && selectedDevice.managed_by_users.length > 0 && (
+                                                                <div className="mt-2 space-y-1">
+                                                                    {selectedDevice.managed_by_users.map((u) => (
+                                                                        <div key={u.id}>
+                                                                            <p className="font-medium text-slate-900 dark:text-white">{u.name}</p>
+                                                                            <p className="text-xs text-slate-500 dark:text-slate-400">{u.email}</p>
+                                                                            <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                                                                                u.role === 'admin' 
+                                                                                    ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
+                                                                                    : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+                                                                            }`}>
+                                                                                {u.role}
+                                                                            </span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </>
                                                     )}
                                                 </div>
                                             </div>
@@ -1785,11 +1919,11 @@ export default function Devices() {
                                                 </span>
                                             </div>
                                             <div className="flex justify-between items-center">
-                                                <span className="text-slate-600 dark:text-slate-400">Last Updated:</span>
+                                                <span className="text-slate-600 dark:text-slate-400">Last Changed:</span>
                                                 <span className="font-medium text-slate-900 dark:text-white">
                                                     {selectedDevice.updated_at 
                                                         ? new Date(selectedDevice.updated_at).toLocaleString()
-                                                        : 'N/A'}
+                                                        : 'Never'}
                                                 </span>
                                             </div>
                                             <div className="flex justify-between items-center">

@@ -16,7 +16,7 @@ return [
     */
 
     'ssr' => [
-        'enabled' => true,
+        'enabled' => false, // Disabled for mobile access - SSR requires separate server
         'url' => env('VITE_SSR_URL', 'http://127.0.0.1:13714'),
         // 'bundle' => base_path('bootstrap/ssr/ssr.mjs'),
 

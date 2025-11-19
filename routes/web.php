@@ -26,6 +26,7 @@ Route::prefix('monitor')->group(function () {
     Route::get('/settings', [MonitorController::class, 'settings'])->name('monitor.settings');
     Route::get('/configuration', [MonitorController::class, 'configuration'])->name('monitor.configuration');
     Route::get('/topology', [App\Http\Controllers\TopologyController::class, 'index'])->name('monitor.topology');
+    Route::get('/plan', [MonitorController::class, 'plan'])->name('monitor.plan');
 });
 
 // API routes

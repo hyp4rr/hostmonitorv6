@@ -185,13 +185,53 @@ class MonitoringController extends Controller
                 $device->response_time = $result['response_time'];
                 $device->last_ping = now();
                 
-                // Track online_since timestamp when device goes online
-                if ($result['status'] === 'online' && $previousStatus !== 'online') {
+                // Helper function to check if status is "online" (online or warning)
+                $isOnlineStatus = function($status) {
+                    return in_array($status, ['online', 'warning']);
+                };
+                
+                // Only update updated_at if transitioning between online and offline states
+                $wasOnline = $isOnlineStatus($previousStatus);
+                $isNowOnline = $isOnlineStatus($result['status']);
+                
+                if ($wasOnline !== $isNowOnline) {
+                    // Status changed from online→offline or offline→online
+                    $device->updated_at = now();
+                    $device->save();
+                } else {
+                    // Status stayed in same category (online→online or offline→offline)
+                    // Disable timestamps to prevent auto-update of updated_at
+                    $device->timestamps = false;
+                    $device->save();
+                    $device->timestamps = true;
+                }
+                
+                // Track online_since timestamp when device goes online (from offline state)
+                // Reset uptime when transitioning from offline to online/warning
+                if ($isNowOnline && !$wasOnline) {
+                    // Device just came online (from offline) - reset uptime counter
                     $device->online_since = now();
                     $device->offline_since = null;
-                } elseif ($result['status'] === 'offline' && $previousStatus === 'online') {
+                    // Save these changes (with timestamps disabled if status didn't change)
+                    if ($wasOnline === $isNowOnline) {
+                        $device->timestamps = false;
+                        $device->save();
+                        $device->timestamps = true;
+                    } else {
+                        $device->save();
+                    }
+                } elseif (!$isNowOnline && $wasOnline) {
+                    // Device just went offline (from online/warning) - reset uptime
                     $device->offline_since = now();
                     $device->online_since = null;
+                    // Save these changes (with timestamps disabled if status didn't change)
+                    if ($wasOnline === $isNowOnline) {
+                        $device->timestamps = false;
+                        $device->save();
+                        $device->timestamps = true;
+                    } else {
+                        $device->save();
+                    }
                 }
                 
                 // Update uptime based on new status (calculates real minutes)
@@ -199,8 +239,6 @@ class MonitoringController extends Controller
                 
                 // Record monitoring history
                 $device->recordMonitoringHistory();
-                
-                $device->save();
             }
         }
     }
@@ -544,9 +582,31 @@ class MonitoringController extends Controller
                         // Update device in database
                         $device = Device::find($deviceId);
                         if ($device) {
+                            $previousStatus = $device->status;
                             $device->status = 'online';
                             $device->response_time = rand(1, 50); // Simulated response time
                             $device->last_ping = now();
+                            
+                            // Helper function to check if status is "online" (online or warning)
+                            $isOnlineStatus = function($status) {
+                                return in_array($status, ['online', 'warning']);
+                            };
+                            
+                            // Only update updated_at if transitioning between online and offline states
+                            $wasOnline = $isOnlineStatus($previousStatus);
+                            $isNowOnline = $isOnlineStatus('online');
+                            
+                            if ($wasOnline !== $isNowOnline) {
+                                // Status changed from offline→online
+                                $device->updated_at = now();
+                                $device->save();
+                            } else {
+                                // Status stayed online (online→online)
+                                // Disable timestamps to prevent auto-update of updated_at
+                                $device->timestamps = false;
+                                $device->save();
+                                $device->timestamps = true;
+                            }
                             
                             // Update uptime based on new status
                             $device->updateUptime();
@@ -574,9 +634,31 @@ class MonitoringController extends Controller
                         // Update device in database
                         $device = Device::find($deviceId);
                         if ($device) {
+                            $previousStatus = $device->status;
                             $device->status = 'offline';
                             $device->response_time = null;
                             $device->last_ping = now();
+                            
+                            // Helper function to check if status is "online" (online or warning)
+                            $isOnlineStatus = function($status) {
+                                return in_array($status, ['online', 'warning']);
+                            };
+                            
+                            // Only update updated_at if transitioning between online and offline states
+                            $wasOnline = $isOnlineStatus($previousStatus);
+                            $isNowOnline = $isOnlineStatus('offline');
+                            
+                            if ($wasOnline !== $isNowOnline) {
+                                // Status changed from online→offline
+                                $device->updated_at = now();
+                                $device->save();
+                            } else {
+                                // Status stayed offline (offline→offline)
+                                // Disable timestamps to prevent auto-update of updated_at
+                                $device->timestamps = false;
+                                $device->save();
+                                $device->timestamps = true;
+                            }
                             
                             // Update uptime based on new status
                             $device->updateUptime();
@@ -640,17 +722,37 @@ class MonitoringController extends Controller
             $duration = round((microtime(true) - $startTime) * 1000, 2);
 
             // Update device status and response time
+            $previousStatus = $device->status;
             $device->status = $result['status'];
             $device->response_time = $result['response_time'];
             $device->last_ping = now();
+            
+            // Helper function to check if status is "online" (online or warning)
+            $isOnlineStatus = function($status) {
+                return in_array($status, ['online', 'warning']);
+            };
+            
+            // Only update updated_at if transitioning between online and offline states
+            $wasOnline = $isOnlineStatus($previousStatus);
+            $isNowOnline = $isOnlineStatus($result['status']);
+            
+            if ($wasOnline !== $isNowOnline) {
+                // Status changed from online→offline or offline→online
+                $device->updated_at = now();
+                $device->save();
+            } else {
+                // Status stayed in same category (online→online or offline→offline)
+                // Disable timestamps to prevent auto-update of updated_at
+                $device->timestamps = false;
+                $device->save();
+                $device->timestamps = true;
+            }
             
             // Update uptime based on new status
             $device->updateUptime();
             
             // Record monitoring history
             $device->recordMonitoringHistory();
-            
-            $device->save();
 
             // Get device's recent ping history
             $recentHistory = \App\Models\MonitoringHistory::where('device_id', $id)

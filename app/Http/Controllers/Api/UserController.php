@@ -27,11 +27,17 @@ class UserController extends Controller
             $validated = $request->validate([
                 'name' => 'required|string|max:255',
                 'email' => 'required|email|unique:users,email',
-                'password' => 'required|string|min:8',
+                'password' => 'nullable|string',
                 'role' => 'required|in:admin,staff',
             ]);
 
-            $validated['password'] = Hash::make($validated['password']);
+            // Only hash password if provided, otherwise set empty password
+            if (!empty($validated['password'])) {
+                $validated['password'] = Hash::make($validated['password']);
+            } else {
+                // Set empty password hash if no password provided
+                $validated['password'] = Hash::make('');
+            }
 
             $user = User::create($validated);
 
@@ -50,7 +56,7 @@ class UserController extends Controller
             $validated = $request->validate([
                 'name' => 'required|string|max:255',
                 'email' => 'required|email|unique:users,email,' . $id,
-                'password' => 'nullable|string|min:8',
+                'password' => 'nullable|string',
                 'role' => 'required|in:admin,staff',
             ]);
 

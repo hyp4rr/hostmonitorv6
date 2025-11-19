@@ -45,9 +45,12 @@ export default function Alerts() {
     const fetchAlerts = async () => {
         setIsLoading(true);
         try {
-            const url = currentBranch?.id 
-                ? `/api/alerts?branch_id=${currentBranch.id}`
-                : '/api/alerts';
+            let url = '/api/alerts';
+            if (currentBranch?.id && currentBranch.id !== 'all') {
+                url = `/api/alerts?branch_id=${currentBranch.id}`;
+            } else if (currentBranch?.id === 'all') {
+                url = '/api/alerts'; // No branch filter for 'all'
+            }
             
             const response = await fetch(url, {
                 credentials: 'same-origin',
@@ -91,7 +94,7 @@ export default function Alerts() {
             <div className="space-y-6">
                 {/* Header */}
                 <div>
-                    <h1 className="bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-3xl font-bold text-transparent dark:from-white dark:to-slate-300">
+                    <h1 className="bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-2xl sm:text-3xl font-bold text-transparent dark:from-white dark:to-slate-300">
                         Alert Management
                     </h1>
                     <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">

@@ -84,6 +84,11 @@ class Device extends Model
         return $this->belongsToMany(User::class, 'device_managers')->withTimestamps();
     }
 
+    public function positions(): HasMany
+    {
+        return $this->hasMany(\App\Models\DevicePosition::class);
+    }
+
     public function alerts(): HasMany
     {
         return $this->hasMany(Alert::class);
@@ -186,7 +191,10 @@ class Device extends Model
     public function resetDailyDigest()
     {
         $this->daily_digest_sent = false;
+        // Disable timestamps to prevent updating updated_at when only resetting digest flag
+        $this->timestamps = false;
         $this->save();
+        $this->timestamps = true;
     }
 
     /**
@@ -210,6 +218,7 @@ class Device extends Model
                 ->count();
 
             if ($totalChecks === 0) {
+                // Use current status
                 return $this->status === 'online' ? 100 : 0;
             }
 
@@ -221,8 +230,11 @@ class Device extends Model
             $percentage = round((float) (($onlineChecks / $totalChecks) * 100), 2);
             
             // Update the device with calculated percentage
+            // Disable timestamps to prevent updating updated_at when only uptime changes
             $this->uptime_percentage = $percentage;
+            $this->timestamps = false;
             $this->save();
+            $this->timestamps = true;
             
             return $percentage;
         }
@@ -241,117 +253,69 @@ class Device extends Model
     {
         $now = now();
         
-        // Ensure online_since is set if device is online but doesn't have it
-        if ($this->status === 'online' && !$this->online_since) {
-            // Device is online but online_since is not set - set it now
-            $this->online_since = $now;
-            $this->offline_since = null;
-        } elseif ($this->status === 'offline' && $this->online_since) {
-            // Device went offline - clear online_since
+        // If device is offline, set uptime_minutes to 0 and clear online_since
+        if ($this->status === 'offline' || $this->status === 'offline_ack') {
+            $this->uptime_minutes = 0;
             $this->online_since = null;
             if (!$this->offline_since) {
                 $this->offline_since = $now;
             }
+            
+            // Still calculate percentage from monitoring history
+            $this->uptime_percentage = round((float) $this->getCalculatedUptimePercentage(), 2);
+            
+            // Disable timestamps to prevent updating updated_at when only uptime changes
+            $this->timestamps = false;
+            $this->save();
+            $this->timestamps = true;
+            return;
         }
         
-        // Calculate real uptime minutes from monitoring history (last 24 hours)
+        // Ensure online_since is set if device is online/warning but doesn't have it
+        // This handles cases where device was already online when system started
+        if (in_array($this->status, ['online', 'warning']) && !$this->online_since) {
+            // Device is online but online_since is not set - set it now
+            $this->online_since = $now;
+            $this->offline_since = null;
+        }
+        
+        // Calculate real uptime minutes (only counts time since online_since, resets on offline)
         $this->uptime_minutes = $this->calculateRealUptimeMinutes();
         
         // Recalculate percentage
         $this->uptime_percentage = round((float) $this->getCalculatedUptimePercentage(), 2);
+        
+        // Disable timestamps to prevent updating updated_at when only uptime changes
+        $this->timestamps = false;
         $this->save();
+        $this->timestamps = true;
     }
     
     /**
-     * Calculate real uptime minutes from monitoring history (last 24 hours)
+     * Calculate real uptime minutes - resets to 0 when device goes offline
+     * Only counts time since online_since (when device last came online)
      */
     public function calculateRealUptimeMinutes(): int
     {
-        $startDate = now()->subHours(24);
-        
-        // Get monitoring history for last 24 hours, ordered by time
-        $history = $this->monitoringHistory()
-            ->where('checked_at', '>=', $startDate)
-            ->orderBy('checked_at', 'asc')
-            ->get();
-        
-        // If device is currently online and has online_since, always count that time
-        if ($this->status === 'online' && $this->online_since) {
-            $onlineSince = $this->online_since;
-            // Only count time within the last 24 hours
-            if ($onlineSince->lt($startDate)) {
-                $onlineSince = $startDate;
-            }
-            $minutesSinceOnline = max(0, $onlineSince->diffInMinutes(now()));
-            
-            // If we have history, also calculate from history and use the larger value
-            if ($history->isNotEmpty()) {
-                // Calculate from history
-                $totalMinutesFromHistory = 0;
-                $lastCheckTime = $startDate;
-                $lastStatus = null;
-                
-                foreach ($history as $check) {
-                    $checkTime = $check->checked_at;
-                    
-                    // If device was online in the previous period, add those minutes
-                    if ($lastStatus === 'online') {
-                        $minutesBetween = max(0, $lastCheckTime->diffInMinutes($checkTime));
-                        $totalMinutesFromHistory += $minutesBetween;
-                    }
-                    
-                    $lastCheckTime = $checkTime;
-                    $lastStatus = $check->status;
-                }
-                
-                // If last check was online, add time since then (but don't double-count with online_since)
-                if ($lastStatus === 'online' && $lastCheckTime) {
-                    // Only add if last check was before online_since (to avoid double counting)
-                    if ($lastCheckTime->lt($onlineSince)) {
-                        $minutesFromLastCheck = max(0, $lastCheckTime->diffInMinutes($onlineSince));
-                        $totalMinutesFromHistory += $minutesFromLastCheck;
-                    }
-                }
-                
-                // Use the sum of history + current online time
-                return min(1440, (int) ($totalMinutesFromHistory + $minutesSinceOnline));
-            } else {
-                // No history - just use online_since
-                return min(1440, (int) $minutesSinceOnline);
-            }
-        }
-        
-        // Device is offline or no online_since - calculate from history only
-        if ($history->isEmpty()) {
+        // If device is offline, uptime is always 0
+        if ($this->status === 'offline' || $this->status === 'offline_ack') {
             return 0;
         }
         
-        // Calculate total minutes online from history
-        $totalMinutes = 0;
-        $lastCheckTime = $startDate;
-        $lastStatus = null;
-        
-        foreach ($history as $check) {
-            $checkTime = $check->checked_at;
-            
-            // If device was online in the previous period, add those minutes
-            if ($lastStatus === 'online') {
-                $minutesBetween = max(0, $lastCheckTime->diffInMinutes($checkTime));
-                $totalMinutes += $minutesBetween;
-            }
-            
-            $lastCheckTime = $checkTime;
-            $lastStatus = $check->status;
+        // If device is online, only count time since online_since (resets on each offline->online transition)
+        if ($this->status === 'online' && $this->online_since) {
+            $minutesSinceOnline = max(0, $this->online_since->diffInMinutes(now()));
+            return min(1440, (int) $minutesSinceOnline); // Cap at 24 hours (1440 minutes)
         }
         
-        // If device is currently online (but no online_since somehow), add time since last check
-        if ($this->status === 'online' && $lastStatus === 'online' && $lastCheckTime) {
-            $minutesSinceLastCheck = max(0, $lastCheckTime->diffInMinutes(now()));
-            $totalMinutes += $minutesSinceLastCheck;
+        // If device is warning status, treat similar to online
+        if ($this->status === 'warning' && $this->online_since) {
+            $minutesSinceOnline = max(0, $this->online_since->diffInMinutes(now()));
+            return min(1440, (int) $minutesSinceOnline);
         }
         
-        // Cap at 24 hours (1440 minutes)
-        return min(1440, (int) $totalMinutes);
+        // Fallback: no online_since or unknown status
+        return 0;
     }
 
     /**

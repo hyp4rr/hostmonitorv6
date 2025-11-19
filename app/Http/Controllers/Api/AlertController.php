@@ -16,8 +16,8 @@ class AlertController extends Controller
         try {
             $query = Alert::with('device.branch')->orderBy('created_at', 'desc');
             
-            // Filter by branch if provided
-            if ($request->has('branch_id')) {
+            // Filter by branch if provided (skip if 'all')
+            if ($request->has('branch_id') && $request->branch_id !== 'all') {
                 $query->whereHas('device', function($q) use ($request) {
                     $q->where('branch_id', $request->branch_id);
                 });

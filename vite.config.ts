@@ -21,10 +21,11 @@ export default defineConfig({
         }),
     ],
     server: {
-        host: '0.0.0.0',
-        port: 3000, // Changed from 5174 to 3000
+        port: 3000,
+        host: '0.0.0.0', // Allow access from network (phone, other devices)
         hmr: {
-            host: '192.168.1.128',
+            host: 'localhost', // HMR still uses localhost for better performance
+            port: 3000, // HMR port (should match server port)
         },
     },
     esbuild: {

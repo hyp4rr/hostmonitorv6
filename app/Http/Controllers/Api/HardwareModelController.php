@@ -1,5 +1,4 @@
 <?php
-// filepath: c:\Users\hyper\Herd\hostmonitorv6\app\Http\Controllers\Api\HardwareModelController.php
 
 namespace App\Http\Controllers\Api;
 
@@ -49,7 +48,10 @@ class HardwareModelController extends Controller
             $activityLog = new ActivityLogService();
             $activityLog->logModelCreated($model->id, $model->name);
 
-            return response()->json($model->load('brand'), 201);
+            // Load brand relationship
+            $model->load('brand');
+            
+            return response()->json($model, 201);
         } catch (\Exception $e) {
             Log::error('Error creating model: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to create model'], 500);
@@ -74,20 +76,48 @@ class HardwareModelController extends Controller
                 ], 422);
             }
 
-            if ($request->has('brand_id')) $model->brand_id = $request->brand_id;
-            if ($request->has('name')) $model->name = $request->name;
-            if ($request->has('description')) $model->description = $request->description;
-
-            // Track changes with before/after values
-            $changes = [];
-            $dirty = $model->getDirty();
-            foreach ($dirty as $field => $newValue) {
-                $changes[$field] = [
-                    'old' => $model->getOriginal($field),
-                    'new' => $newValue
-                ];
+            // Store original values for activity log
+            $originalValues = [];
+            
+            // Prepare update data
+            $updateData = [];
+            
+            if ($request->has('brand_id')) {
+                $updateData['brand_id'] = $request->brand_id;
             }
-            $model->save();
+            
+            if ($request->has('name')) {
+                $updateData['name'] = $request->name;
+            }
+            
+            if ($request->has('description')) {
+                $updateData['description'] = $request->description;
+            }
+            
+            // Store original values
+            foreach ($updateData as $field => $value) {
+                $originalValues[$field] = $model->$field;
+            }
+            
+            // Update the model
+            if (!empty($updateData)) {
+                $model->update($updateData);
+            }
+            
+            // Refresh to get latest data
+            $model->refresh();
+
+            // Track changes for activity log
+            $changes = [];
+            foreach ($updateData as $field => $newValue) {
+                $oldValue = $originalValues[$field] ?? null;
+                if ($oldValue != $newValue) {
+                    $changes[$field] = [
+                        'old' => $oldValue,
+                        'new' => $newValue
+                    ];
+                }
+            }
 
             // Log activity
             if (!empty($changes)) {
@@ -95,10 +125,13 @@ class HardwareModelController extends Controller
                 $activityLog->logModelUpdated($model->id, $model->name, $changes);
             }
 
-            return response()->json($model->load('brand'));
+            // Load brand relationship
+            $model->load('brand');
+
+            return response()->json($model);
         } catch (\Exception $e) {
             Log::error('Error updating model: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to update model'], 500);
+            return response()->json(['error' => 'Failed to update model: ' . $e->getMessage()], 500);
         }
     }
 
@@ -130,4 +163,5 @@ class HardwareModelController extends Controller
             return response()->json(['error' => 'Failed to delete model'], 500);
         }
     }
+
 }

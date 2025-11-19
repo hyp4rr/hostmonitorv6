@@ -1,6 +1,6 @@
 import MonitorLayout from '@/layouts/monitor-layout';
 import { MapPin, Server, Maximize2, Minimize2, Layers, Filter, Search, AlertTriangle } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useSettings } from '@/contexts/settings-context';
@@ -59,13 +59,20 @@ export default function Maps() {
         branch_id: number;
     }>>([]);
     const [isLoadingLocations, setIsLoadingLocations] = useState(true);
+    const [floors, setFloors] = useState<Array<any>>([]);
 
     // Fetch locations from database
     useEffect(() => {
         if (!currentBranch?.id) return;
 
         setIsLoadingLocations(true);
-        fetch(`/api/locations?branch_id=${currentBranch.id}`, {
+        // If 'all' branches selected, fetch all locations without branch_id filter
+        const branchId = String(currentBranch.id);
+        const url = branchId === 'all' 
+            ? '/api/locations'
+            : `/api/locations?branch_id=${currentBranch.id}`;
+        
+        fetch(url, {
             credentials: 'same-origin',
             headers: { 'Accept': 'application/json' },
         })
@@ -78,6 +85,28 @@ export default function Maps() {
         .finally(() => setIsLoadingLocations(false));
     }, [currentBranch?.id]);
 
+    // Fetch floors for this branch (used to deep-link to a specific floor)
+    useEffect(() => {
+        if (!currentBranch?.id) return;
+        const params = new URLSearchParams();
+        // If 'all' branches selected, fetch all floors without branch_id filter
+        const branchId = String(currentBranch.id);
+        if (branchId !== 'all') {
+            params.set('branch_id', branchId);
+        }
+        const url = params.toString() ? `/api/floors?${params.toString()}` : '/api/floors';
+        fetch(url, {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' },
+        })
+            .then(res => res.ok ? res.json() : [])
+            .then(setFloors)
+            .catch(err => {
+                console.error('Error loading floors:', err);
+                setFloors([]);
+            });
+    }, [currentBranch?.id]);
+
     // State for devices loaded from API
     const [realDevices, setRealDevices] = useState<typeof currentBranch.devices>([]);
     
@@ -85,7 +114,13 @@ export default function Maps() {
     useEffect(() => {
         if (!currentBranch?.id) return;
         
-        fetch(`/api/devices?branch_id=${currentBranch.id}&per_page=10000&include_inactive=true`, {
+        // If 'all' branches selected, fetch all devices without branch_id filter
+        const branchId = String(currentBranch.id);
+        const url = branchId === 'all'
+            ? '/api/devices?per_page=10000&include_inactive=true'
+            : `/api/devices?branch_id=${currentBranch.id}&per_page=10000&include_inactive=true`;
+        
+        fetch(url, {
             credentials: 'same-origin',
             headers: { 'Accept': 'application/json' },
             cache: 'no-cache', // Ensure fresh data
@@ -122,7 +157,8 @@ export default function Maps() {
     });
 
     // Transform database locations + devices to map locations
-    const deviceLocations: DeviceLocation[] = [];
+    const deviceLocations: DeviceLocation[] = useMemo(() => {
+        const locations: DeviceLocation[] = [];
 
     // Add locations from database with their assigned devices
     dbLocations.forEach(location => {
@@ -170,7 +206,7 @@ export default function Maps() {
             ? (activeDevicesForUptime.reduce((sum, d) => sum + (d.uptime_percentage || 0), 0) / activeDevicesForUptime.length).toFixed(1)
             : '0.0';
 
-        deviceLocations.push({
+            locations.push({
             lat: location.latitude,
             lng: location.longitude,
             name: location.name,
@@ -200,7 +236,7 @@ export default function Maps() {
                 deviceStatus = 'offline';
             }
             
-            deviceLocations.push({
+            locations.push({
                 lat: device.latitude,
                 lng: device.longitude,
                 name: device.name,
@@ -214,12 +250,17 @@ export default function Maps() {
         }
     });
 
-    const filteredLocations = deviceLocations.filter(location => {
+        return locations;
+    }, [dbLocations, realDevices]);
+
+    const filteredLocations = useMemo(() => {
+        return deviceLocations.filter(location => {
         const matchesStatus = filterStatus === 'all' || location.status === filterStatus;
         const matchesSearch = location.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                             location.devices.some(d => d.toLowerCase().includes(searchQuery.toLowerCase()));
         return matchesStatus && matchesSearch;
     });
+    }, [deviceLocations, filterStatus, searchQuery]);
 
     const createPulsingIcon = (color: string, count: number) => {
         return L.divIcon({
@@ -411,6 +452,21 @@ export default function Maps() {
                     Math.abs(d.latitude - location.lat) < 0.0001 && 
                     Math.abs(d.longitude - location.lng) < 0.0001
                 );
+
+            // Determine floor to deep-link (lowest level for this location if exists)
+            let deepLinkFloorId: number | null = null;
+            let hasFloorsForLocation = false;
+            if (dbLocation) {
+                const floorsForLoc = floors.filter((f: any) => f.location_id === dbLocation.id);
+                if (floorsForLoc.length > 0) {
+                    hasFloorsForLocation = true;
+                    floorsForLoc.sort((a: any, b: any) => (a.level ?? 0) - (b.level ?? 0));
+                    deepLinkFloorId = floorsForLoc[0].id;
+                }
+            }
+
+            // If only one device at this location, pass deviceId to plan page for convenience
+            const deepLinkDeviceId = locationDevicesForPopup.length === 1 ? locationDevicesForPopup[0].id : null;
             
             const deviceListHtml = locationDevicesForPopup.length > 0 
                 ? locationDevicesForPopup.slice(0, 5).map((d: any) => {
@@ -462,6 +518,15 @@ export default function Maps() {
                                 </div>
                             </div>
                         ` : ''}
+
+                        ${dbLocation ? `
+                            <div style="margin-top: 14px;">
+                                <a href="/monitor/plan?location_id=${dbLocation.id}${deepLinkFloorId ? `&floor_id=${deepLinkFloorId}` : ''}${deepLinkDeviceId ? `&deviceId=${deepLinkDeviceId}` : ''}" 
+                                   style="display:inline-flex;align-items:center;gap:8px;background:#3b82f6;color:white;padding:8px 12px;border-radius:8px;text-decoration:none;font-weight:600;">
+                                    <span>${hasFloorsForLocation ? 'Open Floor Plan' : 'Manage Floors'}</span>
+                                </a>
+                            </div>
+                        ` : ''}
                     </div>
                 `, {
                     maxWidth: 360,
@@ -490,7 +555,7 @@ export default function Maps() {
 
         // Signal that markers are ready
         setMarkersReady(markersRef.current.length > 0);
-    }, [filterStatus, searchQuery, isLoadingLocations, dbLocations.length]);
+    }, [filteredLocations, isLoadingLocations, realDevices, dbLocations, floors]);
 
     // Check for incoming location parameter from dashboard
     useEffect(() => {
@@ -674,7 +739,7 @@ export default function Maps() {
                             </div>
                             <div>
                                 <h3 className="text-lg font-bold text-blue-900 dark:text-blue-100">
-                                    {currentBranch.name} - Network Map
+                                    {currentBranch.id === 'all' ? 'All Branches' : currentBranch.name} - Network Map
                                 </h3>
                                 <p className="text-sm text-blue-700 dark:text-blue-300">
                                     {dbLocations.length} location{dbLocations.length !== 1 ? 's' : ''} • 
@@ -688,9 +753,9 @@ export default function Maps() {
 
                 {/* Header - Hide in fullscreen */}
                 {!isFullscreen && (
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <div>
-                            <h1 className="bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-3xl font-bold text-transparent dark:from-white dark:to-slate-300">
+                            <h1 className="bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-2xl sm:text-3xl font-bold text-transparent dark:from-white dark:to-slate-300">
                                 {t('maps.title')}
                             </h1>
                             <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">

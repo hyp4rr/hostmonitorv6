@@ -224,12 +224,37 @@ class FastPingService
     private function updateDeviceStatuses($results)
     {
         foreach ($results as $result) {
-            Device::where('id', $result['device_id'])->update([
-                'status' => $result['status'],
-                'response_time' => $result['response_time'],
-                'last_ping' => $result['timestamp'],
-                'updated_at' => now()
-            ]);
+            $device = Device::find($result['device_id']);
+            if (!$device) continue;
+            
+            $previousStatus = $device->status;
+            $newStatus = $result['status'];
+            
+            // Helper function to check if status is "online" (online or warning)
+            $isOnlineStatus = function($status) {
+                return in_array($status, ['online', 'warning']);
+            };
+            
+            // Only update updated_at if transitioning between online and offline states
+            $wasOnline = $isOnlineStatus($previousStatus);
+            $isNowOnline = $isOnlineStatus($newStatus);
+            
+            // Always update these fields
+            $device->status = $newStatus;
+            $device->response_time = $result['response_time'];
+            $device->last_ping = $result['timestamp'];
+            
+            if ($wasOnline !== $isNowOnline) {
+                // Status changed from online→offline or offline→online
+                $device->updated_at = now();
+                $device->save();
+            } else {
+                // Status stayed in same category (online→online or offline→offline)
+                // Disable timestamps to prevent auto-update of updated_at
+                $device->timestamps = false;
+                $device->save();
+                $device->timestamps = true;
+            }
         }
     }
 
@@ -291,12 +316,33 @@ class FastPingService
         $command = $this->buildPingCommand($device->ip_address);
         $result = $this->executePing($command, $device);
         
-        // Update device status
-        Device::where('id', $deviceId)->update([
-            'status' => $result['status'],
-            'response_time' => $result['response_time'],
-            'last_ping' => $result['timestamp']
-        ]);
+        $previousStatus = $device->status;
+        
+        // Helper function to check if status is "online" (online or warning)
+        $isOnlineStatus = function($status) {
+            return in_array($status, ['online', 'warning']);
+        };
+        
+        // Only update updated_at if transitioning between online and offline states
+        $wasOnline = $isOnlineStatus($previousStatus);
+        $isNowOnline = $isOnlineStatus($result['status']);
+        
+        // Always update these fields
+        $device->status = $result['status'];
+        $device->response_time = $result['response_time'];
+        $device->last_ping = $result['timestamp'];
+        
+        if ($wasOnline !== $isNowOnline) {
+            // Status changed from online→offline or offline→online
+            $device->updated_at = now();
+            $device->save();
+        } else {
+            // Status stayed in same category (online→online or offline→offline)
+            // Disable timestamps to prevent auto-update of updated_at
+            $device->timestamps = false;
+            $device->save();
+            $device->timestamps = true;
+        }
         
         // Store history
         MonitoringHistory::create([

@@ -36,32 +36,10 @@ class DeviceUptimeService
      */
     public function updateDeviceUptime(Device $device)
     {
-        // Get the last 24 hours of monitoring data
-        $startDate = Carbon::now()->subHours(24);
-        
-        // Get all monitoring records for the device in the last 24 hours
-        $totalChecks = MonitoringHistory::where('device_id', $device->id)
-            ->where('checked_at', '>=', $startDate)
-            ->count();
-
-        if ($totalChecks === 0) {
-            // No monitoring data, use current status
-            $device->uptime_percentage = round((float) ($device->status === 'online' ? 100 : 0), 2);
-        } else {
-            // Count online status checks
-            $onlineChecks = MonitoringHistory::where('device_id', $device->id)
-                ->where('checked_at', '>=', $startDate)
-                ->where('status', 'online')
-                ->count();
-
-            // Calculate uptime percentage
-            $device->uptime_percentage = round((float) (($onlineChecks / $totalChecks) * 100), 2);
-        }
-
-        // Calculate real uptime minutes from monitoring history
-        $device->uptime_minutes = $device->calculateRealUptimeMinutes();
-
-        $device->save();
+        // Use the device's updateUptime method which handles reset logic properly
+        // This ensures uptime_minutes resets to 0 when device goes offline
+        // and only counts time since online_since (resets on each offline->online transition)
+        $device->updateUptime();
     }
 
     /**
@@ -99,6 +77,7 @@ class DeviceUptimeService
             ->count();
 
         if ($totalChecks === 0) {
+            // No recent history - use current status
             return $device->status === 'online' ? 100 : 0;
         }
 

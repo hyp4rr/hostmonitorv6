@@ -7,6 +7,28 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Mobile-friendly improvements */
+@media (max-width: 640px) {
+    /* Ensure tables are scrollable on mobile */
+    .table-responsive {
+        -webkit-overflow-scrolling: touch;
+        overflow-x: auto;
+    }
+    
+    /* Touch-friendly buttons */
+    button, a[role="button"] {
+        min-height: 44px;
+        min-width: 44px;
+    }
+    
+    /* Prevent text selection on touch interactions */
+    .touch-pan {
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+    }
+}
+
 @theme {
     --font-sans:
         'Instrument Sans', ui-sans-serif, system-ui, sans-serif,

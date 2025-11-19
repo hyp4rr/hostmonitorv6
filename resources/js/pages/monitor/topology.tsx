@@ -16,6 +16,7 @@ import {
     Link2,
     MousePointer2,
 } from 'lucide-react';
+import { getDeviceCategoryIcon } from '@/utils/device-icons';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { PageProps } from '@/types';
@@ -79,46 +80,69 @@ const CableEdge = (props: any) => {
     // Calculate the path for the cable
     const path = `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`;
     
-    // Cable colors - more visible
-    const cableColor = selected ? '#3b82f6' : '#475569';
-    const cableWidth = selected ? 4 : 3;
+    // Cable colors - green
+    const cableColor = selected ? '#16a34a' : (style.stroke || '#22c55e'); // Use green
+    const cableWidth = selected ? 5 : (style.strokeWidth || 4);
+    
+    // Calculate arrow direction
+    const dx = targetX - sourceX;
+    const dy = targetY - sourceY;
+    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+    const arrowLength = 12;
+    const arrowWidth = 8;
+    
+    // Arrow points
+    const arrowX = targetX - arrowLength * Math.cos(Math.atan2(dy, dx));
+    const arrowY = targetY - arrowLength * Math.sin(Math.atan2(dy, dx));
+    const arrowPath = `M ${targetX} ${targetY} L ${arrowX - arrowWidth * Math.cos(Math.atan2(dy, dx) - Math.PI / 2)} ${arrowY - arrowWidth * Math.sin(Math.atan2(dy, dx) - Math.PI / 2)} L ${arrowX - arrowWidth * Math.cos(Math.atan2(dy, dx) + Math.PI / 2)} ${arrowY - arrowWidth * Math.sin(Math.atan2(dy, dx) + Math.PI / 2)} Z`;
     
     return (
-        <>
-            {/* Shadow/glow effect for depth */}
+        <g>
+            {/* Shadow/glow effect for depth - more prominent */}
             <path
                 d={path}
                 stroke="#1e293b"
-                strokeWidth={cableWidth + 2}
-                strokeOpacity={0.2}
+                strokeWidth={cableWidth + 3}
+                strokeOpacity={0.3}
                 fill="none"
                 strokeLinecap="round"
+                style={{ pointerEvents: 'none' }}
             />
-            {/* Main cable line */}
+            {/* Main cable line - solid and visible */}
             <path
                 d={path}
                 stroke={cableColor}
                 strokeWidth={cableWidth}
                 fill="none"
                 strokeLinecap="round"
-                strokeDasharray={selected ? '0' : '10,5'}
-                markerEnd={markerEnd ? `url(#${markerEnd})` : undefined}
-                style={{
-                    filter: selected ? 'drop-shadow(0 0 4px rgba(59, 130, 246, 0.5))' : 'none',
-                    ...style,
-                }}
+                strokeDasharray="0" // Always solid, no dashes
+                    style={{
+                        filter: selected 
+                            ? 'drop-shadow(0 0 6px rgba(34, 197, 94, 0.8))' 
+                            : 'drop-shadow(0 0 3px rgba(34, 197, 94, 0.4))',
+                        opacity: selected ? 1 : 0.9,
+                        ...style,
+                    }}
+            />
+            {/* Arrow head */}
+            <path
+                d={arrowPath}
+                fill={cableColor}
+                stroke={cableColor}
+                strokeWidth={1}
+                style={{ pointerEvents: 'none' }}
             />
             {/* Cable highlight for 3D effect */}
             <path
                 d={path}
-                stroke="rgba(255, 255, 255, 0.3)"
-                strokeWidth={cableWidth * 0.3}
+                stroke="rgba(255, 255, 255, 0.4)"
+                strokeWidth={cableWidth * 0.4}
                 fill="none"
                 strokeLinecap="round"
-                strokeDasharray={selected ? '0' : '10,5'}
+                strokeDasharray="0"
                 style={{ pointerEvents: 'none' }}
             />
-        </>
+        </g>
     );
 };
 
@@ -149,8 +173,41 @@ const nodeTypes: NodeTypes = {
                 className="px-4 py-2 bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600 rounded-lg shadow-lg min-w-[150px] relative cursor-pointer"
                 style={{ pointerEvents: 'auto' }}
             >
+                {/* Single connection handle in the center - invisible but functional */}
+                <Handle
+                    type="source"
+                    position={Position.Top}
+                    id="center"
+                    style={{ 
+                        background: 'transparent', 
+                        border: 'none',
+                        width: '20px', 
+                        height: '20px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        top: '-10px'
+                    }}
+                />
+                <Handle
+                    type="target"
+                    position={Position.Top}
+                    id="center"
+                    style={{ 
+                        background: 'transparent', 
+                        border: 'none',
+                        width: '20px', 
+                        height: '20px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        top: '-10px'
+                    }}
+                />
                 <div className="flex items-center gap-2 mb-1">
                     <div className={`w-3 h-3 rounded-full ${getStatusColor(data.status)}`} />
+                    {(() => {
+                        const Icon = getDeviceCategoryIcon(data.category || '');
+                        return <Icon className="size-3 text-slate-600 dark:text-slate-400" />;
+                    })()}
                     <span className="text-sm font-semibold text-slate-900 dark:text-white truncate">
                         {data.name}
                     </span>
@@ -212,6 +269,14 @@ export default function Topology() {
             setEdges([]);
         }
     }, [selectedTopology?.id]); // Use selectedTopology?.id to avoid unnecessary reloads
+
+    // Debug: Log edges whenever they change
+    useEffect(() => {
+        console.log('Edges state changed:', edges.length, 'edges');
+        if (edges.length > 0) {
+            console.log('Current edges:', edges);
+        }
+    }, [edges]);
 
     const loadDevices = async () => {
         if (!currentBranch?.id) return;
@@ -327,28 +392,57 @@ export default function Topology() {
                 }));
 
                 // Load edges from canvas_data
-                const topologyEdges: Edge[] = (topology.canvas_data?.edges || []).map((edge: any) => ({
-                    id: edge.id,
-                    source: edge.source,
-                    target: edge.target,
-                    sourceHandle: edge.sourceHandle || null,
-                    targetHandle: edge.targetHandle || null,
-                    type: edge.type || 'cable',
-                    animated: edge.animated || false,
-                    style: edge.style || { 
-                        strokeWidth: 3, 
-                        stroke: '#475569',
-                    },
-                    markerEnd: edge.markerEnd || {
-                        type: MarkerType.ArrowClosed,
-                        width: 20,
-                        height: 20,
-                        color: '#475569',
-                    },
-                }));
+                // Filter edges to only include those where both source and target nodes exist
+                const nodeIds = new Set(topologyNodes.map(n => n.id));
+                const topologyEdges: Edge[] = (topology.canvas_data?.edges || [])
+                    .filter((edge: any) => {
+                        const hasSource = nodeIds.has(edge.source);
+                        const hasTarget = nodeIds.has(edge.target);
+                        if (!hasSource || !hasTarget) {
+                            console.warn('Edge filtered out - missing node:', {
+                                edgeId: edge.id,
+                                source: edge.source,
+                                target: edge.target,
+                                hasSource,
+                                hasTarget,
+                                availableNodes: Array.from(nodeIds)
+                            });
+                            return false;
+                        }
+                        return true;
+                    })
+                    .map((edge: any) => {
+                        const edgeObj: Edge = {
+                            id: edge.id,
+                            source: edge.source,
+                            target: edge.target,
+                            type: edge.type || 'cable',
+                            animated: edge.animated || false,
+                            style: edge.style || { 
+                                strokeWidth: 4, 
+                                stroke: '#22c55e', // Green
+                            },
+                            markerEnd: edge.markerEnd || {
+                                type: MarkerType.ArrowClosed,
+                                width: 24,
+                                height: 24,
+                                color: '#22c55e',
+                            },
+                        };
+                        // Only add handles if they exist and are not null
+                        if (edge.sourceHandle) {
+                            edgeObj.sourceHandle = edge.sourceHandle;
+                        }
+                        if (edge.targetHandle) {
+                            edgeObj.targetHandle = edge.targetHandle;
+                        }
+                        return edgeObj;
+                    });
 
                 setNodes(topologyNodes);
                 setEdges(topologyEdges);
+                console.log('Loaded topology - Nodes:', topologyNodes.length, 'Edges:', topologyEdges.length);
+                console.log('Edge details:', topologyEdges);
             }
         } catch (error) {
             console.error('Failed to load topology data:', error);
@@ -403,23 +497,44 @@ export default function Topology() {
             } else {
                 // Second device selected - create connection
                 console.log('Second device selected, creating connection from', firstSelectedNode, 'to', node.id);
+                
+                // Verify both nodes exist before creating edge
+                const sourceNodeExists = nodes.some(n => n.id === firstSelectedNode);
+                const targetNodeExists = nodes.some(n => n.id === node.id);
+                
+                if (!sourceNodeExists || !targetNodeExists) {
+                    console.error('Cannot create edge - node missing:', {
+                        source: firstSelectedNode,
+                        target: node.id,
+                        sourceExists: sourceNodeExists,
+                        targetExists: targetNodeExists,
+                        allNodeIds: nodes.map(n => n.id)
+                    });
+                    setFirstSelectedNode(null);
+                    setNodes((nds) =>
+                        nds.map((n) => ({
+                            ...n,
+                            style: { ...n.style, border: undefined, borderColor: undefined },
+                        }))
+                    );
+                    return;
+                }
+                
                 const newEdge: Edge = {
                     id: `edge-${firstSelectedNode}-${node.id}-${Date.now()}`,
                     source: firstSelectedNode,
                     target: node.id,
-                    sourceHandle: null,
-                    targetHandle: null,
                     type: 'cable',
                     animated: false,
                     style: { 
-                        strokeWidth: 3, 
-                        stroke: '#475569',
+                        strokeWidth: 4, 
+                        stroke: '#22c55e', // Green
                     },
                     markerEnd: {
                         type: MarkerType.ArrowClosed,
-                        width: 20,
-                        height: 20,
-                        color: '#475569',
+                        width: 24,
+                        height: 24,
+                        color: '#22c55e',
                     },
                 };
                 
@@ -436,10 +551,16 @@ export default function Topology() {
                         const updated = [...eds, newEdge];
                         console.log('Total edges after adding:', updated.length);
                         console.log('All edges:', updated);
-                        // Force ReactFlow to re-render
-                        setTimeout(() => {
-                            console.log('Edges state after timeout:', updated);
-                        }, 100);
+                        console.log('Edge details:', {
+                            id: newEdge.id,
+                            source: newEdge.source,
+                            target: newEdge.target,
+                            type: newEdge.type,
+                            style: newEdge.style,
+                            markerEnd: newEdge.markerEnd
+                        });
+                        console.log('Source node exists:', nodes.some(n => n.id === newEdge.source));
+                        console.log('Target node exists:', nodes.some(n => n.id === newEdge.target));
                         return updated;
                     });
                     
@@ -536,6 +657,13 @@ export default function Topology() {
                 y: event.clientY,
             });
 
+            // Check if device already exists in canvas
+            const deviceExists = nodes.some((node) => node.data.deviceId === device.id);
+            if (deviceExists) {
+                alert(`Device "${device.name}" is already in the canvas. Each device can only be added once.`);
+                return;
+            }
+
             const newNode: Node = {
                 id: `device-${device.id}-${Date.now()}`,
                 type: 'device',
@@ -553,7 +681,7 @@ export default function Topology() {
 
             setNodes((nds) => nds.concat(newNode));
         },
-        [reactFlowInstance, devices, setNodes, selectedTopology]
+        [reactFlowInstance, devices, nodes, setNodes, selectedTopology]
     );
 
     const handleCreateTopology = async () => {
@@ -568,20 +696,33 @@ export default function Topology() {
                     type: node.type,
                     data: node.data,
                 })),
-                edges: edges.map((edge) => ({
-                    id: edge.id,
-                    source: edge.source,
-                    target: edge.target,
-                    sourceHandle: edge.sourceHandle,
-                    targetHandle: edge.targetHandle,
-                    type: edge.type || 'cable',
-                    animated: edge.animated || false,
-                    style: edge.style || { 
-                        strokeWidth: 3, 
-                        stroke: '#475569',
-                    },
-                    markerEnd: edge.markerEnd,
-                })),
+                edges: edges.map((edge) => {
+                    const edgeData: any = {
+                        id: edge.id,
+                        source: edge.source,
+                        target: edge.target,
+                        type: edge.type || 'cable',
+                        animated: edge.animated || false,
+                        style: edge.style || { 
+                            strokeWidth: 4, 
+                            stroke: '#6366f1',
+                        },
+                        markerEnd: edge.markerEnd || {
+                            type: MarkerType.ArrowClosed,
+                            width: 24,
+                            height: 24,
+                            color: '#6366f1',
+                        },
+                    };
+                    // Only include handles if they exist
+                    if (edge.sourceHandle) {
+                        edgeData.sourceHandle = edge.sourceHandle;
+                    }
+                    if (edge.targetHandle) {
+                        edgeData.targetHandle = edge.targetHandle;
+                    }
+                    return edgeData;
+                }),
             };
 
             const topologyDevices: TopologyDevice[] = nodes.map((node) => ({
@@ -638,20 +779,33 @@ export default function Topology() {
                     type: node.type,
                     data: node.data,
                 })),
-                edges: edges.map((edge) => ({
-                    id: edge.id,
-                    source: edge.source,
-                    target: edge.target,
-                    sourceHandle: edge.sourceHandle,
-                    targetHandle: edge.targetHandle,
-                    type: edge.type || 'cable',
-                    animated: edge.animated || false,
-                    style: edge.style || { 
-                        strokeWidth: 3, 
-                        stroke: '#475569',
-                    },
-                    markerEnd: edge.markerEnd,
-                })),
+                edges: edges.map((edge) => {
+                    const edgeData: any = {
+                        id: edge.id,
+                        source: edge.source,
+                        target: edge.target,
+                        type: edge.type || 'cable',
+                        animated: edge.animated || false,
+                        style: edge.style || { 
+                            strokeWidth: 4, 
+                            stroke: '#6366f1',
+                        },
+                        markerEnd: edge.markerEnd || {
+                            type: MarkerType.ArrowClosed,
+                            width: 24,
+                            height: 24,
+                            color: '#6366f1',
+                        },
+                    };
+                    // Only include handles if they exist
+                    if (edge.sourceHandle) {
+                        edgeData.sourceHandle = edge.sourceHandle;
+                    }
+                    if (edge.targetHandle) {
+                        edgeData.targetHandle = edge.targetHandle;
+                    }
+                    return edgeData;
+                }),
             };
 
             const topologyDevices: TopologyDevice[] = nodes
@@ -758,9 +912,9 @@ export default function Topology() {
 
     return (
         <MonitorLayout title="Topology">
-            <div className="flex h-[calc(100vh-4rem)] gap-4 p-4">
+            <div className="flex flex-col lg:flex-row h-[calc(100vh-4rem)] gap-4 p-2 sm:p-4">
                 {/* Left Sidebar - Topologies List */}
-                <div className="w-80 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col">
+                <div className="w-full lg:w-80 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col h-[300px] lg:h-auto">
                     <div className="p-4 border-b border-slate-200 dark:border-slate-700">
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
@@ -937,18 +1091,24 @@ export default function Topology() {
                                 fitView
                                 deleteKeyCode={['Backspace', 'Delete']}
                                 nodesDraggable={!isConnectionMode}
-                                nodesConnectable={false}
+                                nodesConnectable={true}
                                 elementsSelectable={!isConnectionMode}
                                 panOnDrag={!isConnectionMode}
-                                connectionLineStyle={{ stroke: '#3b82f6', strokeWidth: 2 }}
+                                connectionLineStyle={{ stroke: '#22c55e', strokeWidth: 2 }}
                                 connectionLineType="straight"
                                 snapToGrid={false}
                                 defaultEdgeOptions={{
                                     type: 'cable',
                                     animated: false,
                                     style: { 
-                                        strokeWidth: 3, 
-                                        stroke: '#475569',
+                                        strokeWidth: 4, 
+                                        stroke: '#6366f1', // Indigo for better visibility
+                                    },
+                                    markerEnd: {
+                                        type: MarkerType.ArrowClosed,
+                                        width: 24,
+                                        height: 24,
+                                        color: '#6366f1',
                                     },
                                 }}
                                 className="w-full h-full"
@@ -961,6 +1121,21 @@ export default function Topology() {
                                 <Background />
                                 <Controls />
                                 <MiniMap />
+                                {/* Debug info - shows edge count */}
+                                {process.env.NODE_ENV === 'development' && edges.length > 0 && (
+                                    <Panel position="bottom-left" className="bg-yellow-100 dark:bg-yellow-900/20 p-2 rounded text-xs border border-yellow-300">
+                                        <div className="font-semibold">Debug Info</div>
+                                        <div>Nodes: {nodes.length}</div>
+                                        <div>Edges: {edges.length}</div>
+                                        <div className="mt-1 text-[10px] max-h-32 overflow-y-auto">
+                                            {edges.map(e => (
+                                                <div key={e.id} className="truncate">
+                                                    {e.source} → {e.target} ({e.type})
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </Panel>
+                                )}
                                 <Panel position="top-right" className="bg-white dark:bg-slate-800 p-3 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 max-w-xs">
                                     <div className="space-y-2 text-xs text-slate-600 dark:text-slate-400">
                                         {isConnectionMode ? (

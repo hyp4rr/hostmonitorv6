@@ -253,13 +253,35 @@ class DeviceController extends Controller
         }
     }
 
+    /**
+     * Display the specified device with relations.
+     */
+    public function show($id)
+    {
+        try {
+            $device = Device::with([
+                'branch',
+                'location',
+                'hardwareDetail.brand',
+                'hardwareDetail.hardwareModel',
+                'managedBy',
+                'managers',
+            ])->findOrFail($id);
+
+            return response()->json($this->transformDevice($device));
+        } catch (\Exception $e) {
+            Log::error('Error fetching device: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to fetch device'], 500);
+        }
+    }
+
     public function store(Request $request)
     {
         try {
             $validator = Validator::make($request->all(), [
                 'name' => 'required|string|max:255',
                 'ip_address' => 'required|ip|unique:devices,ip_address',
-                'barcode' => 'required|string|max:255|unique:devices,barcode',
+                'barcode' => 'nullable|string|max:255|unique:devices,barcode',
                 'mac_address' => 'nullable|string|max:17',
                 'category' => 'required|string|in:switches,servers,wifi,tas,cctv',
                 'status' => 'required|string|in:online,offline,warning,maintenance',
@@ -291,7 +313,7 @@ class DeviceController extends Controller
             $device = Device::create([
                 'name' => $request->name,
                 'ip_address' => $request->ip_address,
-                'barcode' => $request->barcode,
+                'barcode' => !empty($request->barcode) ? $request->barcode : null,
                 'mac_address' => $request->mac_address,
                 'managed_by' => $request->managed_by ?: null,
                 'serial_number' => $request->serial_number,
@@ -334,7 +356,7 @@ class DeviceController extends Controller
             $validator = Validator::make($request->all(), [
                 'name' => 'sometimes|required|string|max:255',
                 'ip_address' => 'sometimes|required|ip|unique:devices,ip_address,' . $id,
-                'barcode' => 'sometimes|required|string|max:255|unique:devices,barcode,' . $id,
+                'barcode' => 'nullable|string|max:255|unique:devices,barcode,' . $id,
                 'mac_address' => 'nullable|string|max:17',
                 'category' => 'sometimes|required|string|in:switches,servers,wifi,tas,cctv',
                 'status' => 'sometimes|required|string|in:online,offline,warning,maintenance',
@@ -379,6 +401,11 @@ class DeviceController extends Controller
             // Convert empty string to null for managed_by
             if ($request->has('managed_by') && $request->managed_by === '') {
                 $device->managed_by = null;
+            }
+            
+            // Convert empty string to null for barcode
+            if ($request->has('barcode') && $request->barcode === '') {
+                $device->barcode = null;
             }
 
             // Track changes with before/after values
@@ -772,6 +799,12 @@ class DeviceController extends Controller
                 'id' => $device->hardwareDetail->id,
                 'brand' => $brand,
                 'model' => $model,
+                'brand_id' => $device->hardwareDetail->brand_id,
+                'model_id' => $device->hardwareDetail->model_id,
+                'hardware_model' => $device->hardwareDetail->hardwareModel ? [
+                    'id' => $device->hardwareDetail->hardwareModel->id,
+                    'name' => $device->hardwareDetail->hardwareModel->name,
+                ] : null,
             ] : null,
             'name' => $device->name,
             'ip_address' => $device->ip_address,
@@ -808,6 +841,7 @@ class DeviceController extends Controller
             'is_active' => $device->is_active,
             'response_time' => $device->response_time,
             'last_check' => $device->last_ping,
+            'last_ping' => $device->last_ping,
             'offline_reason' => $device->offline_reason,
             'offline_acknowledged_by' => $device->offline_acknowledged_by,
             'offline_acknowledged_at' => $device->offline_acknowledged_at,

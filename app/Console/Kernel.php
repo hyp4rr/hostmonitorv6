@@ -42,6 +42,12 @@ class Kernel extends ConsoleKernel
                  ->everyMinute()
                  ->description('Update device uptime calculations based on monitoring history')
                  ->withoutOverlapping();
+
+        // Ping all devices every 5 minutes
+        $schedule->command('devices:ping-all')
+                 ->everyFiveMinutes()
+                 ->description('Ping all devices and update their status and last_ping timestamp')
+                 ->withoutOverlapping();
     }
 
     /**

@@ -40,8 +40,29 @@
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
 
-        @viteReactRefresh
-        @vite(['resources/js/app.tsx'])
+        @if(app()->environment('local') && file_exists(public_path('hot')))
+            {{-- Development mode: Use Vite dev server --}}
+            @viteReactRefresh
+            @vite(['resources/js/app.tsx'])
+        @else
+            {{-- Production mode: Use built assets --}}
+            @php
+                $manifest = json_decode(file_get_contents(public_path('build/manifest.json')), true);
+                $appEntry = $manifest['resources/js/app.tsx'] ?? null;
+                $cssEntry = $manifest['resources/css/app.css'] ?? null;
+            @endphp
+            @if($appEntry)
+                @if(isset($cssEntry['css']))
+                    @foreach($cssEntry['css'] as $css)
+                        <link rel="stylesheet" href="{{ asset('build/' . $css) }}" />
+                    @endforeach
+                @endif
+                <script type="module" src="{{ asset('build/' . $appEntry['file']) }}"></script>
+            @else
+                {{-- Fallback to @vite if manifest not found --}}
+                @vite(['resources/js/app.tsx'])
+            @endif
+        @endif
         @inertiaHead
     </head>
     <body class="font-sans antialiased">

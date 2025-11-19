@@ -30,9 +30,9 @@ class ReportsController extends Controller
             $startDate = $this->getStartDate($dateRange);
             
             // Get devices with their actual uptime data
+            // Include all active devices regardless of status (online, offline, warning, offline_ack)
             $devicesQuery = Device::where('branch_id', $branchId)
-                ->where('is_active', true)
-                ->where('status', '!=', 'offline_ack');
+                ->where('is_active', true);
             
             // Apply category filter if not 'all'
             if ($category !== 'all') {
@@ -40,7 +40,7 @@ class ReportsController extends Controller
                 $devicesQuery->where('category', $categoryFilter);
             }
             
-            $devices = $devicesQuery->select('id', 'name', 'category', 'uptime_percentage', 'offline_duration_minutes')
+            $devices = $devicesQuery->select('id', 'name', 'category', 'status', 'uptime_percentage', 'offline_duration_minutes')
                 ->get();
             
             // Get all monitoring history for these devices in one query
@@ -53,12 +53,29 @@ class ReportsController extends Controller
                 ->get()
                 ->groupBy('device_id');
             
-            return $devices->map(function ($device) use ($allHistory) {
+            return $devices->map(function ($device) use ($allHistory, $startDate) {
                 // Get history for this specific device
                 $history = $allHistory->get($device->id, collect());
                 
-                // Use device's actual uptime percentage
-                $uptimePercentage = $device->uptime_percentage;
+                // Calculate uptime percentage from monitoring history for the selected date range
+                $uptimePercentage = 0;
+                if ($history->count() > 0) {
+                    // Count online checks vs total checks in the date range
+                    $totalChecks = $history->count();
+                    $onlineChecks = $history->where('status', 'online')->count();
+                    $uptimePercentage = round((float) (($onlineChecks / $totalChecks) * 100), 2);
+                } else {
+                    // No history in the date range - use current status
+                    // If device is currently offline, uptime should be 0% (or very low)
+                    // If device is online but no history, assume 100% (newly added device)
+                    if ($device->status === 'offline' || $device->status === 'offline_ack') {
+                        $uptimePercentage = 0;
+                    } else {
+                        // Device is online but no history - could be newly added
+                        // Use stored uptime percentage or default to 100%
+                        $uptimePercentage = $device->uptime_percentage ?? 100;
+                    }
+                }
                 
                 // Calculate downtime
                 $downtimeMinutes = $device->offline_duration_minutes ?? 0;
@@ -184,10 +201,9 @@ class ReportsController extends Controller
         
         $stats = Device::where('branch_id', $branchId)
             ->where('is_active', true)
-            ->where('status', '!=', 'offline_ack')
             ->select('category', DB::raw('count(*) as total'))
             ->addSelect(DB::raw("SUM(CASE WHEN status = 'online' THEN 1 ELSE 0 END) as online"))
-            ->addSelect(DB::raw("SUM(CASE WHEN status = 'offline' THEN 1 ELSE 0 END) as offline"))
+            ->addSelect(DB::raw("SUM(CASE WHEN status IN ('offline', 'offline_ack') THEN 1 ELSE 0 END) as offline"))
             ->addSelect(DB::raw("AVG(uptime_percentage) as avg_uptime"))
             ->groupBy('category')
             ->get()
@@ -254,9 +270,9 @@ class ReportsController extends Controller
             $startDate = $this->getStartDate($dateRange);
             
             // Build device query with category filter
+            // Include all active devices regardless of status
             $devicesQuery = Device::where('branch_id', $branchId)
-                ->where('is_active', true)
-                ->where('status', '!=', 'offline_ack');
+                ->where('is_active', true);
             
             // Apply category filter if not 'all'
             if ($category !== 'all') {
@@ -278,9 +294,9 @@ class ReportsController extends Controller
             
             // Count incidents using a more efficient query
             // Get device IDs for this branch with category filter
+            // Include all active devices regardless of status
             $deviceIdsQuery = Device::where('branch_id', $branchId)
-                ->where('is_active', true)
-                ->where('status', '!=', 'offline_ack');
+                ->where('is_active', true);
             
             if ($category !== 'all') {
                 $categoryFilter = $this->normalizeCategory($category);

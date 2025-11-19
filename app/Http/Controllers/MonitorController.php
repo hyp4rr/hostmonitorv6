@@ -35,6 +35,12 @@ class MonitorController extends Controller
         // Priority: 1. Request parameter, 2. Session, 3. First available branch
         $branchId = $request->input('branch_id');
         
+        // Handle 'all' branches option (only when explicitly requested)
+        if ($branchId === 'all') {
+            session(['current_branch_id' => 'all']);
+            return 'all';
+        }
+        
         if ($branchId) {
             // Store in session when explicitly selected
             session(['current_branch_id' => $branchId]);
@@ -43,7 +49,11 @@ class MonitorController extends Controller
         
         // Try session
         if (session()->has('current_branch_id')) {
-            return (int)session('current_branch_id');
+            $sessionBranchId = session('current_branch_id');
+            if ($sessionBranchId === 'all') {
+                return 'all';
+            }
+            return (int)$sessionBranchId;
         }
         
         // Fallback to first branch
@@ -64,6 +74,38 @@ class MonitorController extends Controller
     {
         // Get all active branches for dropdown
         $allBranches = $this->getAllBranches();
+
+        // Handle 'all' branches option
+        if ($branchId === 'all') {
+            // Get total device count across all branches
+            $deviceCount = Device::where('is_active', true)
+                ->where('status', '!=', 'offline_ack')
+                ->count();
+            
+            // Get all unique locations across all branches
+            $allLocations = \App\Models\Location::whereHas('devices', function($query) {
+                $query->where('is_active', true);
+            })
+            ->pluck('name')
+            ->unique()
+            ->values()
+            ->toArray();
+
+            return [
+                'id' => 'all',
+                'name' => 'All Branches',
+                'code' => 'ALL',
+                'description' => 'Viewing devices from all branches',
+                'address' => '',
+                'latitude' => null,
+                'longitude' => null,
+                'is_active' => true,
+                'devices' => [],
+                'deviceCount' => $deviceCount,
+                'locations' => $allLocations,
+                'branches' => $allBranches,
+            ];
+        }
 
         if (!$branchId && !empty($allBranches)) {
             $branchId = $allBranches[0]['id'];
@@ -125,12 +167,20 @@ class MonitorController extends Controller
                 return $this->renderEmptyDashboard($branchData);
             }
 
-            // Calculate stats for current branch
-            $stats = $this->calculateBranchStats($branchData['id']);
-            $deviceTypes = $this->getDeviceTypeBreakdown($branchData['id']);
-            $locationStats = $this->getLocationStats($branchData['id']);
-            $recentAlerts = $this->getRecentAlerts($branchData['id']);
-            $recentActivity = $this->getRecentActivity($branchData['id']);
+            // Calculate stats - handle 'all' branches
+            if ($branchData['id'] === 'all') {
+                $stats = $this->calculateAllBranchesStats();
+                $deviceTypes = $this->getAllBranchesDeviceTypeBreakdown();
+                $locationStats = $this->getAllBranchesLocationStats();
+                $recentAlerts = $this->getAllBranchesRecentAlerts();
+                $recentActivity = $this->getAllBranchesRecentActivity();
+            } else {
+                $stats = $this->calculateBranchStats($branchData['id']);
+                $deviceTypes = $this->getDeviceTypeBreakdown($branchData['id']);
+                $locationStats = $this->getLocationStats($branchData['id']);
+                $recentAlerts = $this->getRecentAlerts($branchData['id']);
+                $recentActivity = $this->getRecentActivity($branchData['id']);
+            }
 
             return Inertia::render('monitor/dashboard', [
                 'currentBranch' => $branchData,
@@ -270,6 +320,107 @@ class MonitorController extends Controller
         return $activityLogService->getRecentActivities($branchId, 20);
     }
 
+    /**
+     * Calculate stats for all branches
+     */
+    private function calculateAllBranchesStats()
+    {
+        return [
+            'totalDevices' => Device::where('is_active', true)->where('status', '!=', 'offline_ack')->count(),
+            'onlineDevices' => Device::where('is_active', true)->where('status', 'online')->count(),
+            'warningDevices' => Device::where('is_active', true)->where('status', 'warning')->count(),
+            'offlineDevices' => Device::where('is_active', true)->where('status', 'offline')->count(),
+        ];
+    }
+
+    /**
+     * Get device type breakdown for all branches
+     */
+    private function getAllBranchesDeviceTypeBreakdown()
+    {
+        $totalDevices = Device::where('is_active', true)->where('status', '!=', 'offline_ack')->count();
+        
+        return Device::where('is_active', true)
+            ->where('status', '!=', 'offline_ack')
+            ->select('category', DB::raw('count(*) as count'))
+            ->groupBy('category')
+            ->get()
+            ->map(function ($item) use ($totalDevices) {
+                return [
+                    'type' => $this->formatCategory($item->category),
+                    'count' => $item->count,
+                    'percentage' => $totalDevices > 0 ? round(($item->count / $totalDevices) * 100, 1) : 0,
+                    'color' => $this->getCategoryColor($item->category)
+                ];
+            })
+            ->toArray();
+    }
+
+    /**
+     * Get location stats for all branches
+     */
+    private function getAllBranchesLocationStats()
+    {
+        if (!Schema::hasTable('locations')) {
+            return [];
+        }
+
+        return Device::where('devices.is_active', true)
+            ->where('devices.status', '!=', 'offline_ack')
+            ->whereNotNull('devices.location_id')
+            ->join('locations', 'devices.location_id', '=', 'locations.id')
+            ->select('locations.name as location', DB::raw('count(*) as total'))
+            ->addSelect(DB::raw("SUM(CASE WHEN devices.status = 'online' THEN 1 ELSE 0 END) as online"))
+            ->addSelect(DB::raw("SUM(CASE WHEN devices.status = 'offline' THEN 1 ELSE 0 END) as offline"))
+            ->groupBy('locations.id', 'locations.name')
+            ->havingRaw('count(*) > 0')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'location' => $item->location,
+                    'devices' => $item->total,
+                    'online' => $item->online,
+                    'offline' => $item->offline
+                ];
+            })
+            ->toArray();
+    }
+
+    /**
+     * Get recent alerts for all branches
+     */
+    private function getAllBranchesRecentAlerts()
+    {
+        return Alert::with('device')
+            ->orderBy('triggered_at', 'desc')
+            ->limit(10)
+            ->get()
+            ->map(function ($alert) {
+                return [
+                    'id' => $alert->id,
+                    'device_name' => $alert->device->name ?? 'Unknown Device',
+                    'title' => $alert->title,
+                    'message' => $alert->message,
+                    'severity' => $alert->severity,
+                    'status' => $alert->status,
+                    'acknowledged' => $alert->acknowledged,
+                    'resolved' => $alert->resolved,
+                    'created_at' => $alert->triggered_at,
+                    'created_at_human' => $alert->triggered_at->diffForHumans()
+                ];
+            })
+            ->toArray();
+    }
+
+    /**
+     * Get recent activity for all branches
+     */
+    private function getAllBranchesRecentActivity()
+    {
+        $activityLogService = new ActivityLogService();
+        return $activityLogService->getRecentActivities(null, 20);
+    }
+
     private function getCategoryColor($category): string
     {
         $colors = [
@@ -334,6 +485,15 @@ class MonitorController extends Controller
         $branchId = $this->getCurrentBranchId($request);
         
         return Inertia::render('monitor/configuration', [
+            'currentBranch' => $this->getBranchData($branchId),
+        ]);
+    }
+    
+    public function plan(Request $request)
+    {
+        $branchId = $this->getCurrentBranchId($request);
+        
+        return Inertia::render('monitor/plan', [
             'currentBranch' => $this->getBranchData($branchId),
         ]);
     }

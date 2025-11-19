@@ -363,17 +363,94 @@ class EnterprisePingService
         $updateData = [];
         
         foreach ($results as $result) {
-            $updateData[] = [
+            $device = Device::find($result['device_id']);
+            if (!$device) continue;
+            
+            $previousStatus = $device->status;
+            $newStatus = $result['status'];
+            
+            // Track offline timestamp
+            if ($newStatus === 'offline' && $previousStatus !== 'offline') {
+                // Device just went offline
+                $device->offline_since = now();
+                $device->online_since = null;
+                $device->offline_alert_sent = false;
+            } elseif ($newStatus === 'online' && $previousStatus === 'offline') {
+                // Device came back online
+                $device->online_since = now();
+                $device->offline_since = null;
+                $device->offline_alert_sent = false;
+            }
+            
+            $updateFields = [
                 'id' => $result['device_id'],
                 'status' => $result['status'],
                 'response_time' => $result['response_time'],
                 'last_ping' => $result['timestamp'],
-                'updated_at' => now()
             ];
+            
+            // Helper function to check if status is "online" (online or warning)
+            $isOnlineStatus = function($status) {
+                return in_array($status, ['online', 'warning']);
+            };
+            
+            // Only update updated_at if transitioning between online and offline states
+            $wasOnline = $isOnlineStatus($previousStatus);
+            $isNowOnline = $isOnlineStatus($newStatus);
+            
+            if ($wasOnline !== $isNowOnline) {
+                // Status changed from online→offline or offline→online
+                $updateFields['updated_at'] = now();
+            }
+            
+            $updateData[] = $updateFields;
+            
+            // Check for 2-minute offline alert
+            if ($newStatus === 'offline' && !$device->offline_alert_sent) {
+                $offlineSince = $device->offline_since ?: $device->last_status_change ?: $device->updated_at;
+                $offlineMinutes = $offlineSince->diffInMinutes(now());
+                
+                if ($offlineMinutes >= 2) {
+                    // Create alert for device offline for 2+ minutes
+                    try {
+                        \App\Models\Alert::create([
+                            'device_id' => $device->id,
+                            'type' => 'device_offline',
+                            'severity' => 'high',
+                            'category' => 'connectivity',
+                            'title' => "Device Offline: {$device->name}",
+                            'message' => "Device {$device->name} ({$device->ip_address}) has been offline for {$offlineMinutes} minutes.",
+                            'status' => 'active',
+                            'triggered_at' => now(),
+                            'downtime' => "{$offlineMinutes} minutes",
+                        ]);
+                        
+                        $device->offline_alert_sent = true;
+                        Log::info("Created 2-minute offline alert", [
+                            'device_id' => $device->id,
+                            'device_name' => $device->name,
+                            'offline_minutes' => $offlineMinutes
+                        ]);
+                    } catch (\Exception $e) {
+                        Log::error("Failed to create offline alert", [
+                            'device_id' => $device->id,
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                }
+            }
         }
 
         // Use bulk update for performance
         $this->bulkUpdateDevices($updateData);
+        
+        // Save devices with alert flags
+        foreach ($results as $result) {
+            $device = Device::find($result['device_id']);
+            if ($device && ($device->isDirty('offline_alert_sent') || $device->isDirty('offline_since') || $device->isDirty('online_since'))) {
+                $device->save();
+            }
+        }
     }
 
     /**
@@ -382,12 +459,24 @@ class EnterprisePingService
     private function bulkUpdateDevices($updateData)
     {
         foreach ($updateData as $data) {
-            Device::where('id', $data['id'])->update([
-                'status' => $data['status'],
-                'response_time' => $data['response_time'],
-                'last_ping' => $data['last_ping'],
-                'updated_at' => $data['updated_at']
-            ]);
+            $device = Device::find($data['id']);
+            if (!$device) continue;
+            
+            // Always update these fields
+            $device->status = $data['status'];
+            $device->response_time = $data['response_time'];
+            $device->last_ping = $data['last_ping'];
+            
+            // Only include updated_at if it was set (status changed)
+            if (isset($data['updated_at'])) {
+                $device->updated_at = $data['updated_at'];
+                $device->save();
+            } else {
+                // Disable timestamps to prevent auto-update of updated_at
+                $device->timestamps = false;
+                $device->save();
+                $device->timestamps = true;
+            }
         }
     }
 

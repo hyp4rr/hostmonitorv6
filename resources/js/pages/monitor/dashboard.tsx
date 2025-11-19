@@ -9,6 +9,7 @@ import {
     MapPin,
     Globe,
 } from 'lucide-react';
+import { getDeviceCategoryIcon } from '@/utils/device-icons';
 import { useSettings } from '@/contexts/settings-context';
 import { useTranslation } from '@/contexts/i18n-context';
 import { router, usePage } from '@inertiajs/react';
@@ -125,16 +126,16 @@ export default function Dashboard() {
                 )}
 
                 {/* Header with last update */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div>
-                        <h1 className="bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-3xl font-bold text-transparent dark:from-white dark:to-slate-300">
+                        <h1 className="bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-2xl sm:text-3xl font-bold text-transparent dark:from-white dark:to-slate-300">
                             {t('dashboard.title')}
                         </h1>
                         <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
                             {t('dashboard.subtitle')}
                         </p>
                     </div>
-                    <div className="flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                    <div className="flex items-center gap-2 rounded-full bg-slate-100 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                         <Clock className="size-4" />
                         <span>{lastUpdateDate.toLocaleTimeString()}</span>
                     </div>
@@ -154,7 +155,7 @@ export default function Dashboard() {
                                         <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
                                             {stat.name}
                                         </p>
-                                        <p className="mt-2 text-4xl font-bold text-slate-900 dark:text-white">
+                                        <p className="mt-2 text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white">
                                             {stat.value}
                                         </p>
                                     </div>
@@ -198,7 +199,10 @@ export default function Dashboard() {
                                                 {device.count}
                                             </span>
                                             <div className={`rounded-lg ${device.color} p-2`}>
-                                                <Server className="size-4 text-white" />
+                                                {(() => {
+                                                    const Icon = getDeviceCategoryIcon(device.type);
+                                                    return <Icon className="size-4 text-white" />;
+                                                })()}
                                             </div>
                                         </div>
                                         <h3 className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300">

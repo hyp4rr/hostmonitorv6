@@ -21,8 +21,9 @@ import {
     Search,
     Check,
     MessageCircle,
+    Upload,
 } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from '@/contexts/i18n-context';
 import { Head, router, usePage } from '@inertiajs/react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
@@ -245,6 +246,7 @@ export default function Configuration() {
     
     // Selection state for bulk operations
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
+    
     const [isDeleting, setIsDeleting] = useState(false);
     
     // Pagination state
@@ -255,6 +257,9 @@ export default function Configuration() {
 
     // Filter and search state
     const [deviceSearchTerm, setDeviceSearchTerm] = useState('');
+    const [debouncedDeviceSearchTerm, setDebouncedDeviceSearchTerm] = useState('');
+    const deviceSearchInputRef = useRef<HTMLInputElement>(null);
+    const wasSearchFocusedRef = useRef(false);
     const [deviceStatusFilter, setDeviceStatusFilter] = useState<string>('all');
     const [deviceCategoryFilter, setDeviceCategoryFilter] = useState<string>('all');
     const [deviceActiveFilter, setDeviceActiveFilter] = useState<string>('all'); // all, active, inactive
@@ -286,13 +291,36 @@ export default function Configuration() {
         fetchData();
     }, [currentPage, perPage]);
     
+    // Debounce device search term
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            // Check if input is focused before updating debounced term
+            if (deviceSearchInputRef.current === document.activeElement) {
+                wasSearchFocusedRef.current = true;
+            }
+            setDebouncedDeviceSearchTerm(deviceSearchTerm);
+        }, 1000); // Wait 1 second after user stops typing
+
+        return () => clearTimeout(timer);
+    }, [deviceSearchTerm]);
+
     // Fetch data when device filters or sorting change (for backend filtering/sorting)
     useEffect(() => {
         if (selectedEntity === 'devices') {
             setCurrentPage(1); // Reset to page 1 when filters or sorting change
             fetchData();
         }
-    }, [deviceSearchTerm, deviceStatusFilter, deviceCategoryFilter, deviceActiveFilter, deviceSortField, deviceSortDirection]);
+    }, [debouncedDeviceSearchTerm, deviceStatusFilter, deviceCategoryFilter, deviceActiveFilter, deviceSortField, deviceSortDirection]);
+
+    // Restore focus to search input after loading completes if it was focused
+    useEffect(() => {
+        if (!isLoading && wasSearchFocusedRef.current && deviceSearchInputRef.current && selectedEntity === 'devices') {
+            setTimeout(() => {
+                deviceSearchInputRef.current?.focus();
+                wasSearchFocusedRef.current = false;
+            }, 0);
+        }
+    }, [isLoading, selectedEntity]);
 
     // Auto-refresh data every 30 seconds
     useEffect(() => {
@@ -327,7 +355,11 @@ export default function Configuration() {
             const params = new URLSearchParams();
             
             if (currentBranch?.id && ['devices', 'alerts', 'locations', 'history'].includes(selectedEntity)) {
-                params.append('branch_id', currentBranch.id.toString());
+                // Only add branch_id if it's not 'all' (check as string since it can be 'all' or number)
+                const branchId = String(currentBranch.id);
+                if (branchId !== 'all') {
+                    params.append('branch_id', branchId);
+                }
             }
             
             // Add pagination params for entities that support it
@@ -341,8 +373,8 @@ export default function Configuration() {
                 params.append('include_inactive', 'true');
                 
                 // Pass search filter to backend
-                if (deviceSearchTerm) {
-                    params.append('search', deviceSearchTerm);
+                if (debouncedDeviceSearchTerm) {
+                    params.append('search', debouncedDeviceSearchTerm);
                 }
                 
                 // Pass category filter to backend
@@ -434,21 +466,28 @@ export default function Configuration() {
 
     // Helper function to get CSRF token
     const getCsrfToken = async () => {
+        // Try to get token from meta tag first (for web routes)
+        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (token) {
+            return token;
+        }
+        
+        // For API routes, CSRF is not required, but try to get it if available
         try {
-            await fetch('/sanctum/csrf-cookie', {
+            // Only try sanctum if we're using it, otherwise skip
+            const response = await fetch('/sanctum/csrf-cookie', {
                 credentials: 'same-origin',
             });
-            
-            const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            if (!token) {
-                console.error('CSRF token not found after refresh');
-                return '';
+            if (response.ok) {
+                const newToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                return newToken || '';
             }
-            return token;
         } catch (error) {
-            console.error('Failed to fetch CSRF token:', error);
-            return '';
+            // Sanctum route doesn't exist or failed - that's okay for API routes
+            console.log('CSRF cookie endpoint not available (this is normal for API routes)');
         }
+        
+        return '';
     };
 
     // CRUD operations
@@ -502,7 +541,7 @@ export default function Configuration() {
     const handleSave = async () => {
         setIsLoading(true);
         try {
-            const entityMap: Record<CRUDEntity, string> = {
+            const entityMap: Partial<Record<CRUDEntity, string>> = {
                 branches: '/api/branches',
                 devices: '/api/devices',
                 alerts: '/api/alerts',
@@ -513,11 +552,16 @@ export default function Configuration() {
             };
 
             const baseUrl = entityMap[selectedEntity];
+            if (!baseUrl) {
+                console.error('No API endpoint for entity:', selectedEntity);
+                return;
+            }
             const url = modalMode === 'create' 
                 ? baseUrl 
                 : `${baseUrl}/${selectedItem?.id}`;
             
-            const formData = new FormData(document.querySelector('form') as HTMLFormElement);
+            const form = document.querySelector('form') as HTMLFormElement;
+            const formData = new FormData(form);
             const data: Record<string, any> = {};
             
             // Convert FormData to object, handling arrays and checkboxes properly
@@ -536,18 +580,36 @@ export default function Configuration() {
                         data[key].push(value);
                     }
                 } else {
+                    // Always include the value, even if empty (for fields like image_path that can be cleared)
                     data[key] = value;
                 }
+                
             });
+            
 
             // Normalize specific types
-            if (Array.isArray(data.managed_by_ids)) {
+            // For devices, use managed_by_ids_json if available (from state), otherwise fall back to form inputs
+            if (selectedEntity === 'devices' && data.managed_by_ids_json) {
+                try {
+                    const parsedIds = JSON.parse(data.managed_by_ids_json);
+                    if (Array.isArray(parsedIds)) {
+                        data.managed_by_ids = Array.from(new Set(parsedIds.map((v: any) => Number(v)).filter((v: any) => !Number.isNaN(v))));
+                    }
+                    delete data.managed_by_ids_json; // Remove the JSON field
+                } catch (e) {
+                    console.error('Failed to parse managed_by_ids_json:', e);
+                }
+            } else if (Array.isArray(data.managed_by_ids)) {
                 // Convert to numbers and dedupe
                 data.managed_by_ids = Array.from(new Set(data.managed_by_ids.map((v: any) => Number(v)).filter((v: any) => !Number.isNaN(v))));
             }
             
+            // Ensure managed_by_ids is always an array for devices (even if empty)
+            if (selectedEntity === 'devices' && !data.managed_by_ids) {
+                data.managed_by_ids = [];
+            }
+            
             // Convert boolean checkboxes - must check if key exists in form
-            const form = document.querySelector('form') as HTMLFormElement;
             const checkboxFields = ['is_active', 'acknowledged', 'resolved'];
             
             checkboxFields.forEach(field => {
@@ -557,7 +619,8 @@ export default function Configuration() {
                 }
             });
             
-            console.log('Saving data:', data); // Debug log
+            
+            console.log('Saving data:', data);
             
             const csrfToken = await getCsrfToken();
 
@@ -581,7 +644,27 @@ export default function Configuration() {
             });
 
             if (response.ok) {
+                const responseData = await response.json();
+                console.log('Save response:', responseData);
+                
+                // Refresh data first to update the models list
                 await fetchData();
+                
+                // For models, update the models array with the response data to ensure it's in the list
+                if (selectedEntity === 'models' && responseData && responseData.id) {
+                    setModels(prevModels => {
+                        const updated = prevModels.map((m: Model) => 
+                            m.id === responseData.id ? responseData : m
+                        );
+                        // If model not in list (new model), add it
+                        if (!updated.find((m: Model) => m.id === responseData.id)) {
+                            updated.push(responseData);
+                        }
+                        console.log('Updated models array with response data');
+                        return updated;
+                    });
+                }
+                
                 setShowModal(false);
                 setSelectedItem(null);
             } else {
@@ -600,7 +683,7 @@ export default function Configuration() {
     const handleConfirmDelete = async () => {
         setIsLoading(true);
         try {
-            const entityMap: Record<CRUDEntity, string> = {
+            const entityMap: Partial<Record<CRUDEntity, string>> = {
                 branches: '/api/branches',
                 devices: '/api/devices',
                 alerts: '/api/alerts',
@@ -610,7 +693,12 @@ export default function Configuration() {
                 models: '/api/models',
             };
 
-            const url = `${entityMap[selectedEntity]}/${selectedItem?.id}`;
+            const baseUrl = entityMap[selectedEntity];
+            if (!baseUrl) {
+                console.error('No API endpoint for entity:', selectedEntity);
+                return;
+            }
+            const url = `${baseUrl}/${selectedItem?.id}`;
             
             const csrfToken = await getCsrfToken();
 
@@ -711,12 +799,12 @@ export default function Configuration() {
 
     // Filter other entities
     const filteredDevices = devices.filter(device => {
-        const matchesSearch = deviceSearchTerm === '' || 
-            device.name.toLowerCase().includes(deviceSearchTerm.toLowerCase()) ||
-            device.ip_address.toLowerCase().includes(deviceSearchTerm.toLowerCase()) ||
-            (device.mac_address && device.mac_address.toLowerCase().includes(deviceSearchTerm.toLowerCase())) ||
-            (device.barcode && device.barcode.toLowerCase().includes(deviceSearchTerm.toLowerCase())) ||
-            (device.serial_number && device.serial_number.toLowerCase().includes(deviceSearchTerm.toLowerCase()));
+        const matchesSearch = debouncedDeviceSearchTerm === '' || 
+            device.name.toLowerCase().includes(debouncedDeviceSearchTerm.toLowerCase()) ||
+            device.ip_address.toLowerCase().includes(debouncedDeviceSearchTerm.toLowerCase()) ||
+            (device.mac_address && device.mac_address.toLowerCase().includes(debouncedDeviceSearchTerm.toLowerCase())) ||
+            (device.barcode && device.barcode.toLowerCase().includes(debouncedDeviceSearchTerm.toLowerCase())) ||
+            (device.serial_number && device.serial_number.toLowerCase().includes(debouncedDeviceSearchTerm.toLowerCase()));
         
         const matchesStatus = deviceStatusFilter === 'all' || 
             (deviceStatusFilter === 'online' && device.status === 'online') ||
@@ -1032,6 +1120,91 @@ export default function Configuration() {
                         </div>
                     </div>
 
+                    {/* Device Filters - Outside loading to prevent refresh */}
+                    {selectedEntity === 'devices' && (
+                        <div className="border-b border-slate-200/50 bg-gradient-to-r from-slate-50 to-slate-100 p-4 dark:border-slate-700/50 dark:from-slate-900/50 dark:to-slate-800/50">
+                            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                                {/* Search Bar */}
+                                <div className="relative flex-1">
+                                    <Search className="absolute left-3 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+                                    <input
+                                        ref={deviceSearchInputRef}
+                                        type="text"
+                                        placeholder="Search by name, IP, MAC, barcode, or serial number..."
+                                        value={deviceSearchTerm}
+                                        onChange={(e) => setDeviceSearchTerm(e.target.value)}
+                                        className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm font-medium text-slate-900 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400"
+                                    />
+                                </div>
+                                
+                                {/* Filter Buttons */}
+                                <div className="flex flex-wrap gap-2">
+                                    <select
+                                        value={deviceCategoryFilter}
+                                        onChange={(e) => setDeviceCategoryFilter(e.target.value)}
+                                        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+                                    >
+                                        <option value="all">All Categories</option>
+                                        <option value="switches">Switches</option>
+                                        <option value="servers">Servers</option>
+                                        <option value="wifi">WiFi</option>
+                                        <option value="tas">TAS</option>
+                                        <option value="cctv">CCTV</option>
+                                    </select>
+                                    
+                                    <select
+                                        value={deviceStatusFilter}
+                                        onChange={(e) => setDeviceStatusFilter(e.target.value)}
+                                        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+                                    >
+                                        <option value="all">All Status</option>
+                                        <option value="online">Online</option>
+                                        <option value="warning">Warning</option>
+                                        <option value="offline">Offline</option>
+                                        <option value="offline_ack">Acknowledged</option>
+                                    </select>
+                                    
+                                    <select
+                                        value={deviceActiveFilter}
+                                        onChange={(e) => setDeviceActiveFilter(e.target.value)}
+                                        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+                                    >
+                                        <option value="all">All Devices</option>
+                                        <option value="active">Active Only</option>
+                                        <option value="inactive">Inactive Only</option>
+                                    </select>
+                                    
+                                    {/* Clear Filters Button */}
+                                    {(deviceSearchTerm || deviceStatusFilter !== 'all' || deviceCategoryFilter !== 'all' || deviceActiveFilter !== 'all') && (
+                                        <button
+                                            onClick={() => {
+                                                setDeviceSearchTerm('');
+                                                setDebouncedDeviceSearchTerm('');
+                                                setDeviceStatusFilter('all');
+                                                setDeviceCategoryFilter('all');
+                                                setDeviceActiveFilter('all');
+                                            }}
+                                            className="flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 shadow-sm transition-all hover:bg-red-100 dark:border-red-700 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
+                                        >
+                                            <X className="size-4" />
+                                            Clear Filters
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                            
+                            {/* Results Count */}
+                            <div className="mt-3 text-xs font-medium text-slate-600 dark:text-slate-400">
+                                Showing {devices.length} device(s) on this page
+                                {totalItems > 0 && (
+                                    <span className="ml-2 text-blue-600 dark:text-blue-400">
+                                        (Total: {totalItems} device(s) matching filters across all pages)
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Table */}
                     <div className="overflow-x-auto">
                         {isLoading ? (
@@ -1103,86 +1276,6 @@ export default function Configuration() {
                                 )}
                                 {selectedEntity === 'devices' && (
                                     <>
-                                        {/* Device Filters - Enhanced */}
-                                        <div className="border-b border-slate-200/50 bg-gradient-to-r from-slate-50 to-slate-100 p-4 dark:border-slate-700/50 dark:from-slate-900/50 dark:to-slate-800/50">
-                                            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                                                {/* Search Bar */}
-                                                <div className="relative flex-1">
-                                                    <Search className="absolute left-3 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Search by name, IP, MAC, barcode, or serial number..."
-                                                        value={deviceSearchTerm}
-                                                        onChange={(e) => setDeviceSearchTerm(e.target.value)}
-                                                        className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm font-medium text-slate-900 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400"
-                                                    />
-                                                </div>
-                                                
-                                                {/* Filter Buttons */}
-                                                <div className="flex flex-wrap gap-2">
-                                                    <select
-                                                        value={deviceCategoryFilter}
-                                                        onChange={(e) => setDeviceCategoryFilter(e.target.value)}
-                                                        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
-                                                    >
-                                                        <option value="all">All Categories</option>
-                                                        <option value="switches">Switches</option>
-                                                        <option value="servers">Servers</option>
-                                                        <option value="wifi">WiFi</option>
-                                                        <option value="tas">TAS</option>
-                                                        <option value="cctv">CCTV</option>
-                                                    </select>
-                                                    
-                                                    <select
-                                                        value={deviceStatusFilter}
-                                                        onChange={(e) => setDeviceStatusFilter(e.target.value)}
-                                                        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
-                                                    >
-                                                        <option value="all">All Status</option>
-                                                        <option value="online">Online</option>
-                                                        <option value="warning">Warning</option>
-                                                        <option value="offline">Offline</option>
-                                                        <option value="offline_ack">Acknowledged</option>
-                                                    </select>
-                                                    
-                                                    <select
-                                                        value={deviceActiveFilter}
-                                                        onChange={(e) => setDeviceActiveFilter(e.target.value)}
-                                                        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
-                                                    >
-                                                        <option value="all">All Devices</option>
-                                                        <option value="active">Active Only</option>
-                                                        <option value="inactive">Inactive Only</option>
-                                                    </select>
-                                                    
-                                                    {/* Clear Filters Button */}
-                                                    {(deviceSearchTerm || deviceStatusFilter !== 'all' || deviceCategoryFilter !== 'all' || deviceActiveFilter !== 'all') && (
-                                                        <button
-                                                            onClick={() => {
-                                                                setDeviceSearchTerm('');
-                                                                setDeviceStatusFilter('all');
-                                                                setDeviceCategoryFilter('all');
-                                                                setDeviceActiveFilter('all');
-                                                            }}
-                                                            className="flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 shadow-sm transition-all hover:bg-red-100 dark:border-red-700 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
-                                                        >
-                                                            <X className="size-4" />
-                                                            Clear Filters
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            
-                                            {/* Results Count */}
-                                            <div className="mt-3 text-xs font-medium text-slate-600 dark:text-slate-400">
-                                                Showing {devices.length} device(s) on this page
-                                                {totalItems > 0 && (
-                                                    <span className="ml-2 text-blue-600 dark:text-blue-400">
-                                                        (Total: {totalItems} device(s) matching filters across all pages)
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
                                         <DevicesTable
                                             devices={devices}
                                             onView={handleViewDevice}
@@ -1689,6 +1782,16 @@ export default function Configuration() {
                                             Location
                                         </label>
                                         <p className="mt-1 text-slate-900 dark:text-white">{viewDevice.location?.name || viewDevice.location_name || '-'}</p>
+                                        {(viewDevice as any).location?.id && (
+                                            <div className="mt-2">
+                                                <a
+                                                    href={`/monitor/plan?location_id=${(viewDevice as any).location.id}&deviceId=${viewDevice.id}&mode=config`}
+                                                    className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+                                                >
+                                                    Open Floor Plan (Edit)
+                                                </a>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div>
@@ -2115,8 +2218,8 @@ function DevicesTable({
     }
 
     return (
-        <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
-            <table className="w-full min-w-[1200px]">
+        <div className="overflow-x-auto -mx-4 sm:mx-0 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+            <table className="w-full min-w-[1200px] sm:min-w-0">
                 <thead className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-b-2 border-slate-200 dark:border-slate-700">
                     <tr>
                         <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 w-12">
@@ -2139,7 +2242,7 @@ function DevicesTable({
                         </th>
                         <th
                             onClick={() => onSort('name')}
-                            className="cursor-pointer px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
+                            className="cursor-pointer px-3 sm:px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
                         >
                         <div className="flex items-center gap-1">
                             Name
@@ -2152,7 +2255,7 @@ function DevicesTable({
                     </th>
                     <th
                         onClick={() => onSort('ip_address')}
-                        className="cursor-pointer px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                        className="cursor-pointer px-3 sm:px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
                     >
                         <div className="flex items-center gap-1">
                             IP Address
@@ -2165,7 +2268,7 @@ function DevicesTable({
                     </th>
                     <th
                         onClick={() => onSort('category')}
-                        className="cursor-pointer px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                        className="cursor-pointer px-3 sm:px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
                     >
                         <div className="flex items-center gap-1">
                             Category
@@ -2178,7 +2281,7 @@ function DevicesTable({
                     </th>
                     <th
                         onClick={() => onSort('status')}
-                        className="cursor-pointer px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                        className="cursor-pointer px-3 sm:px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
                     >
                         <div className="flex items-center gap-1">
                             Status
@@ -2189,12 +2292,9 @@ function DevicesTable({
                             )}
                         </div>
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Active</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Managed By</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Branch</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Location</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Brand/Model</th>
-                    <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Actions</th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Active</th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Branch</th>
+                    <th className="px-3 sm:px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Actions</th>
                 </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
@@ -2205,7 +2305,7 @@ function DevicesTable({
                             !device.is_active ? 'opacity-60 bg-slate-50/50 dark:bg-slate-800/50' : ''
                         }`}
                     >
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-4">
                             <input
                                 type="checkbox"
                                 checked={selectedIds.includes(device.id)}
@@ -2213,18 +2313,18 @@ function DevicesTable({
                                 className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
                             />
                         </td>
-                        <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
+                        <td className="px-3 sm:px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
                             {device.name}
                         </td>
-                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400 font-mono">
+                        <td className="px-3 sm:px-6 py-4 text-sm text-slate-600 dark:text-slate-400 font-mono">
                             {device.ip_address}
                         </td>
-                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                        <td className="px-3 sm:px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
                             <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium dark:bg-slate-700">
                                 {formatCategory(device.category)}
                             </span>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-4">
                             <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
                                 device.status === 'online' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
                                 device.status === 'warning' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
@@ -2234,7 +2334,7 @@ function DevicesTable({
                                 {device.status}
                             </span>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-4">
                             <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
                                 device.is_active 
                                     ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' 
@@ -2253,72 +2353,11 @@ function DevicesTable({
                                 )}
                             </span>
                         </td>
-                        <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">
-                            {device.managed_by_user || (device as any).managed_by_users ? (
-                                <div className="flex flex-wrap items-center gap-1">
-                                    {device.managed_by_user && (
-                                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium dark:bg-slate-700">
-                                            {device.managed_by_user.name}
-                                        </span>
-                                    )}
-                                    {Array.isArray((device as any).managed_by_users) && (device as any).managed_by_users.map((u: any) => (
-                                        <span key={u.id} className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium dark:bg-slate-700">
-                                            {u.name}
-                                        </span>
-                                    ))}
-                                </div>
-                            ) : (
-                                <span className="text-slate-400 dark:text-slate-500">-</span>
-                            )}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                        <td className="px-3 sm:px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
                             <div className="flex items-center gap-2">
                                 <Building2 className="size-3.5 text-slate-400" />
                                 <span>{device.branch?.name || '-'}</span>
                             </div>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                            {device.location ? (
-                                device.latitude && device.longitude ? (
-                                    <button
-                                        onClick={() => {
-                                            router.visit('/monitor/maps', {
-                                                data: {
-                                                    deviceId: device.id,
-                                                    lat: device.latitude,
-                                                    lng: device.longitude,
-                                                }
-                                            });
-                                        }}
-                                        className="flex items-center gap-1.5 rounded-lg bg-blue-100 px-2 py-1 text-blue-700 transition-all hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50"
-                                        title="View on map"
-                                    >
-                                        <MapPin className="size-3.5" />
-                                        <span className="text-xs font-medium">{device.location.name}</span>
-                                    </button>
-                                ) : (
-                                    <div className="flex items-center gap-2">
-                                        <MapPin className="size-3.5 text-slate-400" />
-                                        <span>{device.location.name}</span>
-                                    </div>
-                                )
-                            ) : (
-                                <span className="text-slate-400 dark:text-slate-600">-</span>
-                            )}
-                        </td>
-                        <td className="px-6 py-4">
-                            {device.hardware_detail ? (
-                                <div className="flex flex-col">
-                                    <span className="text-sm font-bold text-slate-900 dark:text-white">
-                                        {device.hardware_detail.brand}
-                                    </span>
-                                    <span className="text-xs text-slate-500 dark:text-slate-400">
-                                        {device.hardware_detail.model}
-                                    </span>
-                                </div>
-                            ) : (
-                                <span className="text-slate-400 dark:text-slate-600">-</span>
-                            )}
                         </td>
                         <td className="px-6 py-4 text-right">
                             <div className="flex justify-end gap-2">
@@ -2416,7 +2455,7 @@ function AlertsTable({
                         <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Device</th>
                     <th
                         onClick={() => onSort('title')}
-                        className="cursor-pointer px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                        className="cursor-pointer px-3 sm:px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
                     >
                         <div className="flex items-center gap-1">
                             Title
@@ -2429,7 +2468,7 @@ function AlertsTable({
                     </th>
                     <th
                         onClick={() => onSort('severity')}
-                        className="cursor-pointer px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                        className="cursor-pointer px-3 sm:px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
                     >
                         <div className="flex items-center gap-1">
                             Severity
@@ -2442,7 +2481,7 @@ function AlertsTable({
                     </th>
                     <th
                         onClick={() => onSort('status')}
-                        className="cursor-pointer px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                        className="cursor-pointer px-3 sm:px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
                     >
                         <div className="flex items-center gap-1">
                             Status
@@ -2460,7 +2499,7 @@ function AlertsTable({
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
                 {alerts.map((alert) => (
                     <tr key={alert.id} className="transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-4">
                             <input
                                 type="checkbox"
                                 checked={selectedIds.includes(alert.id)}
@@ -2468,9 +2507,9 @@ function AlertsTable({
                                 className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
                             />
                         </td>
-                        <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">{alert.device?.name || `Device #${alert.device_id}`}</td>
-                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{alert.title}</td>
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">{alert.device?.name || `Device #${alert.device_id}`}</td>
+                        <td className="px-3 sm:px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{alert.title}</td>
+                        <td className="px-3 sm:px-6 py-4">
                             <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
                                 alert.severity === 'critical' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
                                 alert.severity === 'warning' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
@@ -2479,7 +2518,7 @@ function AlertsTable({
                                 {alert.severity}
                             </span>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-4">
                             <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
                                 alert.resolved ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
                                 alert.status === 'active' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
@@ -2488,7 +2527,7 @@ function AlertsTable({
                                 {alert.resolved ? 'Resolved' : alert.status}
                             </span>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-4">
                             <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
                                 alert.acknowledged ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
                                 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
@@ -2580,7 +2619,7 @@ function LocationsTable({
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
                 {locations.map((location) => (
                     <tr key={location.id} className="transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-4">
                             <input
                                 type="checkbox"
                                 checked={selectedIds.includes(location.id)}
@@ -2588,17 +2627,24 @@ function LocationsTable({
                                 className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
                             />
                         </td>
-                        <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
+                        <td className="px-3 sm:px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
                             {location.name}
                         </td>
-                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                        <td className="px-3 sm:px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
                             {location.branch_id}
                         </td>
-                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                        <td className="px-3 sm:px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
                             {location.description || '-'}
                         </td>
                         <td className="px-6 py-4 text-right">
                             <div className="flex justify-end gap-2">
+                                <a
+                                    href={`/monitor/plan?location_id=${location.id}&mode=config`}
+                                    className="rounded-lg p-2 text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/30"
+                                    title="Open Floor Plan (Edit)"
+                                >
+                                    <MapPin className="size-4" />
+                                </a>
                                 <button
                                     onClick={() => onEdit(location)}
                                     className="rounded-lg p-2 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30"
@@ -2701,7 +2747,7 @@ function BranchesTable({
                             !branch.is_active ? 'opacity-60 bg-slate-50/50 dark:bg-slate-800/50' : ''
                         }`}
                     >
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-4">
                             <input
                                 type="checkbox"
                                 checked={selectedIds.includes(branch.id)}
@@ -2709,10 +2755,10 @@ function BranchesTable({
                                 className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
                             />
                         </td>
-                        <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
+                        <td className="px-3 sm:px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
                             #{index + 1}
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-4">
                             <div className="flex items-center gap-2">
                                 <div className="rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 p-2">
                                     <Building2 className="size-4 text-white" />
@@ -2722,18 +2768,18 @@ function BranchesTable({
                                 </span>
                             </div>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-4">
                             <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 dark:bg-slate-700 dark:text-slate-300">
                                 {branch.code}
                             </span>
                         </td>
-                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400 max-w-xs truncate">
+                        <td className="px-3 sm:px-6 py-4 text-sm text-slate-600 dark:text-slate-400 max-w-xs truncate">
                             {branch.description || '-'}
                         </td>
-                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400 max-w-xs truncate">
+                        <td className="px-3 sm:px-6 py-4 text-sm text-slate-600 dark:text-slate-400 max-w-xs truncate">
                             {branch.address || '-'}
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-4">
                             <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
                                 branch.is_active 
                                     ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' 
@@ -2834,7 +2880,7 @@ function UsersTable({
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
                 {users.map((user) => (
                     <tr key={user.id} className="transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-4">
                             <input
                                 type="checkbox"
                                 checked={selectedIds.includes(user.id)}
@@ -2842,9 +2888,9 @@ function UsersTable({
                                 className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
                             />
                         </td>
-                        <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">{user.name}</td>
-                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{user.email}</td>
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">{user.name}</td>
+                        <td className="px-3 sm:px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{user.email}</td>
+                        <td className="px-3 sm:px-6 py-4">
                             <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
                                 user.role === 'admin' 
                                     ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
@@ -2853,7 +2899,7 @@ function UsersTable({
                                 {user.role}
                             </span>
                         </td>
-                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{new Date(user.created_at).toLocaleDateString()}</td>
+                        <td className="px-3 sm:px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{new Date(user.created_at).toLocaleDateString()}</td>
                         <td className="px-6 py-4 text-right">
                             <div className="flex justify-end gap-2">
                                 <button onClick={() => onEdit(user)} className="rounded-lg p-2 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30">
@@ -2927,7 +2973,7 @@ function BrandsTable({
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
                 {brands.map((brand, index) => (
                     <tr key={brand.id} className="transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-4">
                             <input
                                 type="checkbox"
                                 checked={selectedIds.includes(brand.id)}
@@ -2935,9 +2981,9 @@ function BrandsTable({
                                 className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
                             />
                         </td>
-                        <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">#{index + 1}</td>
-                        <td className="px-6 py-4 text-sm font-semibold text-slate-900 dark:text-white">{brand.name}</td>
-                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{brand.description || '-'}</td>
+                        <td className="px-3 sm:px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">#{index + 1}</td>
+                        <td className="px-3 sm:px-6 py-4 text-sm font-semibold text-slate-900 dark:text-white">{brand.name}</td>
+                        <td className="px-3 sm:px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{brand.description || '-'}</td>
                         <td className="px-6 py-4 text-right">
                             <div className="flex justify-end gap-2">
                                 <button onClick={() => onEdit(brand)} className="rounded-lg p-2 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30">
@@ -3012,7 +3058,7 @@ function ModelsTable({
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
                 {models.map((model, index) => (
                     <tr key={model.id} className="transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-4">
                             <input
                                 type="checkbox"
                                 checked={selectedIds.includes(model.id)}
@@ -3020,10 +3066,10 @@ function ModelsTable({
                                 className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
                             />
                         </td>
-                        <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">#{index + 1}</td>
-                        <td className="px-6 py-4 text-sm font-semibold text-slate-900 dark:text-white">{model.name}</td>
-                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{model.brand?.name || '-'}</td>
-                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{model.description || '-'}</td>
+                        <td className="px-3 sm:px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">#{index + 1}</td>
+                        <td className="px-3 sm:px-6 py-4 text-sm font-semibold text-slate-900 dark:text-white">{model.name}</td>
+                        <td className="px-3 sm:px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{model.brand?.name || '-'}</td>
+                        <td className="px-3 sm:px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{model.description || '-'}</td>
                         <td className="px-6 py-4 text-right">
                             <div className="flex justify-end gap-2">
                                 <button onClick={() => onEdit(model)} className="rounded-lg p-2 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30">
@@ -4012,6 +4058,8 @@ function EntityForm({
 
         return (
             <form className="space-y-6">
+                {/* Hidden input to track managerIds state */}
+                <input type="hidden" name="managed_by_ids_json" value={JSON.stringify(managerIds.filter(id => id !== null && !Number.isNaN(id)) as number[])} />
                 {/* Basic Information */}
                 <div>
                     <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Basic Information</h4>
@@ -4021,8 +4069,8 @@ function EntityForm({
                             <input type="text" name="name" defaultValue={deviceData?.name || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="Enter device name" required />
                         </div>
                         <div>
-                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Barcode *</label>
-                            <input type="text" name="barcode" defaultValue={deviceData?.barcode || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="Enter barcode" required />
+                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Barcode</label>
+                            <input type="text" name="barcode" defaultValue={deviceData?.barcode || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="Enter barcode" />
                         </div>
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Serial Number</label>
@@ -4061,23 +4109,28 @@ function EntityForm({
                                 )}
                                 {managerIds.map((val, idx) => (
                                     <div key={idx} className="flex items-center gap-2">
-                                        <select
-                                            name="managed_by_ids[]"
-                                            value={val ?? ''}
-                                            onChange={(e) => updateManagerAt(idx, e.target.value)}
-                                            className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
-                                        >
-                                            <option value="">Select user</option>
-                                            {users && users.length > 0 && users.map((user: UserData) => (
-                                                <option key={user.id} value={user.id}>
-                                                    {user.name} ({user.role})
-                                                </option>
-                                            ))}
-                                        </select>
+                                        <div className="flex-1 min-w-0">
+                                            <select
+                                                name="managed_by_ids[]"
+                                                value={val ?? ''}
+                                                onChange={(e) => updateManagerAt(idx, e.target.value)}
+                                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white truncate"
+                                            >
+                                                <option value="">Select user</option>
+                                                {users && users.length > 0 && users.map((user: UserData) => {
+                                                    const displayName = user.name.length > 25 ? `${user.name.substring(0, 25)}...` : user.name;
+                                                    return (
+                                                        <option key={user.id} value={user.id} title={`${user.name} (${user.role})`}>
+                                                            {displayName} ({user.role})
+                                                        </option>
+                                                    );
+                                                })}
+                                            </select>
+                                        </div>
                                         <button
                                             type="button"
                                             onClick={() => removeManagerAt(idx)}
-                                            className="rounded-md border border-slate-300 px-2.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
+                                            className="rounded-md border border-slate-300 px-2.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700 flex-shrink-0"
                                             title="Remove"
                                         >
                                             Remove
@@ -4455,6 +4508,27 @@ function EntityForm({
                     </div>
                 </div>
 
+                {/* Floor Plan Manager */}
+                {mode === 'edit' && locationData?.id && (
+                    <div className="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800">
+                        <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Floor Plans</h4>
+                        <div className="mb-4">
+                            <a
+                                href={`/monitor/plan?location_id=${locationData.id}&mode=config`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                            >
+                                <MapPin className="size-4" />
+                                Open Floor Plan Editor
+                            </a>
+                            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                                Create floors and place devices on floor plans. Click to open in a new tab.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
                 {/* Info panel */}
                 <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/30 dark:bg-blue-950/20">
                     <h5 className="mb-2 text-sm font-semibold text-blue-900 dark:text-blue-100">
@@ -4464,6 +4538,9 @@ function EntityForm({
                         <li>• Latitude and longitude are required for map display</li>
                         <li>• Use decimal degrees format (e.g., 1.853639, 103.080925)</li>
                         <li>• Locations are filtered by branch in the device form</li>
+                        {mode === 'edit' && locationData?.id && (
+                            <li>• Use the Floor Plan Editor to create floors and place devices</li>
+                        )}
                     </ul>
                 </div>
             </form>
@@ -4494,9 +4571,17 @@ function EntityForm({
                         </div>
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                                {mode === 'create' ? 'Password *' : 'New Password (leave blank to keep current)'}
+                                Password (Optional)
                             </label>
-                            <input type="password" name="password" className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" {...(mode === 'create' ? { required: true } : {})} />
+                            <input 
+                                type="password" 
+                                name="password" 
+                                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" 
+                                placeholder="Leave blank for no password"
+                            />
+                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                Users can be created without a password
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -4528,7 +4613,10 @@ function EntityForm({
     if (entity === 'models') {
         const modelData = data as Model | null;
         const [modelBrands, setModelBrands] = useState<Brand[]>([]);
-
+        const [selectedBrandId, setSelectedBrandId] = useState<number | null>(() => {
+            return modelData?.brand_id || null;
+        });
+        
         useEffect(() => {
             fetch('/api/brands', {
                 credentials: 'same-origin',
@@ -4539,14 +4627,29 @@ function EntityForm({
             .catch(err => console.error('Error loading brands:', err));
         }, []);
 
+        // Update selected brand when modelData changes
+        useEffect(() => {
+            if (modelData?.brand_id) {
+                setSelectedBrandId(modelData.brand_id);
+            } else {
+                setSelectedBrandId(null);
+            }
+        }, [modelData?.brand_id]);
+
         return (
-            <form className="space-y-6">
+            <form className="space-y-6" key={`model_form_${modelData?.id || 'new'}`}>
                 <div>
                     <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Model Information</h4>
                     <div className="grid gap-4">
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Brand *</label>
-                            <select name="brand_id" defaultValue={modelData?.brand_id || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" required>
+                            <select 
+                                name="brand_id" 
+                                value={selectedBrandId || ''} 
+                                onChange={(e) => setSelectedBrandId(e.target.value ? Number(e.target.value) : null)}
+                                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" 
+                                required
+                            >
                                 <option value="">Select Brand</option>
                                 {modelBrands.map(brand => (
                                     <option key={brand.id} value={brand.id}>{brand.name}</option>

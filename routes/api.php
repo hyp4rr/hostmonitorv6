@@ -41,6 +41,16 @@ Route::middleware('api')->group(function () {
     Route::apiResource('brands', BrandController::class);
     Route::apiResource('models', ModelController::class);
     Route::apiResource('topologies', App\Http\Controllers\Api\TopologyController::class);
+    // Floors and device positions
+    Route::get('/floors', [\App\Http\Controllers\Api\FloorController::class, 'index']);
+    Route::post('/floors', [\App\Http\Controllers\Api\FloorController::class, 'store']);
+    Route::put('/floors/{id}', [\App\Http\Controllers\Api\FloorController::class, 'update']);
+    Route::delete('/floors/{id}', [\App\Http\Controllers\Api\FloorController::class, 'destroy']);
+    Route::get('/device-positions', [\App\Http\Controllers\Api\DevicePositionController::class, 'index']);
+    Route::post('/device-positions/upsert', [\App\Http\Controllers\Api\DevicePositionController::class, 'upsert']);
+    Route::delete('/device-positions/{id}', [\App\Http\Controllers\Api\DevicePositionController::class, 'destroy']);
+    // Floor plan image upload
+    Route::post('/floor-plans/upload', [\App\Http\Controllers\Api\FloorPlanController::class, 'upload']);
 });
 
 // Alert routes (only index, update, destroy - alerts are created by system)

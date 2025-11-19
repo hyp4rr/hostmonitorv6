@@ -109,7 +109,7 @@ class ConfigurationController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'barcode' => 'required|string|unique:devices,barcode',
+            'barcode' => 'nullable|string|unique:devices,barcode',
             'managed_by' => 'nullable|exists:users,id',
             'serial_number' => 'nullable|string',
             'ip_address' => 'required|ip|unique:devices,ip_address',
@@ -134,6 +134,11 @@ class ConfigurationController extends Controller
         // Convert empty string to null for managed_by
         if (isset($validated['managed_by']) && $validated['managed_by'] === '') {
             $validated['managed_by'] = null;
+        }
+        
+        // Convert empty string to null for barcode
+        if (isset($validated['barcode']) && $validated['barcode'] === '') {
+            $validated['barcode'] = null;
         }
 
         $device = Device::create($validated);
@@ -171,6 +176,11 @@ class ConfigurationController extends Controller
         // Convert empty string to null for managed_by
         if (isset($validated['managed_by']) && $validated['managed_by'] === '') {
             $validated['managed_by'] = null;
+        }
+        
+        // Convert empty string to null for barcode
+        if (isset($validated['barcode']) && $validated['barcode'] === '') {
+            $validated['barcode'] = null;
         }
 
         // Update offline acknowledged timestamp if acknowledged_by is provided

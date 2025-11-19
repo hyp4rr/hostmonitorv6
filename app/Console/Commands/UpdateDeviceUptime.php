@@ -6,6 +6,7 @@ use App\Models\Device;
 use App\Services\DeviceUptimeService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class UpdateDeviceUptime extends Command
 {
@@ -29,13 +30,23 @@ class UpdateDeviceUptime extends Command
     public function handle()
     {
         $this->info('Updating device uptime...');
+        Log::info('Starting device uptime update');
 
+        $startTime = microtime(true);
         $uptimeService = new DeviceUptimeService();
         
         // Update all device uptimes using the service
         $uptimeService->updateAllDeviceUptimes();
 
+        $duration = round((microtime(true) - $startTime) * 1000, 2);
         $this->info('Device uptime update completed with proper percentage calculations.');
+        
+        // Log to file for scheduler visibility
+        $deviceCount = Device::where('is_active', true)->count();
+        Log::info("Device uptime update completed", [
+            'duration_ms' => $duration,
+            'devices_updated' => $deviceCount
+        ]);
 
         return Command::SUCCESS;
     }

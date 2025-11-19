@@ -54,6 +54,7 @@ class MonitorDevices extends Command
     private function runSingleCheck()
     {
         $this->info('Performing device status check...');
+        Log::info('Starting device monitoring check');
         
         $startTime = microtime(true);
         
@@ -75,9 +76,20 @@ class MonitorDevices extends Command
                 $totalDuration = round((microtime(true) - $startTime) * 1000, 2);
                 $this->info("✅ Monitoring completed in {$totalDuration}ms");
                 
+                // Log to file for scheduler visibility
+                $onlineCount = $result['online'] ?? 0;
+                $offlineCount = $result['offline'] ?? 0;
+                Log::info("Device monitoring completed", [
+                    'duration_ms' => $totalDuration,
+                    'online' => $onlineCount,
+                    'offline' => $offlineCount,
+                    'total' => $onlineCount + $offlineCount
+                ]);
+                
                 return Command::SUCCESS;
             } else {
                 $this->error('❌ Monitoring failed: ' . $result['message']);
+                Log::error('Device monitoring failed: ' . $result['message']);
                 return Command::FAILURE;
             }
         } catch (\Exception $e) {

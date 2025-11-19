@@ -78,8 +78,8 @@ export default function MonitorLayout({ children, title }: MonitorLayoutProps) {
     const branches = currentBranch?.branches || [];
     const hasBranches = branches.length > 0;
     
-    const handleBranchSwitch = (branchId: number) => {
-        if (!branchId || branchId === currentBranch?.id) {
+    const handleBranchSwitch = (branchId: number | 'all') => {
+        if (branchId === currentBranch?.id || (branchId === 'all' && currentBranch?.id === 'all')) {
             setShowBranchMenu(false);
             return;
         }
@@ -154,7 +154,12 @@ export default function MonitorLayout({ children, title }: MonitorLayoutProps) {
     const fetchAlerts = () => {
         if (!currentBranch?.id) return;
 
-        fetch(`/api/alerts?branch_id=${currentBranch.id}&status=active`)
+        // Handle 'all' branches - don't filter by branch_id
+        const url = currentBranch.id === 'all' 
+            ? '/api/alerts?status=active'
+            : `/api/alerts?branch_id=${currentBranch.id}&status=active`;
+        
+        fetch(url)
             .then(res => res.json())
             .then(data => {
                 const formattedAlerts = data.map((alert: any) => ({
@@ -411,7 +416,7 @@ export default function MonitorLayout({ children, title }: MonitorLayoutProps) {
                             </div>
                             <div className="flex items-center gap-x-4 lg:gap-x-6">
                                 {/* Branch Selector */}
-                                {hasBranches && currentBranch?.id && (
+                                {hasBranches && (
                                     <div className="relative">
                                         <button
                                             onClick={() => setShowBranchMenu(!showBranchMenu)}
@@ -419,8 +424,8 @@ export default function MonitorLayout({ children, title }: MonitorLayoutProps) {
                                             aria-label="Select branch"
                                         >
                                             <Building2 className="size-4" />
-                                            <span className="hidden sm:inline">{currentBranch.name}</span>
-                                            <span className="sm:hidden">{currentBranch.code}</span>
+                                            <span className="hidden sm:inline">{currentBranch?.name || 'Select Branch'}</span>
+                                            <span className="sm:hidden">{currentBranch?.code || 'Select'}</span>
                                             <ChevronDown className="size-4" />
                                         </button>
 
@@ -441,8 +446,59 @@ export default function MonitorLayout({ children, title }: MonitorLayoutProps) {
                                                         </p>
                                                     </div>
                                                     <div className="max-h-96 overflow-y-auto">
+                                                        {/* All Branches Option */}
+                                                        <button
+                                                            onClick={() => handleBranchSwitch('all')}
+                                                            className={`w-full p-4 text-left transition-all hover:bg-slate-50 dark:hover:bg-slate-700/50 ${
+                                                                currentBranch?.id === 'all' ? 'bg-blue-50 dark:bg-blue-950/20' : ''
+                                                            }`}
+                                                            aria-current={currentBranch?.id === 'all' ? 'true' : undefined}
+                                                        >
+                                                            <div className="flex items-start gap-3">
+                                                                <div className={`mt-1 rounded-lg p-2 ${
+                                                                    currentBranch?.id === 'all'
+                                                                        ? 'bg-gradient-to-br from-blue-500 to-indigo-600'
+                                                                        : 'bg-slate-100 dark:bg-slate-700'
+                                                                }`}>
+                                                                    <Building2 className={`size-4 ${
+                                                                        currentBranch?.id === 'all'
+                                                                            ? 'text-white'
+                                                                            : 'text-slate-600 dark:text-slate-400'
+                                                                    }`} />
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <h4 className={`text-sm font-bold truncate ${
+                                                                            currentBranch?.id === 'all'
+                                                                                ? 'text-blue-900 dark:text-blue-100'
+                                                                                : 'text-slate-900 dark:text-white'
+                                                                        }`}>
+                                                                            All Branches
+                                                                        </h4>
+                                                                        <span className={`rounded-full px-2 py-0.5 text-xs font-bold shrink-0 ${
+                                                                            currentBranch?.id === 'all'
+                                                                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
+                                                                                : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
+                                                                        }`}>
+                                                                            ALL
+                                                                        </span>
+                                                                    </div>
+                                                                    <p className="mt-1 text-xs text-slate-600 dark:text-slate-400 truncate">
+                                                                        View devices from all branches
+                                                                    </p>
+                                                                </div>
+                                                                {currentBranch?.id === 'all' && (
+                                                                    <div className="mt-1 shrink-0">
+                                                                        <div className="rounded-full bg-blue-500 p-1">
+                                                                            <CheckCircle2 className="size-3 text-white" />
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </button>
+                                                        
                                                         {branches.map((branch) => {
-                                                            const isSelected = currentBranch.id === branch.id;
+                                                            const isSelected = currentBranch?.id === branch.id;
                                                             
                                                             return (
                                                                 <button

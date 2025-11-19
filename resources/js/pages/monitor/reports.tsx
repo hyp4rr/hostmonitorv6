@@ -6,6 +6,7 @@ import { useTranslation } from '@/contexts/i18n-context';
 import { usePage } from '@inertiajs/react';
 import { PageProps } from '@/types';
 import type { CurrentBranch } from '@/types/branch';
+import { getDeviceCategoryIcon } from '@/utils/device-icons';
 
 // Helper function to format uptime duration from minutes
 const formatUptimeDuration = (uptimeMinutes: number): string => {
@@ -279,16 +280,16 @@ export default function Reports() {
                     device?.mac_address || 'N/A',
                     device?.status?.toUpperCase() || 'UNKNOWN',
                     stat.category,
-                    device?.manufacturer || 'N/A',
-                    device?.model || 'N/A',
+                    device?.brand || device?.hardware_detail?.brand || 'N/A',
+                    device?.model || device?.hardware_detail?.hardware_model?.name || 'N/A',
                     device?.barcode || 'N/A',
-                    device?.location || 'N/A',
+                    device?.location || device?.location_name || 'N/A',
                     device?.building || 'N/A',
                     `${stat.uptime}%`,
                     stat.downtime,
                     device?.response_time ? `${device.response_time}ms` : 'N/A',
                     stat.incidents,
-                    device?.last_check ? new Date(device.last_check).toLocaleString() : 'Never',
+                    device?.last_check || device?.last_ping ? new Date(device?.last_check || device?.last_ping).toLocaleString() : 'Never',
                     stat.lastIncident,
                     healthStatus
                 ];
@@ -578,9 +579,12 @@ export default function Reports() {
                                         <p className="text-xs text-slate-600 dark:text-slate-400">{devices.length} devices</p>
                                     </div>
                                     <div className={`rounded-lg ${colors.badge} p-1.5`}>
-                                        {category === 'Servers' ? <Server className="size-4" /> : 
-                                         category === 'Switches' ? <Activity className="size-4" /> : 
-                                         <BarChart3 className="size-4" />}
+                                        {(() => {
+                                            // Normalize category name for icon lookup
+                                            const normalizedCategory = category.toLowerCase();
+                                            const Icon = getDeviceCategoryIcon(normalizedCategory);
+                                            return <Icon className="size-4" />;
+                                        })()}
                                     </div>
                                 </div>
                                 <div className="mt-3 space-y-2">
@@ -620,29 +624,32 @@ export default function Reports() {
                             </div>
                         </div>
                     </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
+                    <div className="overflow-x-auto -mx-4 sm:mx-0">
+                        <table className="w-full min-w-[800px] sm:min-w-0">
                             <thead className="bg-slate-50 dark:bg-slate-900/50">
                                 <tr>
-                                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                                    <th className="px-3 sm:px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                                         Device Name
                                     </th>
-                                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                                    <th className="px-3 sm:px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                                         Category
                                     </th>
-                                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                                    <th className="px-3 sm:px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                                        Status
+                                    </th>
+                                    <th className="px-3 sm:px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                                         Uptime %
                                     </th>
-                                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                                    <th className="px-3 sm:px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                                         Downtime
                                     </th>
-                                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                                    <th className="px-3 sm:px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                                         Incidents
                                     </th>
-                                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                                    <th className="px-3 sm:px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                                         Last Incident
                                     </th>
-                                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                                    <th className="px-3 sm:px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                                         Health
                                     </th>
                                 </tr>
@@ -652,22 +659,60 @@ export default function Reports() {
                                     const colors = getUptimeColors(stat.uptime);
                                     return (
                                         <tr key={idx} className="transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                                            <td className="px-6 py-4">
+                                            <td className="px-3 sm:px-6 py-4">
                                                 <div className="flex items-center gap-3">
                                                     <div className={`rounded-lg ${colors.badge} p-2`}>
-                                                        <Server className="size-4" />
+                                                        {(() => {
+                                                            const device = allDevices.find(d => d.name === stat.device);
+                                                            const category = device?.category || stat.category.toLowerCase();
+                                                            const Icon = getDeviceCategoryIcon(category);
+                                                            return <Icon className="size-4" />;
+                                                        })()}
                                                     </div>
-                                                    <span className="font-semibold text-slate-900 dark:text-white">
-                                                        {stat.device}
-                                                    </span>
+                                                    <div className="flex flex-col">
+                                                        <span className="font-semibold text-slate-900 dark:text-white">
+                                                            {stat.device}
+                                                        </span>
+                                                        {(() => {
+                                                            const device = allDevices.find(d => d.name === stat.device);
+                                                            return device?.ip_address ? (
+                                                                <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                                                                    {device.ip_address}
+                                                                </span>
+                                                            ) : null;
+                                                        })()}
+                                                    </div>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4">
+                                            <td className="px-3 sm:px-6 py-4">
                                                 <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-300">
                                                     {stat.category}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4">
+                                            <td className="px-3 sm:px-6 py-4">
+                                                {(() => {
+                                                    const device = allDevices.find(d => d.name === stat.device);
+                                                    const status = device?.status || 'unknown';
+                                                    const statusColors = {
+                                                        'online': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+                                                        'offline': 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+                                                        'offline_ack': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+                                                        'warning': 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+                                                    };
+                                                    const statusLabel = {
+                                                        'online': 'Online',
+                                                        'offline': 'Offline',
+                                                        'offline_ack': 'Acknowledged',
+                                                        'warning': 'Warning',
+                                                    };
+                                                    return (
+                                                        <span className={`inline-flex items-center justify-center rounded-full ${statusColors[status as keyof typeof statusColors] || 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'} px-2 py-1 text-xs font-bold`}>
+                                                            {statusLabel[status as keyof typeof statusLabel] || status.toUpperCase()}
+                                                        </span>
+                                                    );
+                                                })()}
+                                            </td>
+                                            <td className="px-3 sm:px-6 py-4">
                                                 <div className="flex items-center gap-3">
                                                     <div className="h-2 w-24 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
                                                         <div
@@ -680,12 +725,12 @@ export default function Reports() {
                                                     </span>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4">
+                                            <td className="px-3 sm:px-6 py-4">
                                                 <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
                                                     {stat.downtime}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4">
+                                            <td className="px-3 sm:px-6 py-4">
                                                 <span className={`inline-flex items-center justify-center rounded-full ${
                                                     stat.incidents === 0 
                                                         ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' 
@@ -699,7 +744,7 @@ export default function Reports() {
                                             <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
                                                 {stat.lastIncident}
                                             </td>
-                                            <td className="px-6 py-4">
+                                            <td className="px-3 sm:px-6 py-4">
                                                 <span
                                                     className={`inline-flex items-center gap-1.5 rounded-full ${colors.badge} ${colors.text} px-3 py-1.5 text-xs font-bold uppercase`}
                                                 >
@@ -790,8 +835,13 @@ export default function Reports() {
                                                             <p className="font-bold text-slate-900 dark:text-white">
                                                                 {event.deviceName}
                                                             </p>
-                                                            <p className="text-sm text-slate-600 dark:text-slate-400">
-                                                                {event.deviceIp} • {event.category}
+                                                            <p className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-400">
+                                                                {event.deviceIp} • 
+                                                                {(() => {
+                                                                    const Icon = getDeviceCategoryIcon(event.category);
+                                                                    return <Icon className="size-3" />;
+                                                                })()}
+                                                                {event.category}
                                                             </p>
                                                         </div>
                                                     </div>
