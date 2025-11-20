@@ -16,8 +16,8 @@ class FastPingService
 
     public function __construct()
     {
-        $this->timeout = 5; // 5 seconds timeout for slow-responding devices
-        $this->maxConcurrent = 15; // Reduced concurrent pings for better reliability
+        $this->timeout = 0.5; // 0.5 second timeout for maximum speed
+        $this->maxConcurrent = 100; // Maximum concurrent pings for fastest processing
         $this->results = [];
     }
 
@@ -61,10 +61,7 @@ class FastPingService
             $batchResults = $this->pingBatch($batch);
             $allResults = array_merge($allResults, $batchResults);
             
-            // Small delay between batches to prevent network congestion
-            if ($batchCount < $batches->count()) {
-                usleep(100000); // 100ms delay
-            }
+            // No delay between batches for maximum speed
         }
 
         // Update device statuses in database

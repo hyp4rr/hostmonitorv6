@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Http\Controllers\Api\MonitoringController;
 use App\Services\FastPingService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
@@ -33,31 +34,36 @@ class PingAllDevices extends Command
         $startTime = microtime(true);
 
         try {
-            // Use FastPingService to ping devices synchronously (no queue needed)
+            // Use optimized MonitoringController method with bulk updates
             $pingService = new FastPingService();
-            $result = $pingService->pingAllDevices();
+            $controller = new MonitoringController($pingService);
+            
+            // Call the optimized pingAllDevices method
+            $response = $controller->pingAllDevices();
+            $result = json_decode($response->getContent(), true);
 
             $duration = round((microtime(true) - $startTime) * 1000, 2);
             
-            if ($result['success']) {
-                $stats = $result['stats'];
+            if ($result && isset($result['success']) && $result['success']) {
+                $stats = $result['stats'] ?? [];
                 $this->info("✅ Ping completed successfully!");
-                $this->info("   Total devices: {$stats['total']}");
-                $this->info("   Online: {$stats['online']}");
-                $this->info("   Offline: {$stats['offline']}");
-                $this->info("   Duration: {$stats['duration']}ms");
+                $this->info("   Total devices: " . ($stats['total_devices'] ?? 0));
+                $this->info("   Online: " . ($stats['online_devices'] ?? 0));
+                $this->info("   Offline: " . ($stats['offline_devices'] ?? 0));
+                $this->info("   Duration: {$stats['ping_duration']}ms");
                 
                 Log::info("Scheduled ping all devices completed", [
                     'duration_ms' => $duration,
-                    'total_devices' => $stats['total'],
-                    'online' => $stats['online'],
-                    'offline' => $stats['offline']
+                    'total_devices' => $stats['total_devices'] ?? 0,
+                    'online' => $stats['online_devices'] ?? 0,
+                    'offline' => $stats['offline_devices'] ?? 0
                 ]);
 
                 return Command::SUCCESS;
             } else {
-                $this->error('Ping failed: ' . $result['message']);
-                Log::error('Scheduled ping all devices failed: ' . $result['message']);
+                $errorMessage = $result['error'] ?? $result['message'] ?? 'Unknown error';
+                $this->error('Ping failed: ' . $errorMessage);
+                Log::error('Scheduled ping all devices failed: ' . $errorMessage);
                 return Command::FAILURE;
             }
         } catch (\Exception $e) {

@@ -64,7 +64,7 @@ export default function Reports() {
     const [alertSummary, setAlertSummary] = useState<any>(null);
     const [summary, setSummary] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [allDevices, setAllDevices] = useState<any[]>([]);
+    // Removed allDevices state - using aggregated API data instead for better performance
 
     // Fetch real data from API
     useEffect(() => {
@@ -72,14 +72,9 @@ export default function Reports() {
         
         setIsLoading(true);
         
-        // Fetch devices for calculations
-        fetch(`/api/devices?branch_id=${currentBranch.id}&per_page=10000&include_inactive=true`)
-            .then(res => res.ok ? res.json() : { data: [] })
-            .then(responseData => {
-                const devices = responseData.data || responseData;
-                setAllDevices(devices);
-            })
-            .catch(err => console.error('Error fetching devices:', err));
+        // Don't fetch all devices - use summary/aggregated data from API instead
+        // This significantly improves performance for large device sets
+        // The API endpoints already provide aggregated statistics
         
         // Fetch summary with category filter
         fetch(`/api/reports/summary?branch_id=${currentBranch.id}&date_range=${dateRange}&category=${selectedCategory}`)
@@ -185,30 +180,19 @@ export default function Reports() {
         const totalIncidents = summary?.totalIncidents || filteredStats.reduce((sum, stat) => sum + stat.incidents, 0);
         const totalDowntime = summary?.totalDowntime?.formatted || '0m';
         
-        // Filter devices based on category for accurate counts
-        const filteredDevices = selectedCategory === 'all' 
-            ? allDevices 
-            : allDevices.filter(d => {
-                const deviceCategory = d.category?.toLowerCase();
-                const selectedCat = selectedCategory.toLowerCase();
-                return deviceCategory === selectedCat || 
-                       (selectedCat === 'wifi' && deviceCategory === 'wifi') ||
-                       (selectedCat === 'tas' && deviceCategory === 'tas') ||
-                       (selectedCat === 'cctv' && deviceCategory === 'cctv');
-            });
-        
-        const onlineDevices = filteredDevices.filter(d => d.status === 'online').length;
-        const offlineDevices = filteredDevices.filter(d => d.status === 'offline').length;
-        const warningDevices = filteredDevices.filter(d => d.status === 'warning').length;
-        const acknowledgedDevices = filteredDevices.filter(d => d.status === 'offline_ack').length;
+        // Use summary data for device counts (more efficient than loading all devices)
+        const onlineDevices = summary?.onlineDevices || 0;
+        const offlineDevices = summary?.offlineDevices || 0;
+        const warningDevices = summary?.warningDevices || 0;
+        const acknowledgedDevices = summary?.acknowledgedDevices || 0;
 
-        // Category breakdown (only for filtered devices)
+        // Category breakdown from API data (more efficient)
         const categoryBreakdown = {
-            'Switches': filteredDevices.filter(d => d.category?.toLowerCase() === 'switches').length,
-            'Servers': filteredDevices.filter(d => d.category?.toLowerCase() === 'servers').length,
-            'WiFi': filteredDevices.filter(d => d.category?.toLowerCase() === 'wifi').length,
-            'TAS': filteredDevices.filter(d => d.category?.toLowerCase() === 'tas').length,
-            'CCTV': filteredDevices.filter(d => d.category?.toLowerCase() === 'cctv').length,
+            'Switches': categoryStatsData?.switches || 0,
+            'Servers': categoryStatsData?.servers || 0,
+            'WiFi': categoryStatsData?.wifi || 0,
+            'TAS': categoryStatsData?.tas || 0,
+            'CCTV': categoryStatsData?.cctv || 0,
         };
 
         // Build comprehensive CSV content with better formatting
@@ -663,8 +647,8 @@ export default function Reports() {
                                                 <div className="flex items-center gap-3">
                                                     <div className={`rounded-lg ${colors.badge} p-2`}>
                                                         {(() => {
-                                                            const device = allDevices.find(d => d.name === stat.device);
-                                                            const category = device?.category || stat.category.toLowerCase();
+                                                            // Use category from stat directly (already formatted)
+                                                            const category = stat.category?.toLowerCase() || 'switches';
                                                             const Icon = getDeviceCategoryIcon(category);
                                                             return <Icon className="size-4" />;
                                                         })()}
@@ -673,14 +657,11 @@ export default function Reports() {
                                                         <span className="font-semibold text-slate-900 dark:text-white">
                                                             {stat.device}
                                                         </span>
-                                                        {(() => {
-                                                            const device = allDevices.find(d => d.name === stat.device);
-                                                            return device?.ip_address ? (
-                                                                <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
-                                                                    {device.ip_address}
-                                                                </span>
-                                                            ) : null;
-                                                        })()}
+                                                        {stat.ip_address ? (
+                                                            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                                                                {stat.ip_address}
+                                                            </span>
+                                                        ) : null}
                                                     </div>
                                                 </div>
                                             </td>
@@ -691,8 +672,7 @@ export default function Reports() {
                                             </td>
                                             <td className="px-3 sm:px-6 py-4">
                                                 {(() => {
-                                                    const device = allDevices.find(d => d.name === stat.device);
-                                                    const status = device?.status || 'unknown';
+                                                    const status = stat.status || 'unknown';
                                                     const statusColors = {
                                                         'online': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
                                                         'offline': 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',

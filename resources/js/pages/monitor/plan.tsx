@@ -21,6 +21,7 @@ type Device = {
     ip_address: string;
     category: string;
     status?: string;
+    location_id?: number | null;
     hardware_detail?: {
         hardware_model?: {
         } | null;
@@ -72,12 +73,36 @@ export default function PlanPage() {
     const [isPanning, setIsPanning] = useState(false);
     const [isSpacePressed, setIsSpacePressed] = useState(false);
     const panStartRef = useRef<{ x: number; y: number } | null>(null);
+    const lastPinchDistanceRef = useRef<number | null>(null);
+    const lastPinchCenterRef = useRef<{ x: number; y: number } | null>(null);
+    const isPinchingRef = useRef(false);
 
     const imageRef = useRef<HTMLImageElement | null>(null);
     const containerRef = useRef<HTMLDivElement | null>(null);
     const animationFrameRef = useRef<number | null>(null);
 
     const selectedFloor = useMemo(() => floors.find(f => f.id === selectedFloorId) || null, [floors, selectedFloorId]);
+
+    // Filter devices by the selected floor's location
+    const filteredDevicesForDropdown = useMemo(() => {
+        if (!selectedFloor) return [];
+        // If floor has a location_id, only show devices from that location
+        if (selectedFloor.location_id) {
+            return devices.filter(d => d.location_id === selectedFloor.location_id);
+        }
+        // If floor has no location_id, show devices without a location_id
+        return devices.filter(d => !d.location_id);
+    }, [devices, selectedFloor]);
+
+    // Clear selected device if it's not in the filtered list for the current floor
+    useEffect(() => {
+        if (selectedDeviceId && typeof selectedDeviceId === 'number') {
+            const isDeviceInFilteredList = filteredDevicesForDropdown.some(d => d.id === selectedDeviceId);
+            if (!isDeviceInFilteredList) {
+                setSelectedDeviceId('');
+            }
+        }
+    }, [filteredDevicesForDropdown, selectedDeviceId]);
 
     // Load locations for floor creation/editing
     useEffect(() => {
@@ -369,18 +394,99 @@ export default function PlanPage() {
 
     const deviceName = (id: number) => devices.find(d => d.id === id)?.name || `#${id}`;
 
-    const handleZoomIn = () => {
-        setZoomLevel(prev => Math.min(prev + 0.25, 3));
+    const zoomToPoint = (clientX: number, clientY: number, newZoom: number) => {
+        if (!containerRef.current) return;
+        
+        const rect = containerRef.current.getBoundingClientRect();
+        const containerX = clientX - rect.left;
+        const containerY = clientY - rect.top;
+        
+        // Calculate the point in the image coordinate system (before zoom/pan)
+        const imageX = (containerX - panX - (rect.width * (1 - zoomLevel)) / 2) / zoomLevel;
+        const imageY = (containerY - panY - (rect.height * (1 - zoomLevel)) / 2) / zoomLevel;
+        
+        // Calculate new pan to keep the same point under the cursor
+        const newPanX = containerX - imageX * newZoom - (rect.width * (1 - newZoom)) / 2;
+        const newPanY = containerY - imageY * newZoom - (rect.height * (1 - newZoom)) / 2;
+        
+        setZoomLevel(newZoom);
+        setPanX(newPanX);
+        setPanY(newPanY);
     };
 
-    const handleZoomOut = () => {
-        setZoomLevel(prev => Math.max(prev - 0.25, 0.5));
+    const handleZoomIn = (e?: React.MouseEvent) => {
+        if (e && containerRef.current) {
+            const rect = containerRef.current.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            zoomToPoint(centerX, centerY, Math.min(zoomLevel + 0.25, 5));
+        } else {
+            setZoomLevel(prev => Math.min(prev + 0.25, 5));
+        }
+    };
+
+    const handleZoomOut = (e?: React.MouseEvent) => {
+        if (e && containerRef.current) {
+            const rect = containerRef.current.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            zoomToPoint(centerX, centerY, Math.max(zoomLevel - 0.25, 0.1));
+        } else {
+            setZoomLevel(prev => Math.max(prev - 0.25, 0.1));
+        }
     };
 
     const handleResetZoom = () => {
         setZoomLevel(1);
         setPanX(0);
         setPanY(0);
+    };
+
+    const handleZoomToFit = () => {
+        if (!imageRef.current || !containerRef.current) return;
+        
+        const containerRect = containerRef.current.getBoundingClientRect();
+        const img = imageRef.current;
+        
+        // Wait for image to load
+        if (img.complete && img.naturalWidth && img.naturalHeight) {
+            const imgAspect = img.naturalWidth / img.naturalHeight;
+            const containerAspect = containerRect.width / containerRect.height;
+            
+            let fitZoom = 1;
+            if (imgAspect > containerAspect) {
+                // Image is wider - fit to width
+                fitZoom = containerRect.width / img.naturalWidth;
+            } else {
+                // Image is taller - fit to height
+                fitZoom = containerRect.height / img.naturalHeight;
+            }
+            
+            // Add some padding (90% of fit)
+            fitZoom = fitZoom * 0.9;
+            
+            setZoomLevel(Math.min(Math.max(fitZoom, 0.1), 5));
+            setPanX(0);
+            setPanY(0);
+        }
+    };
+
+    const handleWheelZoom = (e: React.WheelEvent) => {
+        // Don't zoom if scrolling on a button or marker
+        const target = e.target as HTMLElement;
+        if (target.closest('button') || target.closest('[data-device-marker]')) {
+            return;
+        }
+        
+        // Check if Ctrl/Cmd is pressed for zoom, or allow normal scroll
+        if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const delta = e.deltaY > 0 ? -0.1 : 0.1;
+            const newZoom = Math.min(Math.max(zoomLevel + delta, 0.1), 5);
+            zoomToPoint(e.clientX, e.clientY, newZoom);
+        }
     };
 
     const handleMouseDown = (e: React.MouseEvent) => {
@@ -415,7 +521,7 @@ export default function PlanPage() {
         panStartRef.current = null;
     };
 
-    // Touch event handlers for mobile panning
+    // Touch event handlers for mobile panning and pinch zoom
     const handleTouchStart = (e: React.TouchEvent) => {
         // Don't start panning if touching a device marker or button
         const target = e.target as HTMLElement;
@@ -426,8 +532,21 @@ export default function PlanPage() {
         // Don't start panning if dragging a device
         if (draggingDeviceId) return;
         
-        // Only pan with single touch (two fingers would be pinch zoom)
-        if (e.touches.length === 1) {
+        if (e.touches.length === 2) {
+            // Pinch zoom
+            e.preventDefault();
+            e.stopPropagation();
+            isPinchingRef.current = true;
+            const touch1 = e.touches[0];
+            const touch2 = e.touches[1];
+            const distance = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
+            lastPinchDistanceRef.current = distance;
+            lastPinchCenterRef.current = {
+                x: (touch1.clientX + touch2.clientX) / 2,
+                y: (touch1.clientY + touch2.clientY) / 2,
+            };
+        } else if (e.touches.length === 1) {
+            // Single touch panning
             e.preventDefault();
             e.stopPropagation();
             const touch = e.touches[0];
@@ -437,7 +556,25 @@ export default function PlanPage() {
     };
 
     const handleTouchMove = (e: React.TouchEvent) => {
-        if (isPanning && panStartRef.current && e.touches.length === 1) {
+        if (e.touches.length === 2 && isPinchingRef.current && lastPinchDistanceRef.current && lastPinchCenterRef.current) {
+            // Pinch zoom
+            e.preventDefault();
+            e.stopPropagation();
+            const touch1 = e.touches[0];
+            const touch2 = e.touches[1];
+            const distance = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
+            const scale = distance / lastPinchDistanceRef.current;
+            const newZoom = Math.min(Math.max(zoomLevel * scale, 0.1), 5);
+            
+            zoomToPoint(lastPinchCenterRef.current.x, lastPinchCenterRef.current.y, newZoom);
+            
+            lastPinchDistanceRef.current = distance;
+            lastPinchCenterRef.current = {
+                x: (touch1.clientX + touch2.clientX) / 2,
+                y: (touch1.clientY + touch2.clientY) / 2,
+            };
+        } else if (isPanning && panStartRef.current && e.touches.length === 1) {
+            // Single touch panning
             e.preventDefault();
             e.stopPropagation();
             const touch = e.touches[0];
@@ -449,14 +586,30 @@ export default function PlanPage() {
     const handleTouchEnd = () => {
         setIsPanning(false);
         panStartRef.current = null;
+        isPinchingRef.current = false;
+        lastPinchDistanceRef.current = null;
+        lastPinchCenterRef.current = null;
     };
 
-    // Track spacebar for panning
+    // Track spacebar for panning and keyboard shortcuts
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === ' ') {
                 e.preventDefault();
                 setIsSpacePressed(true);
+            }
+            // Zoom with keyboard shortcuts
+            if ((e.ctrlKey || e.metaKey) && e.key === '=') {
+                e.preventDefault();
+                handleZoomIn();
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key === '-') {
+                e.preventDefault();
+                handleZoomOut();
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key === '0') {
+                e.preventDefault();
+                handleResetZoom();
             }
         };
 
@@ -474,6 +627,7 @@ export default function PlanPage() {
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleKeyUp);
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     return (
@@ -628,7 +782,7 @@ export default function PlanPage() {
                                         onChange={(e) => setSelectedDeviceId(e.target.value ? Number(e.target.value) : '')}
                                     >
                                         <option value="">— Select Device —</option>
-                                        {devices.map(d => (
+                                        {filteredDevicesForDropdown.map(d => (
                                             <option key={d.id} value={d.id}>
                                                 {d.name} ({d.ip_address})
                                             </option>
@@ -651,6 +805,12 @@ export default function PlanPage() {
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
+                    onWheel={handleWheelZoom}
+                    onContextMenu={(e) => {
+                        // Prevent browser context menu on right-click
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }}
                     onMouseMove={(e) => {
                         // Handle panning first
                         if (isPanning && panStartRef.current) {
@@ -795,31 +955,31 @@ export default function PlanPage() {
                     }}
                 >
                     {/* Zoom Controls - Inside the plan container */}
-                    <div className="absolute right-2 sm:right-4 top-2 sm:top-4 z-20 flex flex-col gap-1 sm:gap-1.5 rounded-lg bg-white/95 backdrop-blur-sm border border-slate-200/50 p-1.5 sm:p-2 shadow-xl dark:bg-slate-800/95 dark:border-slate-700/50" onClick={(e) => e.stopPropagation()}>
+                    <div className="absolute right-2 sm:right-4 top-2 sm:top-4 z-20 flex flex-col gap-1.5 rounded-lg bg-white/95 backdrop-blur-sm border border-slate-200/50 p-2 shadow-xl dark:bg-slate-800/95 dark:border-slate-700/50" onClick={(e) => e.stopPropagation()}>
                         <button
-                            onClick={(e) => { e.stopPropagation(); handleZoomIn(); }}
-                            className="rounded-md border border-slate-300 p-1.5 sm:p-1.5 hover:bg-slate-100 active:scale-95 transition-all dark:border-slate-600 dark:hover:bg-slate-700 touch-manipulation"
-                            title="Zoom In"
+                            onClick={(e) => { e.stopPropagation(); handleZoomIn(e); }}
+                            className="flex items-center justify-center rounded-md border border-slate-300 bg-white p-2 hover:bg-blue-50 hover:border-blue-300 active:scale-95 transition-all dark:border-slate-600 dark:bg-slate-700 dark:hover:bg-blue-900/30 dark:hover:border-blue-600 touch-manipulation"
+                            title="Zoom In (Ctrl/Cmd + Plus)"
                         >
-                            <ZoomIn className="size-4 sm:size-4" />
+                            <ZoomIn className="size-4 text-slate-700 dark:text-slate-300" />
                         </button>
                         <button
-                            onClick={(e) => { e.stopPropagation(); handleZoomOut(); }}
-                            className="rounded-md border border-slate-300 p-1.5 sm:p-1.5 hover:bg-slate-100 active:scale-95 transition-all dark:border-slate-600 dark:hover:bg-slate-700 touch-manipulation"
-                            title="Zoom Out"
+                            onClick={(e) => { e.stopPropagation(); handleZoomOut(e); }}
+                            className="flex items-center justify-center rounded-md border border-slate-300 bg-white p-2 hover:bg-blue-50 hover:border-blue-300 active:scale-95 transition-all dark:border-slate-600 dark:bg-slate-700 dark:hover:bg-blue-900/30 dark:hover:border-blue-600 touch-manipulation"
+                            title="Zoom Out (Ctrl/Cmd + Minus)"
                         >
-                            <ZoomOut className="size-4 sm:size-4" />
+                            <ZoomOut className="size-4 text-slate-700 dark:text-slate-300" />
                         </button>
-                        <button
-                            onClick={(e) => { e.stopPropagation(); handleResetZoom(); }}
-                            className="rounded-md border border-slate-300 p-1.5 sm:p-1.5 hover:bg-slate-100 active:scale-95 transition-all dark:border-slate-600 dark:hover:bg-slate-700 touch-manipulation"
-                            title="Reset Zoom"
-                        >
-                            <RotateCcw className="size-4 sm:size-4" />
-                        </button>
-                        <div className="px-1.5 py-1 text-center text-[10px] font-semibold text-slate-600 dark:text-slate-400 border-t border-slate-200 dark:border-slate-700 mt-0.5">
+                        <div className="px-2 py-1 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 border-t border-slate-200 dark:border-slate-700">
                             {Math.round(zoomLevel * 100)}%
                         </div>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); handleResetZoom(); }}
+                            className="flex items-center justify-center rounded-md border border-slate-300 bg-white p-2 hover:bg-slate-50 active:scale-95 transition-all dark:border-slate-600 dark:bg-slate-700 dark:hover:bg-slate-600 touch-manipulation"
+                            title="Reset Zoom (Ctrl/Cmd + 0)"
+                        >
+                            <RotateCcw className="size-4 text-slate-700 dark:text-slate-300" />
+                        </button>
                     </div>
 
                     <div
@@ -828,6 +988,7 @@ export default function PlanPage() {
                             transformOrigin: 'top left',
                             width: '100%',
                             height: '100%',
+                            transition: isPanning || isPinchingRef.current ? 'none' : 'transform 0.1s ease-out',
                         }}
                     >
                     {selectedFloor?.plan_image_path ? (
@@ -993,13 +1154,13 @@ export default function PlanPage() {
                     <p className="text-xs text-slate-600 dark:text-slate-400">
                         {canEdit ? (
                             <>
-                                <span className="hidden sm:inline">💡 Tip: Use zoom buttons to zoom. Pan with middle mouse button, right mouse button, or Space + drag. Select a device and click on the plan to place it.</span>
-                                <span className="sm:hidden">💡 Tip: Use zoom buttons to zoom. Touch and drag to pan. Select a device and tap on the plan to place it.</span>
+                                <span className="hidden sm:inline">💡 Tip: Zoom with mouse wheel (Ctrl/Cmd + scroll), zoom slider, or buttons. Pan with middle/right mouse button or Space + drag. Pinch to zoom on touch devices. Keyboard: Ctrl/Cmd + Plus/Minus/0. Select a device and click on the plan to place it.</span>
+                                <span className="sm:hidden">💡 Tip: Use zoom buttons or slider to zoom. Pinch to zoom or touch and drag to pan. Select a device and tap on the plan to place it.</span>
                             </>
                         ) : (
                             <>
-                                <span className="hidden sm:inline">View-only mode. Add <code className="rounded bg-slate-200 px-1 py-0.5 text-[10px] dark:bg-slate-700">?mode=config</code> to the URL to enable editing.</span>
-                                <span className="sm:hidden">View-only mode. Add ?mode=config to enable editing.</span>
+                                <span className="hidden sm:inline">View-only mode. Zoom with mouse wheel (Ctrl/Cmd + scroll), zoom slider, or buttons. Pan with middle/right mouse button or Space + drag. Pinch to zoom on touch devices. Keyboard: Ctrl/Cmd + Plus/Minus/0. Add <code className="rounded bg-slate-200 px-1 py-0.5 text-[10px] dark:bg-slate-700">?mode=config</code> to the URL to enable editing.</span>
+                                <span className="sm:hidden">View-only mode. Pinch to zoom or touch and drag to pan. Add ?mode=config to enable editing.</span>
                             </>
                         )}
                     </p>

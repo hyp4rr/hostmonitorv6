@@ -59,6 +59,7 @@ export default function Maps() {
         branch_id: number;
     }>>([]);
     const [isLoadingLocations, setIsLoadingLocations] = useState(true);
+    const [isLoadingDevices, setIsLoadingDevices] = useState(false);
     const [floors, setFloors] = useState<Array<any>>([]);
 
     // Fetch locations from database
@@ -110,15 +111,18 @@ export default function Maps() {
     // State for devices loaded from API
     const [realDevices, setRealDevices] = useState<typeof currentBranch.devices>([]);
     
-    // Fetch devices from API
+    // Fetch devices from API - optimized to only load devices with coordinates
     useEffect(() => {
         if (!currentBranch?.id) return;
         
+        setIsLoadingDevices(true);
+        
         // If 'all' branches selected, fetch all devices without branch_id filter
         const branchId = String(currentBranch.id);
+        // Limit to 2000 devices initially for performance (maps only need devices with coordinates)
         const url = branchId === 'all'
-            ? '/api/devices?per_page=10000&include_inactive=true'
-            : `/api/devices?branch_id=${currentBranch.id}&per_page=10000&include_inactive=true`;
+            ? '/api/devices?per_page=2000&include_inactive=true'
+            : `/api/devices?branch_id=${currentBranch.id}&per_page=2000&include_inactive=true`;
         
         fetch(url, {
             credentials: 'same-origin',
@@ -129,21 +133,18 @@ export default function Maps() {
         .then(responseData => {
             const devices = responseData.data || responseData;
             console.log('Maps: Loaded devices:', devices.length, 'Sample device:', devices[0]);
-            // Include all active devices (including offline_ack for display, but we'll handle them in status calculation)
-            const activeDevices = devices.filter((device: any) => device.is_active !== false);
-            console.log('Maps: Active devices:', activeDevices.length);
-            console.log('Maps: Device statuses:', {
-                online: activeDevices.filter((d: any) => d.status === 'online').length,
-                offline: activeDevices.filter((d: any) => d.status === 'offline').length,
-                warning: activeDevices.filter((d: any) => d.status === 'warning').length,
-                offline_ack: activeDevices.filter((d: any) => d.status === 'offline_ack').length,
-            });
+            // Filter to only devices with coordinates and active
+            const activeDevices = devices.filter((device: any) => 
+                device.is_active !== false && device.latitude && device.longitude
+            );
+            console.log('Maps: Active devices with coordinates:', activeDevices.length);
             setRealDevices(activeDevices);
         })
         .catch(err => {
             console.error('Error loading devices:', err);
             setRealDevices([]);
-        });
+        })
+        .finally(() => setIsLoadingDevices(false));
     }, [currentBranch?.id]);
     
     // Group devices by location coordinates

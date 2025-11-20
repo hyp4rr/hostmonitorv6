@@ -19,6 +19,7 @@ class DeviceUptimeService
         Device::where('is_active', true)->chunk(100, function ($devices) use (&$updatedBranchIds) {
             foreach ($devices as $device) {
                 $this->updateDeviceUptime($device);
+                $this->updateDeviceDowntime($device);
                 if ($device->branch_id && !in_array($device->branch_id, $updatedBranchIds)) {
                     $updatedBranchIds[] = $device->branch_id;
                 }
@@ -40,6 +41,17 @@ class DeviceUptimeService
         // This ensures uptime_minutes resets to 0 when device goes offline
         // and only counts time since online_since (resets on each offline->online transition)
         $device->updateUptime();
+    }
+
+    /**
+     * Calculate and update downtime percentage for a specific device
+     */
+    public function updateDeviceDowntime(Device $device)
+    {
+        // Use the device's updateDowntime method which handles reset logic properly
+        // This ensures offline_duration_minutes resets to 0 when device goes online
+        // and only counts time since offline_since (resets on each online->offline transition)
+        $device->updateDowntime();
     }
 
     /**
@@ -87,6 +99,30 @@ class DeviceUptimeService
             ->count();
 
         return ($onlineChecks / $totalChecks) * 100;
+    }
+
+    /**
+     * Calculate downtime from monitoring history
+     */
+    public function calculateDowntimeFromHistory(Device $device): float
+    {
+        $startDate = Carbon::now()->subHours(24);
+        
+        $totalChecks = MonitoringHistory::where('device_id', $device->id)
+            ->where('checked_at', '>=', $startDate)
+            ->count();
+
+        if ($totalChecks === 0) {
+            // No recent history - use current status
+            return in_array($device->status, ['offline', 'offline_ack']) ? 100 : 0;
+        }
+
+        $offlineChecks = MonitoringHistory::where('device_id', $device->id)
+            ->where('checked_at', '>=', $startDate)
+            ->whereIn('status', ['offline', 'offline_ack'])
+            ->count();
+
+        return ($offlineChecks / $totalChecks) * 100;
     }
 
     /**

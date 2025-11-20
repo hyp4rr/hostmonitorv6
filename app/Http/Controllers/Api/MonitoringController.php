@@ -8,6 +8,7 @@ use App\Models\Device;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class MonitoringController extends Controller
 {
@@ -89,9 +90,10 @@ class MonitoringController extends Controller
             }
             
             // Optimized for large device sets (5000+ devices)
-            // Use parallel processing with larger batches
+            // Use parallel processing with optimal batch size
             $totalDevices = $devices->count();
-            $batchSize = 200; // Process 200 devices per batch in parallel
+            // Windows has slower process management, use smaller batches
+            $batchSize = (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') ? 100 : 200;
             
             Log::info("Ping All Devices: Starting optimized parallel ping for {$totalDevices} devices (batch size: {$batchSize})");
             
@@ -177,70 +179,157 @@ class MonitoringController extends Controller
      */
     private function batchUpdateDevices($results)
     {
-        foreach ($results as $result) {
-            if (isset($result['device'])) {
-                $device = $result['device'];
-                $previousStatus = $device->status;
-                $device->status = $result['status'];
-                $device->response_time = $result['response_time'];
-                $device->last_ping = now();
-                
-                // Helper function to check if status is "online" (online or warning)
-                $isOnlineStatus = function($status) {
-                    return in_array($status, ['online', 'warning']);
-                };
-                
-                // Only update updated_at if transitioning between online and offline states
-                $wasOnline = $isOnlineStatus($previousStatus);
-                $isNowOnline = $isOnlineStatus($result['status']);
-                
-                if ($wasOnline !== $isNowOnline) {
-                    // Status changed from online→offline or offline→online
-                    $device->updated_at = now();
-                    $device->save();
-                } else {
-                    // Status stayed in same category (online→online or offline→offline)
-                    // Disable timestamps to prevent auto-update of updated_at
-                    $device->timestamps = false;
-                    $device->save();
-                    $device->timestamps = true;
-                }
-                
-                // Track online_since timestamp when device goes online (from offline state)
-                // Reset uptime when transitioning from offline to online/warning
-                if ($isNowOnline && !$wasOnline) {
-                    // Device just came online (from offline) - reset uptime counter
-                    $device->online_since = now();
-                    $device->offline_since = null;
-                    // Save these changes (with timestamps disabled if status didn't change)
-                    if ($wasOnline === $isNowOnline) {
-                        $device->timestamps = false;
-                        $device->save();
-                        $device->timestamps = true;
-                    } else {
-                        $device->save();
-                    }
-                } elseif (!$isNowOnline && $wasOnline) {
-                    // Device just went offline (from online/warning) - reset uptime
-                    $device->offline_since = now();
-                    $device->online_since = null;
-                    // Save these changes (with timestamps disabled if status didn't change)
-                    if ($wasOnline === $isNowOnline) {
-                        $device->timestamps = false;
-                        $device->save();
-                        $device->timestamps = true;
-                    } else {
-                        $device->save();
-                    }
-                }
-                
-                // Update uptime based on new status (calculates real minutes)
-                $device->updateUptime();
-                
-                // Record monitoring history
-                $device->recordMonitoringHistory();
-            }
+        if (empty($results)) {
+            return;
         }
+
+        $now = now();
+        $deviceIds = [];
+        $statusChanges = []; // Devices that changed status (need updated_at)
+        $onlineSinceUpdates = []; // Devices that came online
+        $offlineSinceUpdates = []; // Devices that went offline
+        $historyData = [];
+        
+        // Helper function to check if status is "online" (online or warning)
+        $isOnlineStatus = function($status) {
+            return in_array($status, ['online', 'warning']);
+        };
+        
+        // First pass: collect all updates
+        foreach ($results as $result) {
+            if (!isset($result['device'])) {
+                continue;
+            }
+            
+            $device = $result['device'];
+            $previousStatus = $device->status;
+            $newStatus = $result['status'];
+            $wasOnline = $isOnlineStatus($previousStatus);
+            $isNowOnline = $isOnlineStatus($newStatus);
+            
+            $deviceIds[] = $device->id;
+            
+            // Track status changes
+            if ($wasOnline !== $isNowOnline) {
+                $statusChanges[] = $device->id;
+            }
+            
+            // Track online/offline transitions
+            if ($isNowOnline && !$wasOnline) {
+                $onlineSinceUpdates[] = $device->id;
+            } elseif (!$isNowOnline && $wasOnline) {
+                $offlineSinceUpdates[] = $device->id;
+            }
+            
+            // Prepare monitoring history
+            $historyData[] = [
+                'device_id' => $device->id,
+                'status' => $newStatus,
+                'response_time' => $result['response_time'] ?? null,
+                'checked_at' => $now,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+        
+        if (empty($deviceIds)) {
+            return;
+        }
+        
+        // Use transaction for faster, more consistent updates
+        DB::transaction(function () use ($results, $now, $statusChanges, $onlineSinceUpdates, $offlineSinceUpdates, $historyData) {
+            // Bulk update basic fields for all devices (status, response_time, last_ping)
+            // Group by status to minimize queries
+            $updatesByStatus = [];
+            foreach ($results as $result) {
+                if (!isset($result['device'])) {
+                    continue;
+                }
+                $status = $result['status'];
+                if (!isset($updatesByStatus[$status])) {
+                    $updatesByStatus[$status] = [];
+                }
+                $updatesByStatus[$status][] = [
+                    'id' => $result['device']->id,
+                    'response_time' => $result['response_time'] ?? null,
+                ];
+            }
+            
+            // Bulk update by status group
+            foreach ($updatesByStatus as $status => $deviceUpdates) {
+                $ids = array_column($deviceUpdates, 'id');
+                
+                // Update status and last_ping for all devices with this status
+                DB::table('devices')
+                    ->whereIn('id', $ids)
+                    ->update([
+                        'status' => $status,
+                        'last_ping' => $now,
+                    ]);
+                
+                // Update response_time individually (can't bulk update different values easily)
+                // But we can batch by same response_time values
+                $responseTimeGroups = [];
+                foreach ($deviceUpdates as $update) {
+                    $rt = $update['response_time'] ?? null;
+                    $key = $rt ?? 'null';
+                    if (!isset($responseTimeGroups[$key])) {
+                        $responseTimeGroups[$key] = [];
+                    }
+                    $responseTimeGroups[$key][] = $update['id'];
+                }
+                
+                foreach ($responseTimeGroups as $rt => $rtIds) {
+                    if ($rt === 'null') {
+                        DB::table('devices')
+                            ->whereIn('id', $rtIds)
+                            ->update(['response_time' => null]);
+                    } else {
+                        DB::table('devices')
+                            ->whereIn('id', $rtIds)
+                            ->update(['response_time' => $rt]);
+                    }
+                }
+            }
+            
+            // Update updated_at for devices that changed status
+            if (!empty($statusChanges)) {
+                DB::table('devices')
+                    ->whereIn('id', $statusChanges)
+                    ->update(['updated_at' => $now]);
+            }
+            
+            // Update online_since for devices that came online
+            if (!empty($onlineSinceUpdates)) {
+                DB::table('devices')
+                    ->whereIn('id', $onlineSinceUpdates)
+                    ->update([
+                        'online_since' => $now,
+                        'offline_since' => null,
+                    ]);
+            }
+            
+            // Update offline_since for devices that went offline
+            if (!empty($offlineSinceUpdates)) {
+                DB::table('devices')
+                    ->whereIn('id', $offlineSinceUpdates)
+                    ->update([
+                        'offline_since' => $now,
+                        'online_since' => null,
+                    ]);
+            }
+            
+            // Bulk insert monitoring history
+            if (!empty($historyData)) {
+                $chunks = array_chunk($historyData, 500);
+                foreach ($chunks as $chunk) {
+                    DB::table('monitoring_history')->insert($chunk);
+                }
+            }
+        });
+        
+        // Note: Uptime updates are skipped for performance - they can be calculated later if needed
+        // The uptime_percentage is calculated from monitoring history anyway
     }
 
     /**
@@ -253,7 +342,9 @@ class MonitoringController extends Controller
         $allResults = [];
         $processedCount = 0;
         $totalDevices = $devices->count();
-        $pingTimeout = 2000; // 2000ms (2 seconds) timeout per device for better accuracy
+        // Reduced timeout for faster, more consistent pinging
+        // Most devices respond in 50-200ms, so 250ms is sufficient
+        $pingTimeout = 250; // 250ms timeout per device for faster, more consistent pinging
         
         $batches = $devices->chunk($batchSize);
         $batchCount = $batches->count();
@@ -262,7 +353,8 @@ class MonitoringController extends Controller
         
         foreach ($batches as $index => $batch) {
             $batchStartTime = microtime(true);
-            $batchResults = $this->parallelPingBatch($batch, $pingTimeout);
+            // Don't update DB after each batch - defer to end for better performance
+            $batchResults = $this->parallelPingBatch($batch, $pingTimeout, false);
             $batchDuration = round((microtime(true) - $batchStartTime) * 1000, 2);
             
             $totalOnline += $batchResults['online'];
@@ -275,6 +367,11 @@ class MonitoringController extends Controller
             Log::info("Batch " . ($index + 1) . "/{$batchCount} completed: {$batch->count()} devices, {$batchResults['online']} online, {$batchResults['offline']} offline, {$batchDuration}ms ({$progress}% complete)");
         }
         
+        // Update all devices in one batch at the end (much faster with PostgreSQL)
+        if (!empty($allResults)) {
+            $this->batchUpdateDevices($allResults);
+        }
+        
         return [
             'online' => $totalOnline,
             'offline' => $totalOffline,
@@ -285,7 +382,7 @@ class MonitoringController extends Controller
     /**
      * Ping a batch of devices in parallel using proc_open
      */
-    private function parallelPingBatch($devices, $timeout = 300)
+    private function parallelPingBatch($devices, $timeout = 300, $updateDb = true)
     {
         $onlineCount = 0;
         $offlineCount = 0;
@@ -299,12 +396,14 @@ class MonitoringController extends Controller
             $deviceMap[$device->id] = $device;
             
             if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-                // Windows: -n 2 sends 2 packets for better accuracy, -w is timeout in milliseconds
-                $pingCommand = "ping -n 2 -w {$timeout} {$ip} 2>nul";
+                // Windows: -n 1 sends 1 packet for speed, -w is timeout in milliseconds
+                // Use slightly higher timeout than ping timeout for better reliability
+                $pingTimeoutMs = min($timeout + 50, 500); // Add 50ms buffer, max 500ms
+                $pingCommand = "ping -n 1 -w {$pingTimeoutMs} {$ip} 2>nul";
             } else {
-                // Linux/Mac: -c 2 sends 2 packets, -W is timeout in seconds
-                $timeoutSeconds = round($timeout / 1000, 1);
-                $pingCommand = "ping -c 2 -W {$timeoutSeconds} {$ip} 2>/dev/null";
+                // Linux/Mac: -c 1 sends 1 packet for speed, -W is timeout in seconds
+                $timeoutSeconds = round(($timeout + 50) / 1000, 1); // Add 50ms buffer
+                $pingCommand = "ping -c 1 -W {$timeoutSeconds} {$ip} 2>/dev/null";
             }
             
             $descriptorspec = [
@@ -357,13 +456,16 @@ class MonitoringController extends Controller
             }
         }
         
-        // Wait for all processes with timeout
-        // Increased wait time to allow for network congestion and slower devices
-        // Wait time = ping timeout (2000ms) + buffer (1000ms) = 3000ms total
-        $maxWaitTime = 3.0; // 3 seconds max wait (allows for slower network responses and timeout)
+        // Wait for all processes with adaptive timeout
+        // Most pings complete in 50-200ms, so we can be more aggressive
+        $maxWaitTime = 0.4; // 400ms max wait - most devices respond in 50-200ms
         $startWait = microtime(true);
+        $lastProcessCount = count($processes);
+        $staleIterations = 0;
         
         while (!empty($processes) && (microtime(true) - $startWait) < $maxWaitTime) {
+            $processedInLoop = false;
+            
             foreach ($processes as $key => $proc) {
                 $status = proc_get_status($proc['process']);
                 
@@ -398,11 +500,27 @@ class MonitoringController extends Controller
                     ];
                     
                     unset($processes[$key]);
+                    $processedInLoop = true;
                 }
             }
             
-            if (!empty($processes)) {
-                usleep(1000); // 1ms sleep
+            // Track if we're making progress
+            $currentProcessCount = count($processes);
+            if ($currentProcessCount === $lastProcessCount && !$processedInLoop) {
+                $staleIterations++;
+                // If no progress for several iterations, reduce wait time
+                if ($staleIterations > 10) {
+                    break; // Exit early if no progress
+                }
+            } else {
+                $staleIterations = 0;
+                $lastProcessCount = $currentProcessCount;
+            }
+            
+            // Only sleep if we didn't process anything and there are still processes
+            if (!empty($processes) && !$processedInLoop) {
+                // Use minimal sleep for faster checking
+                usleep(250); // 0.25ms sleep for faster response
             }
         }
         
@@ -462,8 +580,10 @@ class MonitoringController extends Controller
             }
         }
         
-        // Batch update devices
-        $this->batchUpdateDevices($results);
+        // Batch update devices only if requested (defer for better performance)
+        if ($updateDb) {
+            $this->batchUpdateDevices($results);
+        }
         
         return [
             'online' => $onlineCount,
@@ -475,7 +595,7 @@ class MonitoringController extends Controller
     /**
      * Batch ping devices to prevent timeout (legacy method)
      */
-    private function batchPingDevices($devices, $batchSize = 15)
+    private function batchPingDevices($devices, $batchSize = 200)
     {
         return $this->parallelBatchPingDevices($devices, $batchSize);
     }
@@ -485,21 +605,21 @@ class MonitoringController extends Controller
      */
     private function pingSingleDeviceFast($device)
     {
-        $timeout = 2000; // 2000ms (2 seconds) timeout for single device ping for better accuracy
+        $timeout = 300; // 300ms (0.3 second) timeout for single device ping for ultra-fast pinging
         $startTime = microtime(true);
         
         // Use optimized ping command with timeout
         if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-            // Windows: -n 2 sends 2 packets for better accuracy, -w is timeout in milliseconds
-            $command = "ping -n 2 -w " . $timeout . " " . escapeshellarg($device->ip_address) . " 2>nul";
+            // Windows: -n 1 sends 1 packet for speed, -w is timeout in milliseconds
+            $command = "ping -n 1 -w " . $timeout . " " . escapeshellarg($device->ip_address) . " 2>nul";
             $output = [];
             $returnCode = 0;
             exec($command, $output, $returnCode);
             $isOnline = ($returnCode === 0);
         } else {
-            // Linux/Mac: -c 2 sends 2 packets, -W is timeout in seconds
+            // Linux/Mac: -c 1 sends 1 packet for speed, -W is timeout in seconds
             $timeoutSeconds = round($timeout / 1000, 1);
-            $command = "ping -c 2 -W {$timeoutSeconds} " . escapeshellarg($device->ip_address) . " 2>/dev/null";
+            $command = "ping -c 1 -W {$timeoutSeconds} " . escapeshellarg($device->ip_address) . " 2>/dev/null";
             $output = [];
             $returnCode = 0;
             exec($command, $output, $returnCode);

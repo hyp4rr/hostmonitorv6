@@ -40,7 +40,7 @@ class ReportsController extends Controller
                 $devicesQuery->where('category', $categoryFilter);
             }
             
-            $devices = $devicesQuery->select('id', 'name', 'category', 'status', 'uptime_percentage', 'offline_duration_minutes')
+            $devices = $devicesQuery->select('id', 'name', 'ip_address', 'category', 'status', 'uptime_percentage', 'offline_duration_minutes')
                 ->get();
             
             // Get all monitoring history for these devices in one query
@@ -106,6 +106,8 @@ class ReportsController extends Controller
                 
                 return [
                     'device' => $device->name,
+                    'ip_address' => $device->ip_address,
+                    'status' => $device->status,
                     'uptime' => round($uptimePercentage, 2),
                     'downtime' => $downtimeStr,
                     'incidents' => $incidents,
@@ -146,7 +148,7 @@ class ReportsController extends Controller
                 'devices.ip_address as device_ip',
                 'devices.category',
                 'monitoring_history.status',
-                'monitoring_history.checked_at as timestamp',
+                'monitoring_history.checked_at',
                 'monitoring_history.response_time'
             )
             ->get();
@@ -168,22 +170,31 @@ class ReportsController extends Controller
         
         // Get the most recent status changes
         $events = $statusChanges
-            ->sortByDesc('timestamp')
+            ->sortByDesc('checked_at')
             ->take($limit)
             ->map(function ($event) {
+                // checked_at should be a Carbon instance from Eloquent
+                // but handle cases where it might be a string
+                $timestamp = $event->checked_at;
+                if (is_string($timestamp)) {
+                    $timestamp = Carbon::parse($timestamp);
+                } elseif (!$timestamp instanceof Carbon) {
+                    $timestamp = Carbon::now();
+                }
+                
                 return [
                     'id' => 'event-' . $event->id,
-                    'deviceName' => $event->device_name,
-                    'deviceIp' => $event->device_ip,
-                    'eventType' => $event->status === 'online' ? 'up' : 'down',
-                    'timestamp' => $event->timestamp->toIso8601String(),
-                    'category' => $this->formatCategory($event->category),
+                    'deviceName' => $event->device_name ?? 'Unknown',
+                    'deviceIp' => $event->device_ip ?? 'N/A',
+                    'eventType' => ($event->status === 'online' || $event->status === 'warning') ? 'up' : 'down',
+                    'timestamp' => $timestamp->toIso8601String(),
+                    'category' => $this->formatCategory($event->category ?? 'switches'),
                     'responseTime' => $event->response_time,
                 ];
             })
             ->values();
         
-            return response()->json($events);
+        return response()->json($events);
         });
     }
     

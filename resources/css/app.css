@@ -168,3 +168,188 @@
         @apply bg-background text-foreground;
     }
 }
+
+/* Custom Colors - Applied when custom-colors-enabled class is present */
+.custom-colors-enabled {
+    /* Override primary colors */
+    --color-primary: var(--custom-primary) !important;
+    --primary: var(--custom-primary) !important;
+    
+    /* Override secondary and accent */
+    --color-secondary: var(--custom-secondary) !important;
+    --secondary: var(--custom-secondary) !important;
+    --color-accent: var(--custom-accent) !important;
+    --accent: var(--custom-accent) !important;
+    
+    /* Override background */
+    --color-background: var(--custom-background) !important;
+    --background: var(--custom-background) !important;
+    --color-card: var(--custom-card-bg) !important;
+    --card: var(--custom-card-bg) !important;
+    
+    /* Override text/foreground */
+    --color-foreground: var(--custom-text) !important;
+    --foreground: var(--custom-text) !important;
+    --color-muted-foreground: var(--custom-text-secondary) !important;
+    --muted-foreground: var(--custom-text-secondary) !important;
+    
+    /* Override borders */
+    --color-border: var(--custom-border) !important;
+    --border: var(--custom-border) !important;
+    
+    /* Override status colors */
+    --color-success: var(--custom-success) !important;
+    --color-warning: var(--custom-warning) !important;
+    --color-error: var(--custom-error) !important;
+    --color-destructive: var(--custom-error) !important;
+}
+
+.custom-colors-enabled body,
+.custom-colors-enabled html {
+    background-color: var(--custom-background) !important;
+    color: var(--custom-text) !important;
+}
+
+.custom-colors-enabled #app,
+.custom-colors-enabled [data-reactroot] {
+    background-color: var(--custom-background) !important;
+}
+
+/* Apply custom colors to common elements - Primary */
+.custom-colors-enabled .bg-blue-500,
+.custom-colors-enabled .bg-blue-600,
+.custom-colors-enabled .bg-indigo-500,
+.custom-colors-enabled .bg-indigo-600,
+.custom-colors-enabled [class*="bg-blue"],
+.custom-colors-enabled [class*="bg-indigo"],
+.custom-colors-enabled [class*="from-blue"],
+.custom-colors-enabled [class*="to-indigo"] {
+    background-color: var(--custom-primary) !important;
+}
+
+.custom-colors-enabled .text-blue-500,
+.custom-colors-enabled .text-blue-600,
+.custom-colors-enabled .text-indigo-500,
+.custom-colors-enabled .text-indigo-600,
+.custom-colors-enabled [class*="text-blue"],
+.custom-colors-enabled [class*="text-indigo"] {
+    color: var(--custom-primary) !important;
+}
+
+.custom-colors-enabled .border-blue-500,
+.custom-colors-enabled .border-indigo-500,
+.custom-colors-enabled [class*="border-blue"],
+.custom-colors-enabled [class*="border-indigo"] {
+    border-color: var(--custom-primary) !important;
+}
+
+/* Apply custom colors - Background */
+.custom-colors-enabled .bg-white,
+.custom-colors-enabled .bg-slate-50,
+.custom-colors-enabled .bg-slate-100 {
+    background-color: var(--custom-background) !important;
+}
+
+.custom-colors-enabled .bg-slate-700,
+.custom-colors-enabled .bg-slate-800,
+.custom-colors-enabled .bg-slate-900,
+.custom-colors-enabled .dark .bg-slate-800,
+.custom-colors-enabled .dark .bg-slate-900 {
+    background-color: var(--custom-card-bg) !important;
+}
+
+/* Ensure main layout backgrounds use custom background */
+.custom-colors-enabled main,
+.custom-colors-enabled [role="main"],
+.custom-colors-enabled .min-h-screen {
+    background-color: var(--custom-background) !important;
+}
+
+/* Card backgrounds - more specific selectors */
+.custom-colors-enabled .rounded-2xl.bg-white,
+.custom-colors-enabled .rounded-xl.bg-white,
+.custom-colors-enabled .rounded-lg.bg-white,
+.custom-colors-enabled .rounded-2xl.bg-slate-800,
+.custom-colors-enabled .rounded-xl.bg-slate-800,
+.custom-colors-enabled .rounded-lg.bg-slate-800 {
+    background-color: var(--custom-card-bg) !important;
+}
+
+/* Ensure proper text contrast in dark mode */
+.custom-colors-enabled.dark .text-white,
+.custom-colors-enabled .dark .text-white {
+    color: var(--custom-text) !important;
+}
+
+.custom-colors-enabled.dark .text-slate-100,
+.custom-colors-enabled .dark .text-slate-100 {
+    color: var(--custom-text) !important;
+}
+
+/* Apply custom colors - Text */
+.custom-colors-enabled .text-slate-900,
+.custom-colors-enabled .text-slate-800,
+.custom-colors-enabled .text-slate-700,
+.custom-colors-enabled .text-white {
+    color: var(--custom-text) !important;
+}
+
+.custom-colors-enabled .text-slate-600,
+.custom-colors-enabled .text-slate-500,
+.custom-colors-enabled .text-slate-400 {
+    color: var(--custom-text-secondary) !important;
+}
+
+/* Apply custom colors - Borders */
+.custom-colors-enabled .border-slate-200,
+.custom-colors-enabled .border-slate-300,
+.custom-colors-enabled .border-slate-700 {
+    border-color: var(--custom-border) !important;
+}
+
+/* Apply custom colors - Status colors */
+.custom-colors-enabled .bg-green-500,
+.custom-colors-enabled .bg-green-600,
+.custom-colors-enabled .bg-emerald-500,
+.custom-colors-enabled [class*="bg-green"],
+.custom-colors-enabled [class*="bg-emerald"] {
+    background-color: var(--custom-success) !important;
+}
+
+.custom-colors-enabled .text-green-500,
+.custom-colors-enabled .text-green-600,
+.custom-colors-enabled .text-emerald-500,
+.custom-colors-enabled [class*="text-green"],
+.custom-colors-enabled [class*="text-emerald"] {
+    color: var(--custom-success) !important;
+}
+
+.custom-colors-enabled .bg-yellow-500,
+.custom-colors-enabled .bg-amber-500,
+.custom-colors-enabled .bg-orange-500,
+.custom-colors-enabled [class*="bg-yellow"],
+.custom-colors-enabled [class*="bg-amber"],
+.custom-colors-enabled [class*="bg-orange"] {
+    background-color: var(--custom-warning) !important;
+}
+
+.custom-colors-enabled .text-yellow-500,
+.custom-colors-enabled .text-amber-500,
+.custom-colors-enabled .text-orange-500,
+.custom-colors-enabled [class*="text-yellow"],
+.custom-colors-enabled [class*="text-amber"],
+.custom-colors-enabled [class*="text-orange"] {
+    color: var(--custom-warning) !important;
+}
+
+.custom-colors-enabled .bg-red-500,
+.custom-colors-enabled .bg-red-600,
+.custom-colors-enabled [class*="bg-red"] {
+    background-color: var(--custom-error) !important;
+}
+
+.custom-colors-enabled .text-red-500,
+.custom-colors-enabled .text-red-600,
+.custom-colors-enabled [class*="text-red"] {
+    color: var(--custom-error) !important;
+}

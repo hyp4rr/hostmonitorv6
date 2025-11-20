@@ -22,28 +22,28 @@ class UpdateDeviceUptime extends Command
      *
      * @var string
      */
-    protected $description = 'Update device uptime minutes - increment for online devices, reset to 0 for offline devices';
+    protected $description = 'Update device uptime and downtime calculations - increment for online/offline devices respectively';
 
     /**
      * Execute the console command.
      */
     public function handle()
     {
-        $this->info('Updating device uptime...');
-        Log::info('Starting device uptime update');
+        $this->info('Updating device uptime and downtime...');
+        Log::info('Starting device uptime and downtime update');
 
         $startTime = microtime(true);
         $uptimeService = new DeviceUptimeService();
         
-        // Update all device uptimes using the service
+        // Update all device uptimes and downtimes using the service
         $uptimeService->updateAllDeviceUptimes();
 
         $duration = round((microtime(true) - $startTime) * 1000, 2);
-        $this->info('Device uptime update completed with proper percentage calculations.');
+        $this->info('Device uptime and downtime update completed with proper percentage calculations.');
         
         // Log to file for scheduler visibility
         $deviceCount = Device::where('is_active', true)->count();
-        Log::info("Device uptime update completed", [
+        Log::info("Device uptime and downtime update completed", [
             'duration_ms' => $duration,
             'devices_updated' => $deviceCount
         ]);

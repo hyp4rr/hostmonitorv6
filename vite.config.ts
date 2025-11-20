@@ -9,6 +9,8 @@ export default defineConfig({
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.tsx'],
             refresh: true,
+            // The 'hot' file is created automatically for HMR - it's already in .gitignore
+            // You can safely ignore it in your editor/file explorer
         }),
         react({
             babel: {

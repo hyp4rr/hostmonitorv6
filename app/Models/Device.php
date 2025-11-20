@@ -28,6 +28,7 @@ class Device extends Model
         'is_active',
         'uptime_percentage',
         'uptime_minutes',
+        'downtime_percentage',
         'response_time',
         'last_ping',
         'offline_reason',
@@ -46,6 +47,7 @@ class Device extends Model
     protected $casts = [
         'is_active' => 'boolean',
         'uptime_percentage' => 'decimal:2',
+        'downtime_percentage' => 'decimal:2',
         'response_time' => 'decimal:2',
         'last_ping' => 'datetime',
         'offline_acknowledged_at' => 'datetime',
@@ -315,6 +317,119 @@ class Device extends Model
         }
         
         // Fallback: no online_since or unknown status
+        return 0;
+    }
+
+    /**
+     * Get calculated downtime percentage
+     */
+    public function getCalculatedDowntimePercentage(): float
+    {
+        // If we already have a calculated downtime percentage, use it
+        if ($this->downtime_percentage !== null) {
+            return (float) $this->downtime_percentage;
+        }
+
+        // Otherwise calculate from monitoring history or current status
+        $hasHistory = $this->monitoringHistory()->exists();
+        
+        if ($hasHistory) {
+            $startDate = now()->subHours(24);
+            
+            $totalChecks = $this->monitoringHistory()
+                ->where('checked_at', '>=', $startDate)
+                ->count();
+
+            if ($totalChecks === 0) {
+                // Use current status
+                return in_array($this->status, ['offline', 'offline_ack']) ? 100 : 0;
+            }
+
+            $offlineChecks = $this->monitoringHistory()
+                ->where('checked_at', '>=', $startDate)
+                ->whereIn('status', ['offline', 'offline_ack'])
+                ->count();
+
+            $percentage = round((float) (($offlineChecks / $totalChecks) * 100), 2);
+            
+            // Update the device with calculated percentage
+            $this->downtime_percentage = $percentage;
+            $this->timestamps = false;
+            $this->save();
+            $this->timestamps = true;
+            
+            return $percentage;
+        }
+
+        // Fallback to minutes-based calculation
+        $totalMinutes = 24 * 60; // 24 hours in minutes
+        $downtimeMinutes = $this->offline_duration_minutes ?? 0;
+        
+        return min(100, ($downtimeMinutes / $totalMinutes) * 100);
+    }
+
+    /**
+     * Update downtime based on current status - calculates REAL minutes
+     */
+    public function updateDowntime()
+    {
+        $now = now();
+        
+        // If device is online, set downtime_minutes to 0 and clear offline_since
+        if (in_array($this->status, ['online', 'warning'])) {
+            $this->offline_duration_minutes = 0;
+            $this->offline_since = null;
+            if (!$this->online_since) {
+                $this->online_since = $now;
+            }
+            
+            // Still calculate percentage from monitoring history
+            $this->downtime_percentage = round((float) $this->getCalculatedDowntimePercentage(), 2);
+            
+            // Disable timestamps to prevent updating updated_at when only downtime changes
+            $this->timestamps = false;
+            $this->save();
+            $this->timestamps = true;
+            return;
+        }
+        
+        // Ensure offline_since is set if device is offline but doesn't have it
+        if (in_array($this->status, ['offline', 'offline_ack']) && !$this->offline_since) {
+            // Device is offline but offline_since is not set - set it now
+            $this->offline_since = $now;
+            $this->online_since = null;
+        }
+        
+        // Calculate real downtime minutes (only counts time since offline_since, resets on online)
+        $this->offline_duration_minutes = $this->calculateRealDowntimeMinutes();
+        
+        // Recalculate percentage
+        $this->downtime_percentage = round((float) $this->getCalculatedDowntimePercentage(), 2);
+        
+        // Disable timestamps to prevent updating updated_at when only downtime changes
+        $this->timestamps = false;
+        $this->save();
+        $this->timestamps = true;
+    }
+    
+    /**
+     * Calculate real downtime minutes - resets to 0 when device goes online
+     * Only counts time since offline_since (when device last went offline)
+     */
+    public function calculateRealDowntimeMinutes(): float
+    {
+        // If device is online, downtime is always 0
+        if (in_array($this->status, ['online', 'warning'])) {
+            return 0;
+        }
+        
+        // If device is offline, only count time since offline_since (resets on each online->offline transition)
+        if (in_array($this->status, ['offline', 'offline_ack']) && $this->offline_since) {
+            $minutesSinceOffline = max(0, $this->offline_since->diffInMinutes(now()));
+            return min(1440, (float) $minutesSinceOffline); // Cap at 24 hours (1440 minutes)
+        }
+        
+        // Fallback: no offline_since or unknown status
         return 0;
     }
 

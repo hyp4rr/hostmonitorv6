@@ -37,10 +37,10 @@ class Kernel extends ConsoleKernel
                  ->description('Continuous device monitoring backup')
                  ->withoutOverlapping();
 
-        // Update device uptime calculations every minute
+        // Update device uptime and downtime calculations every minute
         $schedule->command('devices:update-uptime')
                  ->everyMinute()
-                 ->description('Update device uptime calculations based on monitoring history')
+                 ->description('Update device uptime and downtime calculations based on monitoring history')
                  ->withoutOverlapping();
 
         // Ping all devices every 5 minutes
