@@ -27,6 +27,7 @@ class Device extends Model
         'building',
         'is_active',
         'uptime_percentage',
+        'sla_target',
         'uptime_minutes',
         'downtime_percentage',
         'response_time',
@@ -47,6 +48,7 @@ class Device extends Model
     protected $casts = [
         'is_active' => 'boolean',
         'uptime_percentage' => 'decimal:2',
+        'sla_target' => 'decimal:2',
         'downtime_percentage' => 'decimal:2',
         'response_time' => 'decimal:2',
         'last_ping' => 'datetime',
@@ -143,7 +145,7 @@ class Device extends Model
     }
 
     /**
-     * Check if device has been offline for more than 5 minutes
+     * Check if device has been offline for more than specified minutes
      */
     public function isOfflineForMoreThan($minutes)
     {

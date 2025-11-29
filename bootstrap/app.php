@@ -39,11 +39,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // Send device offline notifications every 5 minutes
         $schedule->command('devices:send-notifications')->everyFiveMinutes();
         
-        // Ping all devices every 5 minutes
-        $schedule->command('devices:ping-all')
-                 ->everyFiveMinutes()
-                 ->description('Ping all devices and update their status and last_ping timestamp')
-                 ->withoutOverlapping();
+        // DISABLED: Ping all devices every 5 minutes
+        // $schedule->command('devices:ping-all')
+        //          ->everyFiveMinutes()
+        //          ->description('Ping all devices and update their status and last_ping timestamp')
+        //          ->withoutOverlapping();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

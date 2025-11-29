@@ -127,6 +127,43 @@ const formatUptimeDuration = (uptimeMinutes: number): string => {
     }
 };
 
+// Format offline duration with rounding up and conversion to hours/days
+const formatOfflineDuration = (minutes: number | undefined): string => {
+    if (minutes === undefined || minutes <= 0) {
+        return '0 minutes';
+    }
+
+    // Round up to the nearest minute
+    const roundedMinutes = Math.ceil(minutes);
+
+    // If less than 60 minutes, return in minutes
+    if (roundedMinutes < 60) {
+        return `${roundedMinutes} minute${roundedMinutes !== 1 ? 's' : ''}`;
+    }
+
+    // Convert to hours
+    const hours = Math.floor(roundedMinutes / 60);
+    const remainingMinutes = roundedMinutes % 60;
+
+    // If less than 24 hours, return in hours (and minutes if any)
+    if (hours < 24) {
+        if (remainingMinutes > 0) {
+            return `${hours} hour${hours !== 1 ? 's' : ''} ${remainingMinutes} minute${remainingMinutes !== 1 ? 's' : ''}`;
+        }
+        return `${hours} hour${hours !== 1 ? 's' : ''}`;
+    }
+
+    // Convert to days
+    const days = Math.floor(hours / 24);
+    const remainingHours = hours % 24;
+
+    if (remainingHours > 0) {
+        return `${days} day${days !== 1 ? 's' : ''} ${remainingHours} hour${remainingHours !== 1 ? 's' : ''}`;
+    }
+
+    return `${days} day${days !== 1 ? 's' : ''}`;
+};
+
 const categories = [
     { id: 'all' as DeviceCategory, name: 'All Devices', icon: Network, count: 0 },
     { id: 'switches' as DeviceCategory, name: 'Switch', icon: Network, count: 0, description: 'Peralatan nadi utama rangkaian UTHM' },
@@ -239,10 +276,30 @@ export default function Devices() {
             setIsLoadingSelectedDevice(false);
         }
     }, []);
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [sortField, setSortField] = useState<SortField>('name');
     const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+    const [expandedLocations, setExpandedLocations] = useState<Set<string>>(new Set());
+    
+    // Read URL query parameters on mount to set initial filters
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const statusParam = urlParams.get('status');
+        if (statusParam && ['online', 'offline', 'warning'].includes(statusParam)) {
+            setStatusFilter(statusParam as DeviceStatus);
+        }
+        
+        const categoryParam = urlParams.get('category');
+        if (categoryParam && ['all', 'switches', 'servers', 'wifi', 'tas', 'cctv'].includes(categoryParam)) {
+            setSelectedCategory(categoryParam as DeviceCategory);
+        }
+        
+        const locationParam = urlParams.get('location');
+        if (locationParam) {
+            setLocationFilter(locationParam);
+        }
+    }, []);
     
     // Add state for filter options from database
     const [availableLocations, setAvailableLocations] = useState<Array<{id: number, name: string}>>([]);
@@ -321,9 +378,11 @@ export default function Devices() {
         setIsLoadingDevices(true);
         try {
             // Build query params
+            // For grid view, fetch all devices (no pagination)
+            // For list view, use pagination
             const params = new URLSearchParams({
-                page: currentPage.toString(),
-                per_page: perPage.toString(),
+                page: viewMode === 'grid' ? '1' : currentPage.toString(),
+                per_page: viewMode === 'grid' ? '10000' : perPage.toString(), // Large number for grid view to get all devices
             });
             
             // Add branch filter - use 'all' if currentBranch.id is 'all', otherwise use the branch id
@@ -415,7 +474,7 @@ export default function Devices() {
         } finally {
             setIsLoadingDevices(false);
         }
-    }, [currentPage, perPage, selectedCategory, statusFilter, searchQuery, locationFilter, brandFilter, modelFilter, managedByFilter, sortField, sortOrder, currentBranch?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [currentPage, perPage, selectedCategory, statusFilter, searchQuery, locationFilter, brandFilter, modelFilter, managedByFilter, sortField, sortOrder, currentBranch?.id, viewMode]); // eslint-disable-line react-hooks/exhaustive-deps
     
     // Fetch category counts separately
     const fetchCategoryCounts = useCallback(async () => {
@@ -1087,7 +1146,7 @@ export default function Devices() {
                 </div>
 
                 {/* Category Tabs */}
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                     {updatedCategories.map((category) => {
                         const Icon = category.icon;
                         const isActive = selectedCategory === category.id;
@@ -1095,20 +1154,20 @@ export default function Devices() {
                             <button
                                 key={category.id}
                                 onClick={() => setSelectedCategory(category.id)}
-                                className={`group flex flex-col items-center gap-3 rounded-xl border p-4 transition-all hover:scale-105 ${
+                                className={`group flex flex-col items-center gap-2 rounded-lg border p-2.5 transition-all hover:scale-105 ${
                                     isActive
                                         ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-lg dark:border-blue-400 dark:from-blue-950/30 dark:to-indigo-950/30'
                                         : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-md dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-600'
                                 }`}
                                 title={category.description}
                             >
-                                <div className={`rounded-full p-3 transition-all ${
+                                <div className={`rounded-full p-2 transition-all ${
                                     isActive 
                                         ? 'bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg' 
                                         : 'bg-slate-100 group-hover:bg-slate-200 dark:bg-slate-700 dark:group-hover:bg-slate-600'
                                 }`}>
                                     <Icon
-                                        className={`size-6 ${
+                                        className={`size-4 ${
                                             isActive
                                                 ? 'text-white'
                                                 : 'text-slate-600 dark:text-slate-400'
@@ -1117,7 +1176,7 @@ export default function Devices() {
                                 </div>
                                 <div className="text-center">
                                     <p
-                                        className={`text-sm font-bold ${
+                                        className={`text-xs font-bold ${
                                             isActive
                                                 ? 'text-blue-900 dark:text-blue-100'
                                                 : 'text-slate-900 dark:text-white'
@@ -1126,7 +1185,7 @@ export default function Devices() {
                                         {category.name}
                                     </p>
                                     {category.description && (
-                                        <p className={`mt-1 text-xs line-clamp-2 ${
+                                        <p className={`mt-0.5 text-[10px] line-clamp-2 ${
                                             isActive
                                                 ? 'text-blue-700 dark:text-blue-300'
                                                 : 'text-slate-500 dark:text-slate-400'
@@ -1135,7 +1194,7 @@ export default function Devices() {
                                         </p>
                                     )}
                                     <p
-                                        className={`mt-1 text-xs font-semibold ${
+                                        className={`mt-0.5 text-[10px] font-semibold ${
                                             isActive
                                                 ? 'text-blue-600 dark:text-blue-400'
                                                 : 'text-slate-500 dark:text-slate-400'
@@ -1164,172 +1223,264 @@ export default function Devices() {
                     </div>
                 )}
 
-                {/* Grid View */}
-                {viewMode === 'grid' && sortedDevices.length > 0 && (
-                    <div>
-                        <div className="mb-4">
-                            <div className="flex items-center gap-3 mb-2">
-                                {selectedCategory !== 'all' && (() => {
-                                    const category = categories.find(c => c.id === selectedCategory);
-                                    if (category) {
-                                        const Icon = getDeviceCategoryIcon(selectedCategory);
-                                        return (
-                                            <div className="rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 p-2 shadow-lg">
-                                                <Icon className="size-5 text-white" />
-                                            </div>
-                                        );
+                {/* Grid View - Hierarchy Style with Main Blocks */}
+                {viewMode === 'grid' && sortedDevices.length > 0 && (() => {
+                    // Group devices by location first
+                    interface LocationGroup {
+                        locationName: string;
+                        locationId: number | null;
+                        folderId: number | null;
+                        folderName: string;
+                        devices: typeof sortedDevices;
+                    }
+                    
+                    interface FolderGroup {
+                        folderName: string;
+                        folderId: number | null;
+                        locations: LocationGroup[];
+                    }
+
+                    // Group devices by location
+                    const devicesByLocation = new Map<string, LocationGroup>();
+                    
+                    sortedDevices.forEach(device => {
+                        const locationName = (device as any).location_name || 
+                                            (typeof device.location === 'string' ? device.location : null) ||
+                                            ((device as any).location?.name) || 
+                                            'Unknown Location';
+                        const locationId = (device as any).location_id || null;
+                        const folderId = (device as any).location?.location_folder?.id || (device as any).location_folder_id || null;
+                        const folderName = (device as any).location?.location_folder?.name || (device as any).location_folder_name || 'Ungrouped';
+                        
+                        const key = `${locationId ?? locationName}`;
+                        if (!devicesByLocation.has(key)) {
+                            devicesByLocation.set(key, {
+                                locationName,
+                                locationId,
+                                folderId,
+                                folderName,
+                                devices: [],
+                            });
+                        }
+                        devicesByLocation.get(key)!.devices.push(device);
+                    });
+
+                    // Group locations by folder
+                    const folderMap = new Map<string, FolderGroup>();
+                    
+                    devicesByLocation.forEach(locationGroup => {
+                        const folderName = locationGroup.folderName || 'Ungrouped';
+                        const folderId = locationGroup.folderId ?? null;
+                        const key = `${folderId ?? folderName}`;
+                        if (!folderMap.has(key)) {
+                            folderMap.set(key, {
+                                folderName,
+                                folderId,
+                                locations: [],
+                            });
+                        }
+                        folderMap.get(key)!.locations.push(locationGroup);
+                    });
+
+                    // Convert to array and sort
+                    const grouped: FolderGroup[] = [];
+                    folderMap.forEach(folderGroup => {
+                        folderGroup.locations.sort((a, b) => a.locationName.localeCompare(b.locationName));
+                        grouped.push(folderGroup);
+                    });
+
+                    // Sort folders alphabetically, keeping Ungrouped last
+                    grouped.sort((a, b) => {
+                        if (a.folderName === 'Ungrouped') return 1;
+                        if (b.folderName === 'Ungrouped') return -1;
+                        return a.folderName.localeCompare(b.folderName);
+                    });
+
+                    const toggleLocation = (folderName: string, locationName: string) => {
+                        const key = `${folderName}:${locationName}`;
+                        setExpandedLocations(prev => {
+                            const newSet = new Set(prev);
+                            if (newSet.has(key)) {
+                                newSet.delete(key);
+                            } else {
+                                prev.forEach(existingKey => {
+                                    if (existingKey.startsWith(`${folderName}:`)) {
+                                        newSet.delete(existingKey);
                                     }
-                                    return null;
-                                })()}
-                                {selectedCategory === 'all' && (
-                                    <div className="rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 p-2 shadow-lg">
-                                        <Network className="size-5 text-white" />
-                                    </div>
-                                )}
-                                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
-                                    {categories.find(c => c.id === selectedCategory)?.name || 'All Devices'}
-                                </h2>
-                            </div>
-                            <p className="text-sm text-slate-600 dark:text-slate-400">
-                                Showing {filteredDevices.length} device{filteredDevices.length !== 1 ? 's' : ''} on this page
-                                {totalItems > 0 && (
-                                    <span className="ml-2 text-blue-600 dark:text-blue-400">
-                                        (Total: {totalItems} device{totalItems !== 1 ? 's' : ''} matching filters across all pages)
-                                    </span>
-                                )}
-                            </p>
+                                });
+                                newSet.add(key);
+                            }
+                            return newSet;
+                        });
+                    };
+
+                    const isLocationExpanded = (folderName: string, locationName: string): boolean => {
+                        return expandedLocations.has(`${folderName}:${locationName}`);
+                    };
+
+                    return (
+                        <div className="space-y-4">
                             {/* View options */}
-                            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
-                                <label className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                                    <input
-                                        type="checkbox"
-                                        checked={viewOptions.tiny}
-                                        onChange={e => setViewOptions(v => ({ ...v, tiny: e.target.checked }))}
-                                    />
-                                    Smallest
-                                </label>
-                                <label className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                                    <input
-                                        type="checkbox"
-                                        checked={viewOptions.dense}
-                                        onChange={e => setViewOptions(v => ({ ...v, dense: e.target.checked }))}
-                                    />
-                                    Dense
-                                </label>
-                                <label className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                                    <input
-                                        type="checkbox"
-                                        checked={viewOptions.showName}
-                                        onChange={e => setViewOptions(v => ({ ...v, showName: e.target.checked }))}
-                                    />
-                                    Name
-                                </label>
-                                <label className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                                    <input
-                                        type="checkbox"
-                                        checked={viewOptions.showIp}
-                                        onChange={e => setViewOptions(v => ({ ...v, showIp: e.target.checked }))}
-                                    />
-                                    IP
-                                </label>
-                                <label className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                                    <input
-                                        type="checkbox"
-                                        checked={viewOptions.showStatus}
-                                        onChange={e => setViewOptions(v => ({ ...v, showStatus: e.target.checked }))}
-                                    />
-                                    Status
-                                </label>
+                            <div className="mb-4 flex flex-wrap items-center gap-2 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 p-3 shadow-sm">
+                                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 mr-1">View Options:</span>
+                                {[
+                                    { key: 'tiny', label: 'Smallest', checked: viewOptions.tiny, onChange: (e: React.ChangeEvent<HTMLInputElement>) => setViewOptions(v => ({ ...v, tiny: e.target.checked })) },
+                                    { key: 'dense', label: 'Dense', checked: viewOptions.dense, onChange: (e: React.ChangeEvent<HTMLInputElement>) => setViewOptions(v => ({ ...v, dense: e.target.checked })) },
+                                    { key: 'showName', label: 'Name', checked: viewOptions.showName, onChange: (e: React.ChangeEvent<HTMLInputElement>) => setViewOptions(v => ({ ...v, showName: e.target.checked })) },
+                                    { key: 'showIp', label: 'IP', checked: viewOptions.showIp, onChange: (e: React.ChangeEvent<HTMLInputElement>) => setViewOptions(v => ({ ...v, showIp: e.target.checked })) },
+                                    { key: 'showStatus', label: 'Status', checked: viewOptions.showStatus, onChange: (e: React.ChangeEvent<HTMLInputElement>) => setViewOptions(v => ({ ...v, showStatus: e.target.checked })) },
+                                ].map((option) => (
+                                    <label
+                                        key={option.key}
+                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border-2 cursor-pointer transition-all ${
+                                            option.checked
+                                                ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-500'
+                                                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-500'
+                                        }`}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={option.checked}
+                                            onChange={option.onChange}
+                                            className="size-3.5 rounded border-slate-300 text-emerald-600 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-0 cursor-pointer"
+                                        />
+                                        <span className="text-xs font-medium">{option.label}</span>
+                                    </label>
+                                ))}
                             </div>
+
+                            {grouped.map(folderGroup => {
+                                const totalDevices = folderGroup.locations.reduce((sum, loc) => sum + loc.devices.length, 0);
+
+                                return (
+                                    <div key={`${folderGroup.folderId ?? folderGroup.folderName}`} className="space-y-2">
+                                        {/* Folder Header */}
+                                        <div className="bg-emerald-600 text-white rounded-lg px-6 py-4 shadow-lg">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <Building2 className="size-6" />
+                                                    <div>
+                                                        <h2 className="text-xl font-bold">{folderGroup.folderName}</h2>
+                                                        <p className="text-sm opacity-90">
+                                                            {folderGroup.locations.length} location{folderGroup.locations.length !== 1 ? 's' : ''} • {totalDevices} device{totalDevices !== 1 ? 's' : ''}
+                                                        </p>
                         </div>
-                        {/*
-                          Group devices by location and display with location name on top left, devices below
-                        */}
-                        {(() => {
-                            // Group devices by location
-                            const devicesByLocation = filteredDevices.reduce((acc, device) => {
-                                // Handle different location formats: string, location_name, or location object
-                                const locationName = (device as any).location_name || 
-                                                    (typeof device.location === 'string' ? device.location : null) ||
-                                                    ((device as any).location?.name) || 
-                                                    'No Location';
-                                if (!acc[locationName]) {
-                                    acc[locationName] = [];
-                                }
-                                acc[locationName].push(device);
-                                return acc;
-                            }, {} as Record<string, typeof filteredDevices>);
-
-                            const locations = Object.keys(devicesByLocation).sort();
-
-                            return (
-                                <div className="space-y-6">
-                                    {locations.map((locationName) => (
-                                        <div key={locationName} className="space-y-2">
-                                            {/* Location header - minimalistic */}
-                                            <div>
-                                                <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                                                    {locationName}
-                                                </h3>
-                                                <div className="mt-1 border-b border-slate-200 dark:border-slate-700"></div>
-                                            </div>
-                                            {/* Devices grid for this location */}
-                                            <div
-                                                className={`grid ${
-                                                    viewOptions.tiny
-                                                        ? 'grid-cols-6 sm:grid-cols-8 md:grid-cols-12 lg:grid-cols-16 xl:grid-cols-20 2xl:grid-cols-24 gap-1'
-                                                        : viewOptions.dense
-                                                            ? 'grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 2xl:grid-cols-14 gap-1.5'
-                                                            : 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-10 gap-3'
-                                                }`}
-                                            >
-                                                {devicesByLocation[locationName].map((device) => (
-                                                    <div
-                                                        key={device.id}
-                                                        className={`group cursor-pointer ${viewOptions.tiny ? 'rounded sm:rounded' : 'rounded-md'} border border-transparent bg-white ${viewOptions.tiny ? 'shadow-none' : 'shadow'} ${viewOptions.tiny ? '' : 'hover:shadow-lg'} transition-all ${viewOptions.tiny ? '' : 'hover:scale-105'} dark:bg-slate-800 ${viewOptions.tiny ? 'p-0.5' : viewOptions.dense ? 'p-1.5' : 'p-2.5'} overflow-hidden`}
-                                                        onClick={() => {
-                                                            setSelectedDevice(device as Device);
-                                                            // Fetch full details (including additional managers) after opening
-                                                            loadDeviceDetails((device as Device).id);
-                                                        }}
-                                                    >
-                                                        <div className="flex flex-col items-center text-center w-full min-w-0">
-                                                            <div
-                                                                className={`${viewOptions.tiny ? 'mb-0' : 'mb-0.5'} ${viewOptions.tiny ? 'rounded' : 'rounded-md'} border border-transparent ${viewOptions.tiny ? 'p-0.5' : viewOptions.dense ? 'p-1' : 'p-1.5'} transition-transform ${viewOptions.tiny ? '' : 'group-hover:scale-110'} ${getStatusBg(device.status as DeviceStatus)} flex-shrink-0`}
-                                                            >
-                                                                {(() => {
-                                                                    const Icon = getDeviceCategoryIcon(device.category || '');
-                                                                    return <Icon className={`${viewOptions.tiny ? 'size-3' : viewOptions.dense ? 'size-3' : 'size-4'} ${getStatusColor(device.status as DeviceStatus)}`} />;
-                                                                })()}
-                                                            </div>
-                                                            {viewOptions.showName && (
-                                                                <h3 className={`${viewOptions.tiny ? 'mt-0.5 text-[9px]' : 'mb-0 text-[10px]'} font-medium text-slate-900 dark:text-slate-200 line-clamp-1 w-full min-w-0 px-0.5 overflow-hidden text-ellipsis`}>
-                                                                    {device.name}
-                                                                </h3>
-                                                            )}
-                                                            {!viewOptions.tiny && viewOptions.showIp && (
-                                                                <div className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1 w-full min-w-0 px-0.5 overflow-hidden text-ellipsis">
-                                                                    {device.ip_address}
-                                                                </div>
-                                                            )}
-                                                            {!viewOptions.tiny && viewOptions.showStatus && (
-                                                                <div className="mt-0.5 text-[10px] w-full min-w-0 px-0.5">
-                                                                    <span className={`rounded px-1.5 py-0.5 ${getStatusBg(device.status as DeviceStatus)} ${getStatusColor(device.status as DeviceStatus)} inline-block line-clamp-1 overflow-hidden text-ellipsis`}>
-                                                                        {getStatusLabel(device.status as DeviceStatus)}
-                                                                    </span>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                                </div>
                                             </div>
                                         </div>
-                                    ))}
+
+                                        {/* Locations */}
+                                        <div className="space-y-1 ml-4">
+                                            {folderGroup.locations.map(location => {
+                                                const locationKey = `${folderGroup.folderName}:${location.locationName}`;
+                                                const isExpanded = isLocationExpanded(folderGroup.folderName, location.locationName);
+                                                const onlineCount = location.devices.filter(d => d.status === 'online').length;
+                                                const offlineCount = location.devices.filter(d => d.status === 'offline').length;
+
+                                                return (
+                                                    <div key={locationKey} className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+                                                        {/* Location Header - Clickable */}
+                                                        <button
+                                                            onClick={() => toggleLocation(folderGroup.folderName, location.locationName)}
+                                                            className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors rounded-lg"
+                                                        >
+                                                            <div className="flex items-center gap-3 flex-1 text-left">
+                                                                {isExpanded ? (
+                                                                    <ChevronDown className="size-5 text-slate-600 dark:text-slate-400" />
+                                                                ) : (
+                                                                    <ChevronRight className="size-5 text-slate-600 dark:text-slate-400" />
+                                                                )}
+                                                                <MapPin className="size-5 text-slate-600 dark:text-slate-400" />
+                                                                <span className="font-semibold text-slate-900 dark:text-white">
+                                                                    {location.locationName}
+                                                                </span>
+                                                                <span className="text-sm text-slate-500 dark:text-slate-400">
+                                                                    ({location.devices.length} device{location.devices.length !== 1 ? 's' : ''})
+                                                                </span>
+                                                                <div className="flex items-center gap-2 ml-auto">
+                                                                    {onlineCount > 0 && (
+                                                                        <span className="text-xs px-2 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">
+                                                                            {onlineCount} online
+                                                                        </span>
+                                                                    )}
+                                                                    {offlineCount > 0 && (
+                                                                        <span className="text-xs px-2 py-1 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300">
+                                                                            {offlineCount} offline
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </button>
+
+                                                        {/* Devices Grid - Collapsible */}
+                                                        {isExpanded && (
+                                                            <div className="border-t border-slate-200 dark:border-slate-700 p-4">
+                        <div
+                            className={`grid ${
+                                viewOptions.tiny
+                                    ? 'grid-cols-6 sm:grid-cols-8 md:grid-cols-12 lg:grid-cols-16 xl:grid-cols-20 2xl:grid-cols-24 gap-1'
+                                    : viewOptions.dense
+                                        ? 'grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 2xl:grid-cols-14 gap-1.5'
+                                        : 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-10 gap-3'
+                            }`}
+                        >
+                                                                    {location.devices.map((device) => (
+                                <div
+                                    key={device.id}
+                                                                            className={`group cursor-pointer ${viewOptions.tiny ? 'rounded sm:rounded' : 'rounded-md'} border border-transparent bg-white ${viewOptions.tiny ? 'shadow-none' : 'shadow'} ${viewOptions.tiny ? '' : 'hover:shadow-lg'} transition-all ${viewOptions.tiny ? '' : 'hover:scale-105'} dark:bg-slate-800 ${viewOptions.tiny ? 'p-0.5' : viewOptions.dense ? 'p-1.5' : 'p-2.5'} overflow-hidden`}
+                                    onClick={() => {
+                                        setSelectedDevice(device as Device);
+                                        loadDeviceDetails((device as Device).id);
+                                    }}
+                                >
+                                                                            <div className="flex flex-col items-center text-center w-full min-w-0">
+                                        <div
+                                                                                    className={`${viewOptions.tiny ? 'mb-0' : 'mb-0.5'} ${viewOptions.tiny ? 'rounded' : 'rounded-md'} border border-transparent ${viewOptions.tiny ? 'p-0.5' : viewOptions.dense ? 'p-1' : 'p-1.5'} transition-transform ${viewOptions.tiny ? '' : 'group-hover:scale-110'} ${getStatusBg(device.status as DeviceStatus)} flex-shrink-0`}
+                                        >
+                                            {(() => {
+                                                const Icon = getDeviceCategoryIcon(device.category || '');
+                                                return <Icon className={`${viewOptions.tiny ? 'size-3' : viewOptions.dense ? 'size-3' : 'size-4'} ${getStatusColor(device.status as DeviceStatus)}`} />;
+                                            })()}
+                                        </div>
+                                                                                {viewOptions.showName && (
+                                                                                    <h3 className={`${viewOptions.tiny ? 'mt-0.5 text-[9px]' : 'mb-0 text-[10px]'} font-medium text-slate-900 dark:text-slate-200 line-clamp-1 w-full min-w-0 px-0.5 overflow-hidden text-ellipsis`}>
+                                                {device.name}
+                                            </h3>
+                                        )}
+                                        {!viewOptions.tiny && viewOptions.showIp && (
+                                                                                    <div className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1 w-full min-w-0 px-0.5 overflow-hidden text-ellipsis">
+                                                {device.ip_address}
+                                            </div>
+                                        )}
+                                        {!viewOptions.tiny && viewOptions.showStatus && (
+                                                                                    <div className="mt-0.5 text-[10px] w-full min-w-0 px-0.5">
+                                                                                        <span className={`rounded px-1.5 py-0.5 ${getStatusBg(device.status as DeviceStatus)} ${getStatusColor(device.status as DeviceStatus)} inline-block line-clamp-1 overflow-hidden text-ellipsis`}>
+                                                    {getStatusLabel(device.status as DeviceStatus)}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                            );
-                        })()}
+                            ))}
+                        </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+
+                            {grouped.length === 0 && (
+                                <div className="text-center py-12 text-slate-500 dark:text-slate-400">
+                                    No devices found for the selected filters.
+                                </div>
+                            )}
                         
-                        {/* Pagination */}
+                        {/* Pagination - Only show for list view */}
+                        {viewMode === 'list' && (
                         <Pagination
                             currentPage={currentPage}
                             totalPages={totalPages}
@@ -1338,8 +1489,10 @@ export default function Devices() {
                             onPageChange={setCurrentPage}
                             onPerPageChange={setPerPage}
                         />
+                        )}
                     </div>
-                )}
+                    );
+                })()}
 
                 {/* Table View */}
                 {viewMode === 'list' && sortedDevices.length > 0 && (
@@ -1673,9 +1826,9 @@ export default function Devices() {
                                                     <div className="flex items-center gap-2">
                                                         <TrendingUp className="size-4 text-orange-600 dark:text-orange-400" />
                                                         <span className="text-lg font-semibold text-orange-700 dark:text-orange-400">
-                                                            {selectedDevice.offline_duration_minutes} minute{selectedDevice.offline_duration_minutes !== 1 ? 's' : ''}
+                                                            {formatOfflineDuration(selectedDevice.offline_duration_minutes)}
                                                         </span>
-                                                        {selectedDevice.offline_duration_minutes >= 2 && (
+                                                        {selectedDevice.offline_duration_minutes !== undefined && selectedDevice.offline_duration_minutes >= 10 && (
                                                             <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400">
                                                                 Alert Triggered
                                                             </span>

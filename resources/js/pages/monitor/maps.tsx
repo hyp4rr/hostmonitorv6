@@ -3,6 +3,9 @@ import { MapPin, Server, Maximize2, Minimize2, Layers, Filter, Search, AlertTria
 import { useEffect, useRef, useState, useMemo } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
+import 'leaflet.markercluster';
 import { useSettings } from '@/contexts/settings-context';
 import { useTranslation } from '@/contexts/i18n-context';
 import { usePage } from '@inertiajs/react';
@@ -39,6 +42,7 @@ export default function Maps() {
     const mapRef = useRef<L.Map | null>(null);
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const markersRef = useRef<L.Marker[]>([]);
+    const markerClusterGroupRef = useRef<L.MarkerClusterGroup | null>(null);
     const tileLayerRef = useRef<L.TileLayer | null>(null);
     const highlightMarkerRef = useRef<L.Marker | null>(null);
     const [selectedLocation, setSelectedLocation] = useState<DeviceLocation | null>(null);
@@ -133,11 +137,14 @@ export default function Maps() {
         .then(responseData => {
             const devices = responseData.data || responseData;
             console.log('Maps: Loaded devices:', devices.length, 'Sample device:', devices[0]);
-            // Filter to only devices with coordinates and active
+            // Filter to include devices that are active AND either:
+            // 1. Have coordinates (latitude/longitude), OR
+            // 2. Have a location_id (they'll get coordinates from their location)
             const activeDevices = devices.filter((device: any) => 
-                device.is_active !== false && device.latitude && device.longitude
+                device.is_active !== false && 
+                (device.latitude && device.longitude || device.location_id)
             );
-            console.log('Maps: Active devices with coordinates:', activeDevices.length);
+            console.log('Maps: Active devices with coordinates or location_id:', activeDevices.length);
             setRealDevices(activeDevices);
         })
         .catch(err => {
@@ -166,9 +173,27 @@ export default function Maps() {
         if (!location.latitude || !location.longitude) return;
 
         // Find devices assigned to this location using location_id
-        const locationDevices = realDevices.filter(d => 
-            d.location_id === location.id
-        );
+        // Use loose equality to handle string/number type mismatches
+        const locationDevices = realDevices.filter(d => {
+            // Match by location_id (handle both string and number types)
+            const matchesById = d.location_id != null && (
+                d.location_id === location.id || 
+                String(d.location_id) === String(location.id) ||
+                Number(d.location_id) === Number(location.id)
+            );
+            
+            // Also match by coordinates if device has coordinates matching this location
+            const matchesByCoords = d.latitude && d.longitude && 
+                Math.abs(d.latitude - location.latitude) < 0.0001 &&
+                Math.abs(d.longitude - location.longitude) < 0.0001;
+            
+            return matchesById || matchesByCoords;
+        });
+        
+        // Debug logging for locations with no devices
+        if (locationDevices.length === 0) {
+            console.log(`Location "${location.name}" (ID: ${location.id}) has no matching devices. Total devices: ${realDevices.length}, Devices with location_id: ${realDevices.filter(d => d.location_id != null).length}`);
+        }
 
         // Determine overall status based on devices at this location
         let status: 'online' | 'warning' | 'offline' = 'offline';
@@ -424,6 +449,12 @@ export default function Maps() {
     useEffect(() => {
         if (!mapRef.current) return;
 
+        // Clear existing marker cluster group
+        if (markerClusterGroupRef.current) {
+            mapRef.current.removeLayer(markerClusterGroupRef.current);
+            markerClusterGroupRef.current.clearLayers();
+        }
+
         // Clear existing markers
         markersRef.current.forEach(marker => marker.remove());
         markersRef.current = [];
@@ -432,6 +463,37 @@ export default function Maps() {
         if (isLoadingLocations) {
             return;
         }
+
+        // Create new marker cluster group
+        const markerClusterGroup = (L as any).markerClusterGroup({
+            maxClusterRadius: 60, // Maximum radius that a cluster will cover (in pixels) - increased for better grouping
+            spiderfyOnMaxZoom: true, // When you click a cluster at max zoom, it will spiderfy the child markers
+            showCoverageOnHover: true, // Show a polygon when hovering over a cluster
+            zoomToBoundsOnClick: true, // When clicking a cluster, zoom to its bounds
+            chunkedLoading: true, // Split the addLayers processing in to small intervals
+            chunkInterval: 200, // Time interval (in ms) during which addLayers works before pausing to let the rest of the page process
+            chunkDelay: 50, // Delay between processing intervals
+            iconCreateFunction: function(cluster: any) {
+                const count = cluster.getChildCount();
+                let size = 'small';
+                let color = '#3b82f6'; // Blue
+                if (count > 100) {
+                    size = 'large';
+                    color = '#ef4444'; // Red for large clusters
+                } else if (count > 20) {
+                    size = 'medium';
+                    color = '#f59e0b'; // Orange for medium clusters
+                }
+
+                return L.divIcon({
+                    html: `<div style="background-color: ${color}; border: 3px solid white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"><span style="color: white; font-weight: bold; font-size: 14px;">${count}</span></div>`,
+                    className: 'marker-cluster-custom',
+                    iconSize: L.point(40, 40)
+                });
+            }
+        });
+
+        markerClusterGroupRef.current = markerClusterGroup;
 
         // Add markers for filtered locations
         filteredLocations.forEach((location) => {
@@ -487,7 +549,6 @@ export default function Maps() {
                 : '<div style="color: #64748b; font-size: 12px; padding: 8px 0;">No devices assigned to this location</div>';
 
             const marker = L.marker([location.lat, location.lng], { icon })
-                .addTo(mapRef.current!)
                 .bindPopup(`
                     <div style="padding: 14px; min-width: 280px; max-width: 340px; font-family: system-ui, -apple-system, sans-serif;">
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 2px solid #e2e8f0;">
@@ -543,7 +604,13 @@ export default function Maps() {
             });
 
             markersRef.current.push(marker);
+            markerClusterGroup.addLayer(marker);
         });
+
+        // Add marker cluster group to map
+        if (markerClusterGroupRef.current) {
+            markerClusterGroupRef.current.addTo(mapRef.current);
+        }
 
         // Fit bounds to show all markers
         if (filteredLocations.length > 0) {

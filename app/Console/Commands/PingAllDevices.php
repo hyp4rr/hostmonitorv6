@@ -28,12 +28,25 @@ class PingAllDevices extends Command
      */
     public function handle()
     {
-        $this->info('Starting ping all devices...');
-        Log::info('Starting scheduled ping all devices');
-
-        $startTime = microtime(true);
+        // Use cache-based locking to prevent multiple instances from running simultaneously
+        $lockKey = 'devices:ping-all:lock';
+        $lockTimeout = 600; // 10 minutes max execution time (for large device counts)
+        
+        // Try to acquire lock
+        $lockAcquired = cache()->lock($lockKey, $lockTimeout)->get();
+        
+        if (!$lockAcquired) {
+            $this->warn('Another ping operation is already running. Skipping this execution.');
+            Log::warning('Skipped ping all devices - another instance is already running');
+            return Command::SUCCESS;
+        }
 
         try {
+            $this->info('Starting ping all devices...');
+            Log::info('Starting scheduled ping all devices');
+
+            $startTime = microtime(true);
+
             // Use optimized MonitoringController method with bulk updates
             $pingService = new FastPingService();
             $controller = new MonitoringController($pingService);
@@ -73,6 +86,9 @@ class PingAllDevices extends Command
             ]);
 
             return Command::FAILURE;
+        } finally {
+            // Release lock
+            cache()->lock($lockKey)->release();
         }
     }
 }

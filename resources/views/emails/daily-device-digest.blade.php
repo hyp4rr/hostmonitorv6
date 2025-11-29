@@ -164,7 +164,7 @@
                 @if($device->offline_duration_minutes)
                 <div class="info-row">
                     <span class="info-label">Downtime:&nbsp;</span>
-                    <span class="info-value">{{ $device->offline_duration_minutes }} minutes</span>
+                    <span class="info-value">{{ \App\Helpers\FormatHelper::formatOfflineDuration($device->offline_duration_minutes) }}</span>
                 </div>
                 @else
                 <div class="info-row">

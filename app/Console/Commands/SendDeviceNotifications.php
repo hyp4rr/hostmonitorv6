@@ -116,13 +116,13 @@ class SendDeviceNotifications extends Command
             return Command::SUCCESS;
         }
 
-        // Get all offline devices that have been offline for more than 5 minutes
+        // Get all offline devices that have been offline for more than 10 minutes (2 ping cycles)
         $offlineDevices = Device::where('status', 'offline')
             ->whereNotNull('managed_by')
             ->with(['managedBy', 'branch', 'location'])
             ->get()
             ->filter(function ($device) {
-                return $device->isOfflineForMoreThan(5) && $device->shouldSendNotification();
+                return $device->isOfflineForMoreThan(10) && $device->shouldSendNotification();
             });
 
         if ($offlineDevices->isEmpty()) {

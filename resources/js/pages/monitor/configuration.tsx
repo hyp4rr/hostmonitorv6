@@ -22,6 +22,8 @@ import {
     Check,
     MessageCircle,
     Upload,
+    Download,
+    FileText,
 } from 'lucide-react';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from '@/contexts/i18n-context';
@@ -65,6 +67,43 @@ const formatUptimeDuration = (uptimeMinutes: number): string => {
     } else {
         return `${minutes}m`;
     }
+};
+
+// Format offline duration with rounding up and conversion to hours/days
+const formatOfflineDuration = (minutes: number | undefined): string => {
+    if (minutes === undefined || minutes <= 0) {
+        return '0 minutes';
+    }
+
+    // Round up to the nearest minute
+    const roundedMinutes = Math.ceil(minutes);
+
+    // If less than 60 minutes, return in minutes
+    if (roundedMinutes < 60) {
+        return `${roundedMinutes} minute${roundedMinutes !== 1 ? 's' : ''}`;
+    }
+
+    // Convert to hours
+    const hours = Math.floor(roundedMinutes / 60);
+    const remainingMinutes = roundedMinutes % 60;
+
+    // If less than 24 hours, return in hours (and minutes if any)
+    if (hours < 24) {
+        if (remainingMinutes > 0) {
+            return `${hours} hour${hours !== 1 ? 's' : ''} ${remainingMinutes} minute${remainingMinutes !== 1 ? 's' : ''}`;
+        }
+        return `${hours} hour${hours !== 1 ? 's' : ''}`;
+    }
+
+    // Convert to days
+    const days = Math.floor(hours / 24);
+    const remainingHours = hours % 24;
+
+    if (remainingHours > 0) {
+        return `${days} day${days !== 1 ? 's' : ''} ${remainingHours} hour${remainingHours !== 1 ? 's' : ''}`;
+    }
+
+    return `${days} day${days !== 1 ? 's' : ''}`;
 };
 
 interface Device {
@@ -136,13 +175,28 @@ interface Alert {
     triggered_at: string;
 }
 
+interface LocationFolder {
+    id: number;
+    name: string;
+    branch_id: number;
+    description?: string | null;
+    branch?: {
+        id: number;
+        name: string;
+    };
+    created_at: string;
+}
+
 interface Location {
     id: number;
     branch_id: number;
+    location_folder_id?: number | null;
     name: string;
+    main_block?: string | null;
     description?: string;
     latitude: number;
     longitude: number;
+    location_folder?: LocationFolder | null;
     created_at: string;
 }
 
@@ -180,7 +234,7 @@ interface Model {
     description?: string;
 }
 
-type CRUDEntity = 'branches' | 'devices' | 'alerts' | 'locations' | 'users' | 'brands' | 'models' | 'history';
+type CRUDEntity = 'branches' | 'devices' | 'alerts' | 'locations' | 'location-folders' | 'users' | 'brands' | 'models' | 'history';
 
 interface ActivityLog {
     id: number;
@@ -231,6 +285,7 @@ export default function Configuration() {
     const [devices, setDevices] = useState<Device[]>([]);
     const [alerts, setAlerts] = useState<Alert[]>([]);
     const [locations, setLocations] = useState<Location[]>([]);
+    const [locationFolders, setLocationFolders] = useState<LocationFolder[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [users, setUsers] = useState<UserData[]>([]);
     const [brands, setBrands] = useState<Brand[]>([]);
@@ -246,8 +301,73 @@ export default function Configuration() {
     
     // Selection state for bulk operations
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
+    const [modalEntity, setModalEntity] = useState<CRUDEntity>('devices');
+    const [locationView, setLocationView] = useState<'folders' | 'locations'>('folders');
+    const locationManagementTitle = locationView === 'folders' ? 'Manage Folders' : 'Manage Locations';
+    const locationManagementDescription = locationView === 'folders'
+        ? 'Organize related locations into easily collapsible groups.'
+        : 'Assign each location to a folder for the hierarchical grid view.';
+    const capitalizedEntity = selectedEntity.charAt(0).toUpperCase() + selectedEntity.slice(1);
+    const toolbarTitle = selectedEntity === 'locations'
+        ? locationManagementTitle
+        : `Manage ${capitalizedEntity}`;
+    const toolbarSubtitle = selectedEntity === 'locations'
+        ? locationManagementDescription
+        : `Create, edit, and manage your ${selectedEntity}`;
+    const locationToggleControl = (
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900/70 sm:flex-row sm:justify-between lg:gap-4 lg:text-left">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Location Management View
+            </p>
+            <div className="inline-flex rounded-lg bg-slate-100 p-1 shadow-inner dark:bg-slate-800/70">
+                {[
+                    { key: 'folders', label: 'Folders' },
+                    { key: 'locations', label: 'Locations' },
+                ].map((tab) => (
+                    <button
+                        key={tab.key}
+                        type="button"
+                        onClick={() => setLocationView(tab.key as 'folders' | 'locations')}
+                        className={`px-5 py-1.5 text-sm font-semibold rounded-lg transition-all ${
+                            locationView === tab.key
+                                ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow'
+                                : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white'
+                        }`}
+                    >
+                        {tab.label}
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+
+    const formatEntitySingular = useCallback((entity: CRUDEntity) => {
+        switch (entity) {
+            case 'devices': return 'Device';
+            case 'alerts': return 'Alert';
+            case 'locations': return 'Location';
+            case 'location-folders': return 'Location Folder';
+            case 'users': return 'User';
+            case 'brands': return 'Brand';
+            case 'models': return 'Model';
+            case 'history': return 'History Entry';
+            case 'branches': return 'Branch';
+            default:
+                return typeof entity === 'string' ? entity.slice(0, -1) : 'Item';
+        }
+    }, []);
     
     const [isDeleting, setIsDeleting] = useState(false);
+    const addButtonLabel = selectedEntity === 'locations' && locationView === 'folders' ? 'Add Folder' : 'Add New';
+    const resolveEntityForAction = useCallback((entityOverride?: CRUDEntity) => {
+        if (entityOverride) {
+            return entityOverride;
+        }
+        if (selectedEntity === 'locations' && locationView === 'folders') {
+            return 'location-folders';
+        }
+        return selectedEntity;
+    }, [selectedEntity, locationView]);
     
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
@@ -260,6 +380,8 @@ export default function Configuration() {
     const [debouncedDeviceSearchTerm, setDebouncedDeviceSearchTerm] = useState('');
     const deviceSearchInputRef = useRef<HTMLInputElement>(null);
     const wasSearchFocusedRef = useRef(false);
+    
+    // Location folder expansion state
     const [deviceStatusFilter, setDeviceStatusFilter] = useState<string>('all');
     const [deviceCategoryFilter, setDeviceCategoryFilter] = useState<string>('all');
     const [deviceActiveFilter, setDeviceActiveFilter] = useState<string>('all'); // all, active, inactive
@@ -303,7 +425,7 @@ export default function Configuration() {
 
         return () => clearTimeout(timer);
     }, [deviceSearchTerm]);
-
+    
     // Fetch data when device filters or sorting change (for backend filtering/sorting)
     useEffect(() => {
         if (selectedEntity === 'devices') {
@@ -322,6 +444,12 @@ export default function Configuration() {
         }
     }, [isLoading, selectedEntity]);
 
+useEffect(() => {
+    if (selectedEntity !== 'locations') {
+        setLocationView('folders');
+    }
+}, [selectedEntity]);
+
     // Auto-refresh data every 30 seconds
     useEffect(() => {
         const interval = setInterval(() => {
@@ -331,6 +459,27 @@ export default function Configuration() {
         return () => clearInterval(interval);
     }, [selectedEntity, currentBranch?.id]);
 
+    const fetchLocationFolders = useCallback(async () => {
+        try {
+            const response = await fetch('/api/location-folders', {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' },
+            });
+            if (response.status === 401) {
+                console.warn('Not authorized to fetch location folders. Please ensure you are logged in.');
+                return;
+            }
+            if (response.ok) {
+                const data = await response.json();
+                setLocationFolders(data);
+            } else {
+                console.error('Failed to fetch location folders:', await response.text());
+            }
+        } catch (error) {
+            console.error('Error fetching location folders:', error);
+        }
+    }, []);
+
     const fetchData = async () => {
         setIsLoading(true);
         try {
@@ -339,6 +488,7 @@ export default function Configuration() {
                 devices: '/api/devices',
                 alerts: '/api/alerts',
                 locations: '/api/locations',
+                'location-folders': '/api/location-folders',
                 users: '/api/users',
                 brands: '/api/brands',
                 models: '/api/models',
@@ -354,6 +504,7 @@ export default function Configuration() {
             // Add branch filter and pagination for devices, alerts, locations, and history
             const params = new URLSearchParams();
             
+            // Filter by branch for devices, alerts, locations, and history
             if (currentBranch?.id && ['devices', 'alerts', 'locations', 'history'].includes(selectedEntity)) {
                 // Only add branch_id if it's not 'all' (check as string since it can be 'all' or number)
                 const branchId = String(currentBranch.id);
@@ -454,11 +605,30 @@ export default function Configuration() {
                         setActivityHistory(data);
                         break;
                 }
+
+                if (selectedEntity === 'locations' || selectedEntity === 'location-folders') {
+                    await fetchLocationFolders();
+                }
             } else {
-                console.error('Failed to fetch:', response.statusText);
+                console.error('Failed to fetch:', response.status, response.statusText);
+                // Try to parse error response
+                try {
+                    const errorData = await response.json();
+                    console.error('Error response:', errorData);
+                } catch (e) {
+                    console.error('Could not parse error response');
+                }
+                // Clear data on error to show empty state
+                if (selectedEntity === 'devices') {
+                    setDevices([]);
+                }
             }
         } catch (error) {
             console.error('Error fetching data:', error);
+            // Clear data on error to show empty state
+            if (selectedEntity === 'devices') {
+                setDevices([]);
+            }
         } finally {
             setIsLoading(false);
         }
@@ -491,21 +661,27 @@ export default function Configuration() {
     };
 
     // CRUD operations
-    const handleCreate = () => {
+    const handleCreate = (entityOverride?: CRUDEntity) => {
+        const effectiveEntity = resolveEntityForAction(entityOverride);
         setModalMode('create');
         setSelectedItem(null);
+        setModalEntity(effectiveEntity);
         setShowModal(true);
     };
 
-    const handleEdit = (item: Device | Alert | Location | Branch | UserData | Brand | Model) => {
+    const handleEdit = (item: any, entityOverride?: CRUDEntity) => {
+        const effectiveEntity = resolveEntityForAction(entityOverride);
         setModalMode('edit');
         setSelectedItem(item);
+        setModalEntity(effectiveEntity);
         setShowModal(true);
     };
 
-    const handleDelete = (item: Device | Alert | Location | Branch | UserData | Brand | Model) => {
+    const handleDelete = (item: any, entityOverride?: CRUDEntity) => {
+        const effectiveEntity = resolveEntityForAction(entityOverride);
         setModalMode('delete');
         setSelectedItem(item);
+        setModalEntity(effectiveEntity);
         setShowModal(true);
     };
 
@@ -538,6 +714,178 @@ export default function Configuration() {
         setShowViewModal(true);
     };
 
+    // Excel Export handler
+    const handleExportCsv = async () => {
+        try {
+            const params = new URLSearchParams();
+            
+            if (currentBranch?.id) {
+                params.append('branch_id', currentBranch.id.toString());
+            }
+            
+            if (deviceCategoryFilter !== 'all') {
+                params.append('category', deviceCategoryFilter);
+            }
+            
+            if (deviceStatusFilter !== 'all') {
+                params.append('status', deviceStatusFilter);
+            }
+            
+            const url = `/api/devices/export/csv${params.toString() ? '?' + params.toString() : ''}`;
+            
+            // Fetch the Excel file
+            const response = await fetch(url, {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/vnd.ms-excel' },
+            });
+            
+            if (response.ok) {
+                const blob = await response.blob();
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `devices_export_${new Date().toISOString().split('T')[0]}.xls`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(link.href);
+            } else {
+                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                console.error('Export failed:', response.statusText, errorData);
+                alert(`Failed to export devices: ${errorData.error || response.statusText}`);
+            }
+        } catch (error) {
+            console.error('Error exporting Excel:', error);
+            alert('Failed to export devices. Please ensure PhpSpreadsheet is installed.');
+        }
+    };
+
+    // CSV Import handler
+    // Download CSV template handler
+    const handleDownloadTemplate = async () => {
+        try {
+            const response = await fetch('/api/devices/import/csv/template', {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'text/csv' },
+            });
+            
+            if (response.ok) {
+                const blob = await response.blob();
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `device_import_template_${new Date().toISOString().split('T')[0]}.csv`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(link.href);
+                return true;
+            } else {
+                alert('Failed to download template');
+                return false;
+            }
+        } catch (error) {
+            console.error('Error downloading template:', error);
+            alert('Failed to download template');
+            return false;
+        }
+    };
+
+    // File input ref for CSV import
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Trigger file input for CSV import
+    const handleImportCsvClick = async () => {
+        // Ask if user wants to download template first
+        const wantTemplate = confirm(
+            'Do you want to download the CSV template first?\n\n' +
+            'Click OK to download template\n' +
+            'Click Cancel to proceed with file selection'
+        );
+        
+        if (wantTemplate) {
+            await handleDownloadTemplate();
+            // Ask if they want to continue with import after downloading
+            const continueImport = confirm(
+                'Template downloaded!\n\n' +
+                'Do you want to import a CSV file now?'
+            );
+            if (continueImport && fileInputRef.current) {
+                fileInputRef.current.click();
+            }
+        } else {
+            // Proceed directly to file selection
+            if (fileInputRef.current) {
+                fileInputRef.current.click();
+            }
+        }
+    };
+
+    const handleImportCsv = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        
+        // Validate file type
+        if (!file.name.endsWith('.csv') && !file.name.endsWith('.txt')) {
+            alert('Please select a CSV file (.csv or .txt)');
+            return;
+        }
+        
+        // Confirm import
+        const updateExisting = confirm(
+            'Import devices from CSV?\n\n' +
+            'Click OK to update existing devices (by IP address or ID)\n' +
+            'Click Cancel to skip existing devices'
+        );
+        
+        try {
+            setIsLoading(true);
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('branch_id', currentBranch?.id?.toString() || '');
+            formData.append('update_existing', updateExisting ? '1' : '0');
+            
+            const csrfToken = await getCsrfToken();
+            
+            const response = await fetch('/api/devices/import/csv', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                credentials: 'same-origin',
+                body: formData,
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                
+                // Show success message with details
+                const message = `Import completed!\n\n` +
+                    `✅ Imported: ${result.results.imported}\n` +
+                    `🔄 Updated: ${result.results.updated}\n` +
+                    `⏭️ Skipped: ${result.results.skipped}` +
+                    (result.results.errors.length > 0 
+                        ? `\n\n⚠️ Errors:\n${result.results.errors.slice(0, 5).join('\n')}${result.results.errors.length > 5 ? `\n... and ${result.results.errors.length - 5} more` : ''}`
+                        : '');
+                
+                alert(message);
+                
+                // Refresh device list
+                await fetchData();
+            } else {
+                const error = await response.json();
+                alert(`Import failed: ${error.error || 'Unknown error'}`);
+            }
+        } catch (error) {
+            console.error('Error importing CSV:', error);
+            alert('Failed to import devices. Please check the file format and try again.');
+        } finally {
+            setIsLoading(false);
+            // Reset file input
+            event.target.value = '';
+        }
+    };
+
     const handleSave = async () => {
         setIsLoading(true);
         try {
@@ -546,21 +894,27 @@ export default function Configuration() {
                 devices: '/api/devices',
                 alerts: '/api/alerts',
                 locations: '/api/locations',
+                'location-folders': '/api/location-folders',
                 users: '/api/users',
                 brands: '/api/brands',
                 models: '/api/models',
             };
 
-            const baseUrl = entityMap[selectedEntity];
+            const baseUrl = entityMap[modalEntity];
             if (!baseUrl) {
-                console.error('No API endpoint for entity:', selectedEntity);
+                console.error('No API endpoint for entity:', modalEntity);
                 return;
             }
             const url = modalMode === 'create' 
                 ? baseUrl 
                 : `${baseUrl}/${selectedItem?.id}`;
             
-            const form = document.querySelector('form') as HTMLFormElement;
+            const form = document.getElementById('entity-modal-form') as HTMLFormElement | null;
+            if (!form) {
+                console.error('Entity form not found');
+                setIsLoading(false);
+                return;
+            }
             const formData = new FormData(form);
             const data: Record<string, any> = {};
             
@@ -569,6 +923,10 @@ export default function Configuration() {
                 const key = rawKey.endsWith('[]') ? rawKey.slice(0, -2) : rawKey;
                 // Skip empty values for optional foreign keys
                 if (key === 'location_id' && value === '') return;
+                if (key === 'location_folder_id' && value === '') {
+                    data[key] = null; // Set to null instead of skipping
+                    return;
+                }
                 if (key === 'hardware_detail_id' && value === '') return;
 
                 // Collect array fields (e.g., managed_by_ids[])
@@ -589,7 +947,7 @@ export default function Configuration() {
 
             // Normalize specific types
             // For devices, use managed_by_ids_json if available (from state), otherwise fall back to form inputs
-            if (selectedEntity === 'devices' && data.managed_by_ids_json) {
+            if (modalEntity === 'devices' && data.managed_by_ids_json) {
                 try {
                     const parsedIds = JSON.parse(data.managed_by_ids_json);
                     if (Array.isArray(parsedIds)) {
@@ -605,7 +963,7 @@ export default function Configuration() {
             }
             
             // Ensure managed_by_ids is always an array for devices (even if empty)
-            if (selectedEntity === 'devices' && !data.managed_by_ids) {
+            if (modalEntity === 'devices' && !data.managed_by_ids) {
                 data.managed_by_ids = [];
             }
             
@@ -650,8 +1008,24 @@ export default function Configuration() {
                 // Refresh data first to update the models list
                 await fetchData();
                 
+                // For location-folders, also refresh folders list
+                if (modalEntity === 'location-folders') {
+                    try {
+                    const foldersResponse = await fetch('/api/location-folders', {
+                            credentials: 'same-origin',
+                            headers: { 'Accept': 'application/json' },
+                        });
+                        if (foldersResponse.ok) {
+                            const foldersData = await foldersResponse.json();
+                            setLocationFolders(foldersData);
+                        }
+                    } catch (error) {
+                        console.error('Error refreshing location folders:', error);
+                    }
+                }
+                
                 // For models, update the models array with the response data to ensure it's in the list
-                if (selectedEntity === 'models' && responseData && responseData.id) {
+                if (modalEntity === 'models' && responseData && responseData.id) {
                     setModels(prevModels => {
                         const updated = prevModels.map((m: Model) => 
                             m.id === responseData.id ? responseData : m
@@ -688,14 +1062,15 @@ export default function Configuration() {
                 devices: '/api/devices',
                 alerts: '/api/alerts',
                 locations: '/api/locations',
+                'location-folders': '/api/location-folders',
                 users: '/api/users',
                 brands: '/api/brands',
                 models: '/api/models',
             };
 
-            const baseUrl = entityMap[selectedEntity];
+            const baseUrl = entityMap[modalEntity];
             if (!baseUrl) {
-                console.error('No API endpoint for entity:', selectedEntity);
+                console.error('No API endpoint for entity:', modalEntity);
                 return;
             }
             const url = `${baseUrl}/${selectedItem?.id}`;
@@ -714,6 +1089,7 @@ export default function Configuration() {
             if (response.ok) {
                 await fetchData();
                 setShowModal(false);
+                setSelectedItem(null);
             } else {
                 const errorData = await response.json();
                 alert(errorData.error || 'Failed to delete');
@@ -1030,25 +1406,30 @@ export default function Configuration() {
                         </button>
                     ))}
                 </div>
+                {selectedEntity === 'locations' && (
+                    <div className="mt-4">
+                        {locationToggleControl}
+                    </div>
+                )}
 
                 {/* Content area */}
                 <div className="rounded-2xl border border-slate-200/50 bg-white shadow-lg dark:border-slate-700/50 dark:bg-slate-800">
                     {/* Toolbar */}
-                    <div className="flex items-center justify-between border-b border-slate-200/50 bg-gradient-to-r from-slate-50 to-slate-100 p-6 dark:border-slate-700/50 dark:from-slate-900/50 dark:to-slate-800/50">
+                    <div className="flex flex-col gap-4 border-b border-slate-200/50 bg-gradient-to-r from-slate-50 to-slate-100 p-6 dark:border-slate-700/50 dark:from-slate-900/50 dark:to-slate-800/50 xl:flex-row xl:items-center xl:justify-between">
                         <div className="flex items-center gap-3">
                             <div className="rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 p-3 shadow-lg">
                                 <Server className="size-6 text-white" />
                             </div>
                             <div>
                                 <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-                                    Manage {selectedEntity.charAt(0).toUpperCase() + selectedEntity.slice(1)}
+                                    {toolbarTitle}
                                 </h2>
                                 <p className="text-sm text-slate-600 dark:text-slate-400">
-                                    Create, edit, and manage your {selectedEntity}
+                                    {toolbarSubtitle}
                                 </p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                             <button
                                 onClick={() => fetchData()}
                                 disabled={isLoading}
@@ -1108,12 +1489,39 @@ export default function Configuration() {
                                             Delete Selected ({selectedIds.length})
                                         </button>
                                     )}
+                                    {selectedEntity === 'devices' && (
+                                        <>
+                                            <button
+                                                onClick={handleExportCsv}
+                                                className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-500 to-green-600 px-4 py-2 text-sm font-medium text-white shadow-lg transition-all hover:scale-105"
+                                                title="Export devices to Excel (.xls)"
+                                            >
+                                                <Download className="size-4" />
+                                                Export Excel
+                                            </button>
+                                            <button
+                                                onClick={handleImportCsvClick}
+                                                className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-600 px-4 py-2 text-sm font-medium text-white shadow-lg transition-all hover:scale-105"
+                                                title="Import devices from CSV file"
+                                            >
+                                                <Upload className="size-4" />
+                                                Import CSV
+                                            </button>
+                                            <input
+                                                ref={fileInputRef}
+                                                type="file"
+                                                accept=".csv,.txt"
+                                                onChange={handleImportCsv}
+                                                className="hidden"
+                                            />
+                                        </>
+                                    )}
                                     <button
-                                        onClick={handleCreate}
+                                        onClick={() => handleCreate()}
                                         className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-500 px-4 py-2 text-sm font-medium text-white shadow-lg transition-all hover:scale-105"
                                     >
                                         <Plus className="size-4" />
-                                        Add New
+                                        {addButtonLabel}
                                     </button>
                                 </>
                             )}
@@ -1121,88 +1529,88 @@ export default function Configuration() {
                     </div>
 
                     {/* Device Filters - Outside loading to prevent refresh */}
-                    {selectedEntity === 'devices' && (
-                        <div className="border-b border-slate-200/50 bg-gradient-to-r from-slate-50 to-slate-100 p-4 dark:border-slate-700/50 dark:from-slate-900/50 dark:to-slate-800/50">
-                            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                                {/* Search Bar */}
-                                <div className="relative flex-1">
-                                    <Search className="absolute left-3 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
-                                    <input
+                                {selectedEntity === 'devices' && (
+                                        <div className="border-b border-slate-200/50 bg-gradient-to-r from-slate-50 to-slate-100 p-4 dark:border-slate-700/50 dark:from-slate-900/50 dark:to-slate-800/50">
+                                            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                                                {/* Search Bar */}
+                                                <div className="relative flex-1">
+                                                    <Search className="absolute left-3 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+                                                    <input
                                         ref={deviceSearchInputRef}
-                                        type="text"
-                                        placeholder="Search by name, IP, MAC, barcode, or serial number..."
-                                        value={deviceSearchTerm}
-                                        onChange={(e) => setDeviceSearchTerm(e.target.value)}
-                                        className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm font-medium text-slate-900 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400"
-                                    />
-                                </div>
-                                
-                                {/* Filter Buttons */}
-                                <div className="flex flex-wrap gap-2">
-                                    <select
-                                        value={deviceCategoryFilter}
-                                        onChange={(e) => setDeviceCategoryFilter(e.target.value)}
-                                        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
-                                    >
-                                        <option value="all">All Categories</option>
-                                        <option value="switches">Switches</option>
-                                        <option value="servers">Servers</option>
-                                        <option value="wifi">WiFi</option>
-                                        <option value="tas">TAS</option>
-                                        <option value="cctv">CCTV</option>
-                                    </select>
-                                    
-                                    <select
-                                        value={deviceStatusFilter}
-                                        onChange={(e) => setDeviceStatusFilter(e.target.value)}
-                                        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
-                                    >
-                                        <option value="all">All Status</option>
-                                        <option value="online">Online</option>
-                                        <option value="warning">Warning</option>
-                                        <option value="offline">Offline</option>
-                                        <option value="offline_ack">Acknowledged</option>
-                                    </select>
-                                    
-                                    <select
-                                        value={deviceActiveFilter}
-                                        onChange={(e) => setDeviceActiveFilter(e.target.value)}
-                                        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
-                                    >
-                                        <option value="all">All Devices</option>
-                                        <option value="active">Active Only</option>
-                                        <option value="inactive">Inactive Only</option>
-                                    </select>
-                                    
-                                    {/* Clear Filters Button */}
-                                    {(deviceSearchTerm || deviceStatusFilter !== 'all' || deviceCategoryFilter !== 'all' || deviceActiveFilter !== 'all') && (
-                                        <button
-                                            onClick={() => {
-                                                setDeviceSearchTerm('');
+                                                        type="text"
+                                                        placeholder="Search by name, IP, MAC, barcode, or serial number..."
+                                                        value={deviceSearchTerm}
+                                                        onChange={(e) => setDeviceSearchTerm(e.target.value)}
+                                                        className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm font-medium text-slate-900 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400"
+                                                    />
+                                                </div>
+                                                
+                                                {/* Filter Buttons */}
+                                                <div className="flex flex-wrap gap-2">
+                                                    <select
+                                                        value={deviceCategoryFilter}
+                                                        onChange={(e) => setDeviceCategoryFilter(e.target.value)}
+                                                        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+                                                    >
+                                                        <option value="all">All Categories</option>
+                                                        <option value="switches">Switches</option>
+                                                        <option value="servers">Servers</option>
+                                                        <option value="wifi">WiFi</option>
+                                                        <option value="tas">TAS</option>
+                                                        <option value="cctv">CCTV</option>
+                                                    </select>
+                                                    
+                                                    <select
+                                                        value={deviceStatusFilter}
+                                                        onChange={(e) => setDeviceStatusFilter(e.target.value)}
+                                                        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+                                                    >
+                                                        <option value="all">All Status</option>
+                                                        <option value="online">Online</option>
+                                                        <option value="warning">Warning</option>
+                                                        <option value="offline">Offline</option>
+                                                        <option value="offline_ack">Acknowledged</option>
+                                                    </select>
+                                                    
+                                                    <select
+                                                        value={deviceActiveFilter}
+                                                        onChange={(e) => setDeviceActiveFilter(e.target.value)}
+                                                        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+                                                    >
+                                                        <option value="all">All Devices</option>
+                                                        <option value="active">Active Only</option>
+                                                        <option value="inactive">Inactive Only</option>
+                                                    </select>
+                                                    
+                                                    {/* Clear Filters Button */}
+                                                    {(deviceSearchTerm || deviceStatusFilter !== 'all' || deviceCategoryFilter !== 'all' || deviceActiveFilter !== 'all') && (
+                                                        <button
+                                                            onClick={() => {
+                                                                setDeviceSearchTerm('');
                                                 setDebouncedDeviceSearchTerm('');
-                                                setDeviceStatusFilter('all');
-                                                setDeviceCategoryFilter('all');
-                                                setDeviceActiveFilter('all');
-                                            }}
-                                            className="flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 shadow-sm transition-all hover:bg-red-100 dark:border-red-700 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
-                                        >
-                                            <X className="size-4" />
-                                            Clear Filters
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                            
-                            {/* Results Count */}
-                            <div className="mt-3 text-xs font-medium text-slate-600 dark:text-slate-400">
-                                Showing {devices.length} device(s) on this page
-                                {totalItems > 0 && (
-                                    <span className="ml-2 text-blue-600 dark:text-blue-400">
-                                        (Total: {totalItems} device(s) matching filters across all pages)
-                                    </span>
-                                )}
-                            </div>
-                        </div>
+                                                                setDeviceStatusFilter('all');
+                                                                setDeviceCategoryFilter('all');
+                                                                setDeviceActiveFilter('all');
+                                                            }}
+                                                            className="flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 shadow-sm transition-all hover:bg-red-100 dark:border-red-700 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
+                                                        >
+                                                            <X className="size-4" />
+                                                            Clear Filters
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Results Count */}
+                                            <div className="mt-3 text-xs font-medium text-slate-600 dark:text-slate-400">
+                                                Showing {devices.length} device(s) on this page
+                                                {totalItems > 0 && (
+                                                    <span className="ml-2 text-blue-600 dark:text-blue-400">
+                                                        (Total: {totalItems} device(s) matching filters across all pages)
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
                     )}
 
                     {/* Table */}
@@ -1399,49 +1807,59 @@ export default function Configuration() {
                                     </>
                                 )}
                                 {selectedEntity === 'locations' && (
-                                    <>
-                                        {/* Location Filters */}
-                                        <div className="border-b border-slate-200/50 bg-gradient-to-r from-slate-50 to-slate-100 p-4 dark:border-slate-700/50 dark:from-slate-900/50 dark:to-slate-800/50">
-                                            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                                                <div className="relative flex-1">
-                                                    <Search className="absolute left-3 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Search by name or description..."
-                                                        value={locationSearchTerm}
-                                                        onChange={(e) => setLocationSearchTerm(e.target.value)}
-                                                        className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm font-medium text-slate-900 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400"
-                                                    />
+                                    <div className="space-y-6">
+                                        {locationView === 'folders' ? (
+                                            <div className="rounded-2xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900/60">
+                                                <LocationFoldersTable
+                                                    folders={locationFolders}
+                                                    onEdit={(folder) => handleEdit(folder, 'location-folders')}
+                                                    onDelete={(folder) => handleDelete(folder, 'location-folders')}
+                                                />
+                                            </div>
+                                        ) : (
+                                            <div className="rounded-2xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900/60">
+                                                <div className="flex flex-col gap-3 border-b border-slate-100 px-4 py-4 dark:border-slate-800 lg:flex-row lg:items-center lg:justify-between">
+                                                    <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
+                                                        <div className="relative w-full sm:max-w-sm">
+                                                            <Search className="absolute left-3 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Search by name or description..."
+                                                                value={locationSearchTerm}
+                                                                onChange={(e) => setLocationSearchTerm(e.target.value)}
+                                                                className="w-full rounded-full border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm font-medium text-slate-900 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:focus:border-blue-400"
+                                                            />
+                                                        </div>
+                                                        {locationSearchTerm && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setLocationSearchTerm('')}
+                                                                className="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300"
+                                                            >
+                                                                <X className="size-4" />
+                                                                Clear Search
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                
-                                                {locationSearchTerm && (
-                                                    <button
-                                                        onClick={() => setLocationSearchTerm('')}
-                                                        className="flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 shadow-sm transition-all hover:bg-red-100 dark:border-red-700 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
-                                                    >
-                                                        <X className="size-4" />
-                                                        Clear Search
-                                                    </button>
-                                                )}
+                                                <div className="border-b border-slate-100 px-4 py-2.5 text-xs font-medium text-slate-600 dark:border-slate-800 dark:text-slate-400">
+                                                    Showing {filteredLocations.length} of {locations.length} location(s)
+                                                    {filteredLocations.length !== locations.length && (
+                                                        <span className="ml-2 text-blue-600 dark:text-blue-400">
+                                                            ({locations.length - filteredLocations.length} hidden by filters)
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <LocationsTable
+                                                    locations={filteredLocations}
+                                                    onEdit={handleEdit}
+                                                    onDelete={handleDelete}
+                                                    selectedIds={selectedIds}
+                                                    onToggleSelection={toggleSelection}
+                                                />
                                             </div>
-                                            
-                                            <div className="mt-3 text-xs font-medium text-slate-600 dark:text-slate-400">
-                                                Showing {filteredLocations.length} of {locations.length} location(s)
-                                                {filteredLocations.length !== locations.length && (
-                                                    <span className="ml-2 text-blue-600 dark:text-blue-400">
-                                                        ({locations.length - filteredLocations.length} hidden by filters)
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <LocationsTable
-                                            locations={filteredLocations}
-                                            onEdit={handleEdit}
-                                            onDelete={handleDelete}
-                                            selectedIds={selectedIds}
-                                            onToggleSelection={toggleSelection}
-                                        />
-                                    </>
+                                        )}
+                                    </div>
                                 )}
                                 {selectedEntity === 'users' && (
                                     <>
@@ -1594,9 +2012,9 @@ export default function Configuration() {
                         {/* Modal Header */}
                         <div className="flex items-center justify-between border-b border-slate-200 p-6 dark:border-slate-700">
                             <h3 className="text-xl font-semibold text-slate-900 dark:text-white">
-                                {modalMode === 'create' && `Create New ${selectedEntity.slice(0, -1)}`}
-                                {modalMode === 'edit' && `Edit ${selectedEntity.slice(0, -1)}`}
-                                {modalMode === 'delete' && `Delete ${selectedEntity.slice(0, -1)}`}
+                                {modalMode === 'create' && `Create New ${formatEntitySingular(modalEntity)}`}
+                                {modalMode === 'edit' && `Edit ${formatEntitySingular(modalEntity)}`}
+                                {modalMode === 'delete' && `Delete ${formatEntitySingular(modalEntity)}`}
                                 {modalMode === 'acknowledge' && 'Acknowledge Offline Device'}
                                 {modalMode === 'bulk_acknowledge' && `Bulk Acknowledge Offline (${selectedIds.length} devices)`}
                                 {modalMode === 'bulk_edit' && `Bulk Edit Devices (${selectedIds.length} devices)`}
@@ -1639,10 +2057,11 @@ export default function Configuration() {
                                 <BulkEditDevicesForm deviceIds={selectedIds} onSuccess={() => { setShowModal(false); setSelectedIds([]); fetchData(); }} />
                             ) : (
                                 <EntityForm
-                                    entity={selectedEntity}
+                                    entity={modalEntity}
                                     mode={modalMode}
                                     data={selectedItem}
                                     users={users}
+                                    locationFolders={locationFolders}
                                 />
                             )}
                         </div>
@@ -2242,7 +2661,7 @@ function DevicesTable({
                         </th>
                         <th
                             onClick={() => onSort('name')}
-                            className="cursor-pointer px-3 sm:px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
+                            className="cursor-pointer px-3 sm:px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors max-w-[150px]"
                         >
                         <div className="flex items-center gap-1">
                             Name
@@ -2293,7 +2712,6 @@ function DevicesTable({
                         </div>
                     </th>
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Active</th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Branch</th>
                     <th className="px-3 sm:px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Actions</th>
                 </tr>
             </thead>
@@ -2313,8 +2731,10 @@ function DevicesTable({
                                 className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
                             />
                         </td>
-                        <td className="px-3 sm:px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
-                            {device.name}
+                        <td className="px-3 sm:px-6 py-4 text-sm font-medium text-slate-900 dark:text-white max-w-[150px]">
+                            <div className="truncate" title={device.name}>
+                                {device.name}
+                            </div>
                         </td>
                         <td className="px-3 sm:px-6 py-4 text-sm text-slate-600 dark:text-slate-400 font-mono">
                             {device.ip_address}
@@ -2352,12 +2772,6 @@ function DevicesTable({
                                     </>
                                 )}
                             </span>
-                        </td>
-                        <td className="px-3 sm:px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                            <div className="flex items-center gap-2">
-                                <Building2 className="size-3.5 text-slate-400" />
-                                <span>{device.branch?.name || '-'}</span>
-                            </div>
                         </td>
                         <td className="px-6 py-4 text-right">
                             <div className="flex justify-end gap-2">
@@ -2553,6 +2967,81 @@ function AlertsTable({
     );
 }
 
+// Location Folders Table
+function LocationFoldersTable({
+    folders,
+    onEdit,
+    onDelete,
+}: {
+    folders: LocationFolder[];
+    onEdit: (folder: LocationFolder) => void;
+    onDelete: (folder: LocationFolder) => void;
+}) {
+    if (folders.length === 0) {
+        return (
+            <div className="p-10 text-center text-sm text-slate-500 dark:text-slate-400">
+                No folders yet. Use the "Add New" button above to create one.
+            </div>
+        );
+    }
+
+    return (
+        <div className="overflow-x-auto">
+            <table className="w-full min-w-[700px]">
+                <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
+                    <tr>
+                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                            Folder Name
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                            Branch
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                            Description
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 w-32">
+                            Actions
+                        </th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
+                    {folders.map(folder => (
+                        <tr key={folder.id} className="transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                            <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
+                                {folder.name}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                                {folder.branch?.name || folder.branch_id}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                                {folder.description || '—'}
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                                <div className="flex justify-end gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => onEdit(folder)}
+                                        className="rounded-lg p-2 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30"
+                                    >
+                                        <Edit className="size-4" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => onDelete(folder)}
+                                        className="rounded-lg p-2 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30"
+                                    >
+                                        <Trash2 className="size-4" />
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+}
+
 // Locations Table Component
 function LocationsTable({
     locations,
@@ -2590,11 +3079,11 @@ function LocationsTable({
                                 checked={selectedIds.length === locations.length && locations.length > 0}
                                 onChange={() => {
                                     if (selectedIds.length === locations.length) {
-                                        locations.forEach(l => onToggleSelection(l.id));
+                                        locations.forEach(loc => onToggleSelection(loc.id));
                                     } else {
-                                        locations.forEach(l => {
-                                            if (!selectedIds.includes(l.id)) {
-                                                onToggleSelection(l.id);
+                                        locations.forEach(loc => {
+                                            if (!selectedIds.includes(loc.id)) {
+                                                onToggleSelection(loc.id);
                                             }
                                         });
                                     }
@@ -2602,67 +3091,75 @@ function LocationsTable({
                                 className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
                             />
                         </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                        Location Name
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                        Branch ID
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                        Description
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                        Actions
-                    </th>
-                </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
-                {locations.map((location) => (
-                    <tr key={location.id} className="transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                        <td className="px-3 sm:px-6 py-4">
-                            <input
-                                type="checkbox"
-                                checked={selectedIds.includes(location.id)}
-                                onChange={() => onToggleSelection(location.id)}
-                                className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
-                            />
-                        </td>
-                        <td className="px-3 sm:px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
-                            {location.name}
-                        </td>
-                        <td className="px-3 sm:px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                            {location.branch_id}
-                        </td>
-                        <td className="px-3 sm:px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                            {location.description || '-'}
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                            <div className="flex justify-end gap-2">
-                                <a
-                                    href={`/monitor/plan?location_id=${location.id}&mode=config`}
-                                    className="rounded-lg p-2 text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/30"
-                                    title="Open Floor Plan (Edit)"
-                                >
-                                    <MapPin className="size-4" />
-                                </a>
-                                <button
-                                    onClick={() => onEdit(location)}
-                                    className="rounded-lg p-2 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30"
-                                >
-                                    <Edit className="size-4" />
-                                </button>
-                                <button
-                                    onClick={() => onDelete(location)}
-                                    className="rounded-lg p-2 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30"
-                                >
-                                    <Trash2 className="size-4" />
-                                </button>
-                            </div>
-                        </td>
+                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                            Location Name
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                            Branch
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                            Folder
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                            Description
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                            Actions
+                        </th>
                     </tr>
-                ))}
-            </tbody>
-        </table>
+                </thead>
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
+                    {locations.map((location) => {
+                        const folderName = location.location_folder?.name || location.main_block || 'Ungrouped';
+                        return (
+                        <tr key={location.id} className="transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                            <td className="px-3 sm:px-6 py-4">
+                                <input
+                                    type="checkbox"
+                                    checked={selectedIds.includes(location.id)}
+                                    onChange={() => onToggleSelection(location.id)}
+                                    className="size-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                                />
+                            </td>
+                            <td className="px-3 sm:px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
+                                {location.name}
+                            </td>
+                            <td className="px-3 sm:px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                                {location.branch_id}
+                            </td>
+                            <td className="px-3 sm:px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                                {folderName}
+                            </td>
+                            <td className="px-3 sm:px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                                {location.description || '-'}
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                                <div className="flex justify-end gap-2">
+                                    <a
+                                        href={`/monitor/plan?location_id=${location.id}&mode=config`}
+                                        className="rounded-lg p-2 text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/30"
+                                        title="Open Floor Plan (Edit)"
+                                    >
+                                        <MapPin className="size-4" />
+                                    </a>
+                                    <button
+                                        onClick={() => onEdit(location)}
+                                        className="rounded-lg p-2 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30"
+                                    >
+                                        <Edit className="size-4" />
+                                    </button>
+                                    <button
+                                        onClick={() => onDelete(location)}
+                                        className="rounded-lg p-2 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30"
+                                    >
+                                        <Trash2 className="size-4" />
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    )})}
+                </tbody>
+            </table>
         </div>
     );
 }
@@ -3492,7 +3989,7 @@ function AcknowledgeOfflineForm({ device }: { device: Device }) {
                         </p>
                         {device.offline_duration_minutes !== undefined && device.offline_duration_minutes > 0 && (
                             <p className="mt-1 text-sm text-orange-700 dark:text-orange-400">
-                                Offline for: {device.offline_duration_minutes} minute{device.offline_duration_minutes !== 1 ? 's' : ''}
+                                Offline for: {formatOfflineDuration(device.offline_duration_minutes)}
                             </p>
                         )}
                     </div>
@@ -3703,13 +4200,16 @@ function EntityForm({
     mode,
     data,
     users,
+    locationFolders,
 }: {
     entity: CRUDEntity;
     mode: 'create' | 'edit';
     data: Device | Alert | Location | Branch | UserData | Brand | Model | null;
     users: UserData[];
+    locationFolders: LocationFolder[];
 }) {
     const { currentBranch } = usePage<PageProps>().props;
+    const formId = 'entity-modal-form';
     
     const [latitude, setLatitude] = useState<string>(() => {
         if (entity === 'locations' && data) {
@@ -3793,8 +4293,8 @@ function EntityForm({
     const [models, setModels] = useState<Model[]>([]);
 
     useEffect(() => {
-        // Fetch branches for device/location forms
-        if (entity === 'devices' || entity === 'locations') {
+        // Fetch branches for forms that need them
+        if (entity === 'devices' || entity === 'locations' || entity === 'location-folders') {
             fetch('/api/branches', {
                 credentials: 'same-origin',
                 headers: { 'Accept': 'application/json' },
@@ -3847,8 +4347,10 @@ function EntityForm({
 
     if (entity === 'branches') {
         const branchData = data as Branch | null;
+        const filteredLocationFolders = locationFolders.filter(folder => !selectedBranchId || folder.branch_id === selectedBranchId);
+
         return (
-            <form className="space-y-6">
+            <form id={formId} className="space-y-6">
                 <div>
                     <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Branch Information</h4>
                     <div className="grid gap-4 sm:grid-cols-2">
@@ -4057,7 +4559,7 @@ function EntityForm({
         }, [selectedBranchId, mode, deviceData?.branch_id]);
 
         return (
-            <form className="space-y-6">
+            <form id={formId} className="space-y-6">
                 {/* Hidden input to track managerIds state */}
                 <input type="hidden" name="managed_by_ids_json" value={JSON.stringify(managerIds.filter(id => id !== null && !Number.isNaN(id)) as number[])} />
                 {/* Basic Information */}
@@ -4110,22 +4612,22 @@ function EntityForm({
                                 {managerIds.map((val, idx) => (
                                     <div key={idx} className="flex items-center gap-2">
                                         <div className="flex-1 min-w-0">
-                                            <select
-                                                name="managed_by_ids[]"
-                                                value={val ?? ''}
-                                                onChange={(e) => updateManagerAt(idx, e.target.value)}
+                                        <select
+                                            name="managed_by_ids[]"
+                                            value={val ?? ''}
+                                            onChange={(e) => updateManagerAt(idx, e.target.value)}
                                                 className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white truncate"
-                                            >
-                                                <option value="">Select user</option>
+                                        >
+                                            <option value="">Select user</option>
                                                 {users && users.length > 0 && users.map((user: UserData) => {
                                                     const displayName = user.name.length > 25 ? `${user.name.substring(0, 25)}...` : user.name;
                                                     return (
                                                         <option key={user.id} value={user.id} title={`${user.name} (${user.role})`}>
                                                             {displayName} ({user.role})
-                                                        </option>
+                                                </option>
                                                     );
                                                 })}
-                                            </select>
+                                        </select>
                                         </div>
                                         <button
                                             type="button"
@@ -4303,7 +4805,7 @@ function EntityForm({
         const alertData = data as Alert | null;
 
         return (
-            <form className="space-y-6">
+            <form id={formId} className="space-y-6">
                 <div>
                     <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Alert Information</h4>
                     <div className="grid gap-4">
@@ -4419,6 +4921,61 @@ function EntityForm({
         );
     }
 
+    if (entity === 'location-folders') {
+        const folderData = data as LocationFolder | null;
+
+        return (
+            <form id={formId} className="space-y-6">
+                <div>
+                    <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Folder Information</h4>
+                    <div className="grid gap-4">
+                        <div>
+                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Folder Name *</label>
+                            <input 
+                                type="text" 
+                                name="name" 
+                                defaultValue={folderData?.name || ''} 
+                                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" 
+                                placeholder="e.g., Blok ABC" 
+                                required 
+                            />
+                        </div>
+                        <div>
+                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Branch *</label>
+                            <select 
+                                name="branch_id" 
+                                defaultValue={
+                                    folderData?.branch_id 
+                                        ? String(folderData.branch_id) 
+                                        : currentBranch?.id 
+                                            ? String(currentBranch.id) 
+                                            : ''
+                                } 
+                                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" 
+                                required
+                            >
+                                <option value="">Select Branch</option>
+                                {branches.map(branch => (
+                                    <option key={branch.id} value={branch.id}>{branch.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Description</label>
+                            <textarea 
+                                name="description" 
+                                defaultValue={folderData?.description || ''} 
+                                rows={3} 
+                                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" 
+                                placeholder="Optional description for this folder"
+                            />
+                        </div>
+                    </div>
+                </div>
+            </form>
+        );
+    }
+
     if (entity === 'locations') {
         const locationData = data as Location | null;
         
@@ -4431,14 +4988,35 @@ function EntityForm({
             }
         }, [locationData, currentBranch, mode]);
 
+        const filteredLocationFolders = (locationFolders ?? []).filter(folder => !selectedBranchId || folder.branch_id === selectedBranchId);
+
         return (
-            <form className="space-y-6">
+            <form id={formId} className="space-y-6">
                 <div>
                     <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Location Information</h4>
                     <div className="grid gap-4">
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Location Name *</label>
                             <input type="text" name="name" defaultValue={locationData?.name || ''} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="e.g., Server Room A, Floor 3 West Wing" required />
+                        </div>
+                        <div>
+                            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Folder</label>
+                            <select 
+                                name="location_folder_id" 
+                                defaultValue={locationData?.location_folder_id ?? ''} 
+                                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                                disabled={!selectedBranchId}
+                            >
+                                <option value="">No Folder (Ungrouped)</option>
+                                {filteredLocationFolders.map(folder => (
+                                    <option key={folder.id} value={folder.id}>
+                                        {folder.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                Assign this location to a folder/main block for hierarchical grouping.
+                            </p>
                         </div>
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Branch *</label>

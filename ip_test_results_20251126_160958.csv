@@ -1,0 +1,7 @@
+﻿Timestamp,IP,Gateway_Ping,Internet_Ping,Gateway_MS,DNS_Flush_Status,10.8.2.201_Ping,10.8.2.201_MS,10.8.2.202_Ping,10.8.2.202_MS,10.8.27.254_Ping,10.8.27.254_MS,10.60.23.254_Ping,10.60.23.254_MS,Notes
+2025-11-26 16:10:14,10.8.24.3,Failed,Failed,N/A,Success,Failed,N/A,Failed,N/A,Failed,N/A,Failed,N/A,
+2025-11-26 16:10:19,10.8.24.4,Failed,Failed,N/A,Success,Failed,N/A,Failed,N/A,Failed,N/A,Failed,N/A,
+2025-11-26 16:10:25,10.8.24.5,Failed,Failed,N/A,Success,Failed,N/A,Failed,N/A,Failed,N/A,Failed,N/A,
+2025-11-26 16:10:30,10.8.24.7,Failed,Failed,N/A,Success,Failed,N/A,Failed,N/A,Failed,N/A,Failed,N/A,
+2025-11-26 16:10:36,10.8.24.8,Failed,Failed,N/A,Success,Failed,N/A,Failed,N/A,Failed,N/A,Failed,N/A,
+2025-11-26 16:10:41,10.8.24.9,Failed,Failed,N/A,Success,Failed,N/A,Failed,N/A,Failed,N/A,Failed,N/A,

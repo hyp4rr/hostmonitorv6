@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\ModelController;
 use App\Http\Controllers\Api\ActivityLogController;
 use App\Http\Controllers\Api\ReportsController;
 use App\Http\Controllers\Api\MonitoringController;
+use App\Http\Controllers\Api\LocationFolderController;
 use Illuminate\Http\Request;
 
 // Config authentication (no CSRF required for these endpoints)
@@ -37,6 +38,7 @@ Route::middleware('api')->group(function () {
     Route::apiResource('devices', DeviceController::class);
     Route::apiResource('alerts', AlertController::class);
     Route::apiResource('locations', LocationController::class);
+    Route::apiResource('location-folders', LocationFolderController::class);
     Route::apiResource('users', UserController::class);
     Route::apiResource('brands', BrandController::class);
     Route::apiResource('models', ModelController::class);
@@ -87,6 +89,9 @@ Route::get('/devices', [App\Http\Controllers\Api\DeviceController::class, 'index
 Route::post('/devices', [App\Http\Controllers\Api\DeviceController::class, 'store']);
 Route::put('/devices/{id}', [App\Http\Controllers\Api\DeviceController::class, 'update']);
 Route::delete('/devices/{id}', [App\Http\Controllers\Api\DeviceController::class, 'destroy']);
+Route::get('/devices/export/csv', [App\Http\Controllers\Api\DeviceController::class, 'exportCsv']);
+Route::get('/devices/import/csv/template', [App\Http\Controllers\Api\DeviceController::class, 'downloadCsvTemplate']);
+Route::post('/devices/import/csv', [App\Http\Controllers\Api\DeviceController::class, 'importCsv']);
 
 // Hardware Model CRUD
 Route::get('/models', [App\Http\Controllers\Api\HardwareModelController::class, 'index']);
@@ -103,6 +108,20 @@ Route::get('/reports/uptime-stats', [ReportsController::class, 'uptimeStats']);
 Route::get('/reports/device-events', [ReportsController::class, 'deviceEvents']);
 Route::get('/reports/category-stats', [ReportsController::class, 'categoryStats']);
 Route::get('/reports/alert-summary', [ReportsController::class, 'alertSummary']);
+Route::get('/reports/sla-report', [ReportsController::class, 'slaReport']);
+Route::get('/reports/generate', [ReportsController::class, 'generate']);
+
+// Report History
+Route::get('/reports/history', [ReportsController::class, 'listReportHistory']);
+Route::get('/reports/history/{id}/download', [ReportsController::class, 'downloadReportHistory']);
+Route::delete('/reports/history/{id}', [ReportsController::class, 'deleteReportHistory']);
+
+// Custom Reports
+Route::get('/reports/custom', [ReportsController::class, 'listCustomReports']);
+Route::post('/reports/custom', [ReportsController::class, 'storeCustomReport']);
+Route::get('/reports/custom/{id}', [ReportsController::class, 'showCustomReport']);
+Route::put('/reports/custom/{id}', [ReportsController::class, 'updateCustomReport']);
+Route::delete('/reports/custom/{id}', [ReportsController::class, 'deleteCustomReport']);
 
 // Monitoring routes (no CSRF required)
 Route::get('/monitoring/status', [MonitoringController::class, 'status']);

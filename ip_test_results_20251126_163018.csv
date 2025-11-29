@@ -1,0 +1,6 @@
+﻿Timestamp,IP,Gateway_Ping,Internet_Ping,Gateway_MS,10.8.2.201_Ping,10.8.2.201_MS,10.8.2.202_Ping,10.8.2.202_MS,10.8.27.254_Ping,10.8.27.254_MS,10.60.23.254_Ping,10.60.23.254_MS,Notes
+2025-11-26 16:30:37,10.8.24.3,Success,Success,1,Success,0,Success,0,Success,2.5,Success,0,
+2025-11-26 16:30:54,10.8.24.4,Success,Success,1,Success,0,Success,0,Success,0,Success,0,
+2025-11-26 16:31:12,10.8.24.5,Success,Success,1.5,Success,0,Success,0,Success,1,Success,0,
+2025-11-26 16:31:30,10.8.24.7,Success,Success,2,Success,0,Success,0,Success,1,Success,0,
+2025-11-26 16:31:48,10.8.24.8,Success,Success,0.5,Success,0,Success,0,Success,2.5,Success,0.5,

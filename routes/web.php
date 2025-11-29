@@ -26,6 +26,7 @@ Route::prefix('monitor')->group(function () {
     Route::get('/settings', [MonitorController::class, 'settings'])->name('monitor.settings');
     Route::get('/configuration', [MonitorController::class, 'configuration'])->name('monitor.configuration');
     Route::get('/topology', [App\Http\Controllers\TopologyController::class, 'index'])->name('monitor.topology');
+    Route::get('/map-topology', [MonitorController::class, 'mapTopology'])->name('monitor.map-topology');
     Route::get('/plan', [MonitorController::class, 'plan'])->name('monitor.plan');
 });
 
@@ -315,6 +316,12 @@ Route::middleware(['web', 'auth'])->prefix('api/config')->group(function () {
     Route::post('/locations', [ConfigurationController::class, 'createLocation']);
     Route::put('/locations/{id}', [ConfigurationController::class, 'updateLocation']);
     Route::delete('/locations/{id}', [ConfigurationController::class, 'deleteLocation']);
+
+    // Location folders
+    Route::get('/location-folders', [ConfigurationController::class, 'getLocationFolders']);
+    Route::post('/location-folders', [ConfigurationController::class, 'createLocationFolder']);
+    Route::put('/location-folders/{id}', [ConfigurationController::class, 'updateLocationFolder']);
+    Route::delete('/location-folders/{id}', [ConfigurationController::class, 'deleteLocationFolder']);
     
     // Users
     Route::get('/users', [ConfigurationController::class, 'getUsers']);

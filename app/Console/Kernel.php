@@ -25,17 +25,17 @@ class Kernel extends ConsoleKernel
                  ->timezone('Asia/Kuala_Lumpur')
                  ->description('Check for real-time device notifications during business hours (Malaysia time)');
 
-        // Fast device monitoring every 30 seconds
-        $schedule->command('devices:monitor')
-                 ->everyThirtySeconds()
-                 ->description('Fast device monitoring every 30 seconds')
-                 ->withoutOverlapping();
+        // DISABLED: Fast device monitoring every 30 seconds
+        // $schedule->command('devices:monitor')
+        //          ->everyThirtySeconds()
+        //          ->description('Fast device monitoring every 30 seconds')
+        //          ->withoutOverlapping();
 
-        // Continuous monitoring (backup - every 2 minutes)
-        $schedule->command('devices:monitor --continuous --interval=120')
-                 ->everyTwoMinutes()
-                 ->description('Continuous device monitoring backup')
-                 ->withoutOverlapping();
+        // DISABLED: Continuous monitoring (backup - every 2 minutes)
+        // $schedule->command('devices:monitor --continuous --interval=120')
+        //          ->everyTwoMinutes()
+        //          ->description('Continuous device monitoring backup')
+        //          ->withoutOverlapping();
 
         // Update device uptime and downtime calculations every minute
         $schedule->command('devices:update-uptime')
@@ -43,11 +43,11 @@ class Kernel extends ConsoleKernel
                  ->description('Update device uptime and downtime calculations based on monitoring history')
                  ->withoutOverlapping();
 
-        // Ping all devices every 5 minutes
-        $schedule->command('devices:ping-all')
-                 ->everyFiveMinutes()
-                 ->description('Ping all devices and update their status and last_ping timestamp')
-                 ->withoutOverlapping();
+        // DISABLED: Ping all devices every 5 minutes
+        // $schedule->command('devices:ping-all')
+        //          ->everyFiveMinutes()
+        //          ->description('Ping all devices and update their status and last_ping timestamp')
+        //          ->withoutOverlapping();
     }
 
     /**

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Location;
+use App\Models\LocationFolder;
 use App\Services\ActivityLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -14,7 +15,7 @@ class LocationController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = Location::with('branch')->orderBy('id', 'asc');
+            $query = Location::with(['branch', 'locationFolder'])->orderBy('id', 'asc');
             
             // Filter by branch if provided
             if ($request->has('branch_id')) {
@@ -35,6 +36,7 @@ class LocationController extends Controller
             $validator = Validator::make($request->all(), [
                 'name' => 'required|string|max:255',
                 'branch_id' => 'required|exists:branches,id',
+                'location_folder_id' => 'nullable|exists:location_folders,id',
                 'description' => 'nullable|string|max:1000',
                 'latitude' => 'nullable|numeric|between:-90,90',
                 'longitude' => 'nullable|numeric|between:-180,180',
@@ -47,7 +49,7 @@ class LocationController extends Controller
                 ], 422);
             }
 
-            $location = Location::create([
+            $location = new Location([
                 'name' => $request->name,
                 'branch_id' => $request->branch_id,
                 'description' => $request->description,
@@ -55,11 +57,21 @@ class LocationController extends Controller
                 'longitude' => $request->longitude,
             ]);
 
+            if ($request->filled('location_folder_id')) {
+                $folder = LocationFolder::find($request->location_folder_id);
+                if ($folder) {
+                    $location->location_folder_id = $folder->id;
+                    $location->main_block = $folder->name;
+                }
+            }
+
+            $location->save();
+
             // Log activity
             $activityLog = new ActivityLogService();
             $activityLog->logLocationCreated($location->id, $location->name, $location->branch_id);
 
-            return response()->json($location->load('branch'), 201);
+            return response()->json($location->load(['branch', 'locationFolder']), 201);
         } catch (\Exception $e) {
             Log::error('Error creating location: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to create location', 'message' => $e->getMessage()], 500);
@@ -85,6 +97,7 @@ class LocationController extends Controller
             $validator = Validator::make($request->all(), [
                 'name' => 'sometimes|required|string|max:255',
                 'branch_id' => 'sometimes|required|exists:branches,id',
+                'location_folder_id' => 'nullable|exists:location_folders,id',
                 'description' => 'nullable|string|max:1000',
                 'latitude' => 'nullable|numeric|between:-90,90',
                 'longitude' => 'nullable|numeric|between:-180,180',
@@ -100,6 +113,18 @@ class LocationController extends Controller
             if ($request->has('name')) $location->name = $request->name;
             if ($request->has('branch_id')) $location->branch_id = $request->branch_id;
             if ($request->has('description')) $location->description = $request->description;
+            if ($request->has('location_folder_id')) {
+                if ($request->filled('location_folder_id')) {
+                    $folder = LocationFolder::find($request->location_folder_id);
+                    if ($folder) {
+                        $location->location_folder_id = $folder->id;
+                        $location->main_block = $folder->name;
+                    }
+                } else {
+                    $location->location_folder_id = null;
+                    $location->main_block = null;
+                }
+            }
             if ($request->has('latitude')) $location->latitude = $request->latitude;
             if ($request->has('longitude')) $location->longitude = $request->longitude;
 
@@ -120,7 +145,7 @@ class LocationController extends Controller
                 $activityLog->logLocationUpdated($location->id, $location->name, $changes, $location->branch_id);
             }
 
-            return response()->json($location->load('branch'));
+            return response()->json($location->load(['branch', 'locationFolder']));
         } catch (\Exception $e) {
             Log::error('Error updating location: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to update location', 'message' => $e->getMessage()], 500);

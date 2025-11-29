@@ -148,7 +148,9 @@
 
         <div class="timestamp">
             <strong>Alert Time:</strong> {{ now()->format('F j, Y g:i A') }}
-            @if($offlineDuration)
+            @if(isset($device) && $device->offline_duration_minutes)
+            <br><strong>Offline Duration:</strong> {{ \App\Helpers\FormatHelper::formatOfflineDuration($device->offline_duration_minutes) }}
+            @elseif(isset($offlineDuration))
             <br><strong>Offline Duration:</strong> {{ $offlineDuration }}
             @endif
         </div>

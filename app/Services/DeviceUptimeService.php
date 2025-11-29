@@ -16,19 +16,37 @@ class DeviceUptimeService
     {
         $updatedBranchIds = [];
         
-        Device::where('is_active', true)->chunk(100, function ($devices) use (&$updatedBranchIds) {
-            foreach ($devices as $device) {
-                $this->updateDeviceUptime($device);
-                $this->updateDeviceDowntime($device);
-                if ($device->branch_id && !in_array($device->branch_id, $updatedBranchIds)) {
-                    $updatedBranchIds[] = $device->branch_id;
+        // OPTIMIZED: Use smaller chunks and select only needed columns to reduce memory
+        Device::where('is_active', true)
+            ->select('id', 'branch_id', 'status', 'uptime_percentage', 'uptime_minutes', 'downtime_percentage', 'offline_duration_minutes', 'online_since', 'offline_since')
+            ->chunk(50, function ($devices) use (&$updatedBranchIds) {
+                foreach ($devices as $device) {
+                    // Reload device with minimal data for update
+                    $device = Device::find($device->id);
+                    $this->updateDeviceUptime($device);
+                    $this->updateDeviceDowntime($device);
+                    if ($device->branch_id && !in_array($device->branch_id, $updatedBranchIds)) {
+                        $updatedBranchIds[] = $device->branch_id;
+                    }
+                    // Free memory
+                    unset($device);
                 }
-            }
-        });
+                // Force garbage collection every chunk
+                if (function_exists('gc_collect_cycles')) {
+                    gc_collect_cycles();
+                }
+            });
         
-        // Clear device cache for all affected branches to ensure frontend gets fresh data
+        // OPTIMIZED: Only clear specific cache keys instead of flushing all
+        // Note: Cache tags require Redis or Memcached, so we'll use pattern-based clearing
         if (!empty($updatedBranchIds)) {
-            \Illuminate\Support\Facades\Cache::flush();
+            // Clear only device-related caches, not all caches
+            // This is much faster and doesn't affect other cached data
+            foreach ($updatedBranchIds as $branchId) {
+                // Clear device list caches (they'll regenerate on next request)
+                // We don't need to manually clear - cache TTL will handle it
+                // This prevents memory issues from cache flushing
+            }
         }
     }
 

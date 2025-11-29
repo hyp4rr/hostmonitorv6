@@ -462,6 +462,15 @@ class MonitorController extends Controller
         ]);
     }
 
+    public function mapTopology(Request $request)
+    {
+        $branchId = $this->getCurrentBranchId($request);
+        
+        return Inertia::render('monitor/map-topology', [
+            'currentBranch' => $this->getBranchData($branchId),
+        ]);
+    }
+
     public function reports(Request $request)
     {
         $branchId = $this->getCurrentBranchId($request);

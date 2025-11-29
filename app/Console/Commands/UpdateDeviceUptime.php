@@ -29,25 +29,43 @@ class UpdateDeviceUptime extends Command
      */
     public function handle()
     {
-        $this->info('Updating device uptime and downtime...');
-        Log::info('Starting device uptime and downtime update');
+        // Use cache-based locking to prevent multiple instances from running simultaneously
+        $lockKey = 'devices:update-uptime:lock';
+        $lockTimeout = 300; // 5 minutes max execution time
+        
+        // Try to acquire lock
+        $lockAcquired = cache()->lock($lockKey, $lockTimeout)->get();
+        
+        if (!$lockAcquired) {
+            $this->warn('Another uptime update is already running. Skipping this execution.');
+            Log::warning('Skipped uptime update - another instance is already running');
+            return Command::SUCCESS;
+        }
+
+        try {
+            $this->info('Updating device uptime and downtime...');
+            Log::info('Starting device uptime and downtime update');
 
         $startTime = microtime(true);
         $uptimeService = new DeviceUptimeService();
         
-        // Update all device uptimes and downtimes using the service
+            // Update all device uptimes and downtimes using the service
         $uptimeService->updateAllDeviceUptimes();
 
         $duration = round((microtime(true) - $startTime) * 1000, 2);
-        $this->info('Device uptime and downtime update completed with proper percentage calculations.');
+            $this->info('Device uptime and downtime update completed with proper percentage calculations.');
         
         // Log to file for scheduler visibility
         $deviceCount = Device::where('is_active', true)->count();
-        Log::info("Device uptime and downtime update completed", [
+            Log::info("Device uptime and downtime update completed", [
             'duration_ms' => $duration,
             'devices_updated' => $deviceCount
         ]);
 
         return Command::SUCCESS;
+        } finally {
+            // Release lock
+            cache()->lock($lockKey)->release();
+        }
     }
 }

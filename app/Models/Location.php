@@ -11,7 +11,9 @@ class Location extends Model
 
     protected $fillable = [
         'branch_id',
+        'location_folder_id',
         'name',
+        'main_block',
         'description',
         'latitude',
         'longitude',
@@ -25,6 +27,11 @@ class Location extends Model
     public function branch()
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    public function locationFolder()
+    {
+        return $this->belongsTo(LocationFolder::class);
     }
 
     public function devices()

@@ -3,6 +3,10 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 
+// Increase memory limit for better performance with large datasets
+ini_set('memory_limit', '256M');
+ini_set('max_execution_time', '300');
+
 define('LARAVEL_START', microtime(true));
 
 // Determine if the application is in maintenance mode...

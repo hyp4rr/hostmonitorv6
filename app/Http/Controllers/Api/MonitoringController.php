@@ -189,12 +189,12 @@ class MonitoringController extends Controller
         $onlineSinceUpdates = []; // Devices that came online
         $offlineSinceUpdates = []; // Devices that went offline
         $historyData = [];
-        
-        // Helper function to check if status is "online" (online or warning)
-        $isOnlineStatus = function($status) {
-            return in_array($status, ['online', 'warning']);
-        };
-        
+                
+                // Helper function to check if status is "online" (online or warning)
+                $isOnlineStatus = function($status) {
+                    return in_array($status, ['online', 'warning']);
+                };
+                
         // First pass: collect all updates
         foreach ($results as $result) {
             if (!isset($result['device'])) {
@@ -204,20 +204,20 @@ class MonitoringController extends Controller
             $device = $result['device'];
             $previousStatus = $device->status;
             $newStatus = $result['status'];
-            $wasOnline = $isOnlineStatus($previousStatus);
+                $wasOnline = $isOnlineStatus($previousStatus);
             $isNowOnline = $isOnlineStatus($newStatus);
-            
+                
             $deviceIds[] = $device->id;
             
             // Track status changes
-            if ($wasOnline !== $isNowOnline) {
+                if ($wasOnline !== $isNowOnline) {
                 $statusChanges[] = $device->id;
-            }
-            
+                }
+                
             // Track online/offline transitions
-            if ($isNowOnline && !$wasOnline) {
+                if ($isNowOnline && !$wasOnline) {
                 $onlineSinceUpdates[] = $device->id;
-            } elseif (!$isNowOnline && $wasOnline) {
+                } elseif (!$isNowOnline && $wasOnline) {
                 $offlineSinceUpdates[] = $device->id;
             }
             
@@ -289,9 +289,9 @@ class MonitoringController extends Controller
                             ->whereIn('id', $rtIds)
                             ->update(['response_time' => $rt]);
                     }
+                    }
                 }
-            }
-            
+                
             // Update updated_at for devices that changed status
             if (!empty($statusChanges)) {
                 DB::table('devices')
@@ -324,8 +324,8 @@ class MonitoringController extends Controller
                 $chunks = array_chunk($historyData, 500);
                 foreach ($chunks as $chunk) {
                     DB::table('monitoring_history')->insert($chunk);
-                }
             }
+        }
         });
         
         // Note: Uptime updates are skipped for performance - they can be calculated later if needed
@@ -582,7 +582,7 @@ class MonitoringController extends Controller
         
         // Batch update devices only if requested (defer for better performance)
         if ($updateDb) {
-            $this->batchUpdateDevices($results);
+        $this->batchUpdateDevices($results);
         }
         
         return [

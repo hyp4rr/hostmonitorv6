@@ -1,0 +1,6 @@
+﻿Timestamp,IP,Gateway_Ping,Internet_Ping,Gateway_MS,DNS_Flush_Status,10.8.2.201_Ping,10.8.2.201_MS,10.8.2.202_Ping,10.8.2.202_MS,10.8.27.254_Ping,10.8.27.254_MS,10.60.23.254_Ping,10.60.23.254_MS,Notes
+2025-11-26 16:13:25,10.8.24.3,Error,Error,N/A,Error,Error,N/A,Error,N/A,Error,N/A,Error,N/A,A parameter cannot be found that matches parameter name 'TimeoutSeconds'.
+2025-11-26 16:13:36,10.8.24.4,Error,Error,N/A,Error,Error,N/A,Error,N/A,Error,N/A,Error,N/A,A parameter cannot be found that matches parameter name 'TimeoutSeconds'.
+2025-11-26 16:13:48,10.8.24.5,Error,Error,N/A,Error,Error,N/A,Error,N/A,Error,N/A,Error,N/A,A parameter cannot be found that matches parameter name 'TimeoutSeconds'.
+2025-11-26 16:14:00,10.8.24.7,Error,Error,N/A,Error,Error,N/A,Error,N/A,Error,N/A,Error,N/A,A parameter cannot be found that matches parameter name 'TimeoutSeconds'.
+2025-11-26 16:14:12,10.8.24.8,Error,Error,N/A,Error,Error,N/A,Error,N/A,Error,N/A,Error,N/A,A parameter cannot be found that matches parameter name 'TimeoutSeconds'.

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Device;
 use App\Models\Alert;
 use App\Models\Location;
+use App\Models\LocationFolder;
 use App\Models\Branch;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -236,24 +237,72 @@ class ConfigurationController extends Controller
         return response()->json(['success' => true]);
     }
 
+    // Location Folder CRUD
+    public function getLocationFolders()
+    {
+        return response()->json(LocationFolder::with('branch:id,name')->orderBy('name')->get());
+    }
+
+    public function createLocationFolder(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'branch_id' => 'required|integer|exists:branches,id',
+            'description' => 'nullable|string',
+        ]);
+
+        $folder = LocationFolder::create($validated);
+        return response()->json($folder->load('branch'), 201);
+    }
+
+    public function updateLocationFolder(Request $request, $id)
+    {
+        $folder = LocationFolder::findOrFail($id);
+
+        $validated = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'branch_id' => 'sometimes|integer|exists:branches,id',
+            'description' => 'nullable|string',
+        ]);
+
+        $folder->update($validated);
+        return response()->json($folder->load('branch'));
+    }
+
+    public function deleteLocationFolder($id)
+    {
+        $folder = LocationFolder::findOrFail($id);
+        $folder->delete();
+        return response()->json(['success' => true]);
+    }
+
     // Location CRUD
     public function getLocations()
     {
-        return response()->json(Location::all());
+        return response()->json(Location::with('locationFolder')->get());
     }
 
     public function createLocation(Request $request)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'branch' => 'required|string',
-            'latitude' => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
+            'branch_id' => 'required|integer|exists:branches,id',
+            'location_folder_id' => 'nullable|integer|exists:location_folders,id',
+            'main_block' => 'nullable|string|max:255',
+            'latitude' => 'required|numeric',
+            'longitude' => 'required|numeric',
             'description' => 'nullable|string',
         ]);
 
+        if (!empty($validated['location_folder_id'])) {
+            $folder = LocationFolder::find($validated['location_folder_id']);
+            if ($folder) {
+                $validated['main_block'] = $folder->name;
+            }
+        }
+
         $location = Location::create($validated);
-        return response()->json($location, 201);
+        return response()->json($location->load('locationFolder'), 201);
     }
 
     public function updateLocation(Request $request, $id)
@@ -262,14 +311,27 @@ class ConfigurationController extends Controller
         
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
-            'branch' => 'sometimes|string',
-            'latitude' => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
+            'branch_id' => 'sometimes|integer|exists:branches,id',
+            'location_folder_id' => 'nullable|integer|exists:location_folders,id',
+            'main_block' => 'nullable|string|max:255',
+            'latitude' => 'sometimes|numeric',
+            'longitude' => 'sometimes|numeric',
             'description' => 'nullable|string',
         ]);
 
+        if ($request->has('location_folder_id')) {
+            if ($validated['location_folder_id']) {
+                $folder = LocationFolder::find($validated['location_folder_id']);
+                if ($folder) {
+                    $validated['main_block'] = $folder->name;
+                }
+            } else {
+                $validated['main_block'] = null;
+            }
+        }
+
         $location->update($validated);
-        return response()->json($location);
+        return response()->json($location->load('locationFolder'));
     }
 
     public function deleteLocation($id)

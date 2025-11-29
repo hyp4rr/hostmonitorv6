@@ -91,6 +91,7 @@ export default function Dashboard() {
             icon: Server,
             gradient: 'from-blue-500 to-indigo-600',
             bgGradient: 'from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50',
+            filter: null, // No filter for total devices
         },
         {
             name: t('dashboard.online'),
@@ -98,6 +99,7 @@ export default function Dashboard() {
             icon: CheckCircle2,
             gradient: 'from-emerald-500 to-green-600',
             bgGradient: 'from-emerald-50 to-green-50 dark:from-emerald-950/50 dark:to-green-950/50',
+            filter: 'online',
         },
         {
             name: t('dashboard.offline'),
@@ -105,6 +107,7 @@ export default function Dashboard() {
             icon: Wifi,
             gradient: 'from-rose-500 to-red-600',
             bgGradient: 'from-rose-50 to-red-50 dark:from-rose-950/50 dark:to-red-950/50',
+            filter: 'offline',
         },
         {
             name: t('dashboard.warning'),
@@ -112,6 +115,7 @@ export default function Dashboard() {
             icon: AlertTriangle,
             gradient: 'from-yellow-500 to-amber-500',
             bgGradient: 'from-yellow-50 to-amber-50 dark:from-yellow-950/50 dark:to-amber-950/50',
+            filter: 'warning',
         },
     ];
 
@@ -145,26 +149,39 @@ export default function Dashboard() {
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                     {statCards.map((stat) => {
                         const Icon = stat.icon;
+                        const handleClick = () => {
+                            const url = stat.filter 
+                                ? `/monitor/devices?status=${stat.filter}`
+                                : '/monitor/devices';
+                            router.visit(url);
+                        };
                         return (
-                            <div
+                            <button
                                 key={stat.name}
-                                className={`group relative overflow-hidden rounded-2xl border border-slate-200/50 bg-gradient-to-br ${stat.bgGradient} p-6 shadow-lg backdrop-blur-sm transition-all hover:scale-105 hover:shadow-2xl dark:border-slate-700/50`}
+                                onClick={handleClick}
+                                type="button"
+                                className={`group relative overflow-hidden rounded-2xl border border-slate-200/50 bg-gradient-to-br ${stat.bgGradient} p-6 shadow-lg backdrop-blur-sm transition-all hover:scale-105 hover:shadow-2xl cursor-pointer dark:border-slate-700/50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 w-full text-left`}
                             >
-                                <div className="flex items-center justify-between">
-                                    <div>
+                                <div className="flex items-start justify-between">
+                                    <div className="flex-1 min-w-0">
                                         <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
                                             {stat.name}
                                         </p>
                                         <p className="mt-2 text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white">
                                             {stat.value}
                                         </p>
+                                        <div className="mt-2 h-0 overflow-hidden transition-all duration-300 ease-out group-hover:h-5">
+                                            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-75 text-xs font-medium text-slate-600 dark:text-slate-400">
+                                                Click to view →
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className={`rounded-xl bg-gradient-to-br ${stat.gradient} p-3 shadow-lg`}>
+                                    <div className={`flex-shrink-0 ml-4 rounded-xl bg-gradient-to-br ${stat.gradient} p-3 shadow-lg`}>
                                         <Icon className="size-6 text-white" />
                                     </div>
                                 </div>
-                                <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-0 transition-opacity group-hover:opacity-5`}></div>
-                            </div>
+                                <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-0 transition-opacity group-hover:opacity-5 pointer-events-none`}></div>
+                            </button>
                         );
                     })}
                 </div>
@@ -187,40 +204,66 @@ export default function Dashboard() {
 
                     {deviceTypes.length > 0 ? (
                         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-                            {deviceTypes.map((device, idx) => (
-                                <div 
-                                    key={idx} 
-                                    className="group relative overflow-hidden rounded-xl border border-slate-200/50 bg-white p-4 transition-all hover:scale-105 hover:shadow-lg dark:border-slate-700/50 dark:bg-slate-900"
-                                >
-                                    <div className={`absolute inset-0 bg-gradient-to-br ${device.color.replace('bg-', 'from-')}/10 to-transparent opacity-0 transition-opacity group-hover:opacity-100`} />
-                                    <div className="relative">
-                                        <div className="mb-3 flex items-center justify-between">
-                                            <span className="text-lg font-bold text-slate-900 dark:text-white">
-                                                {device.count}
-                                            </span>
-                                            <div className={`rounded-lg ${device.color} p-2`}>
-                                                {(() => {
-                                                    const Icon = getDeviceCategoryIcon(device.type);
-                                                    return <Icon className="size-4 text-white" />;
-                                                })()}
+                            {deviceTypes.map((device, idx) => {
+                                // Normalize category name to filter value (e.g., "Switches" -> "switches", "WiFi" -> "wifi")
+                                const normalizeCategory = (type: string): string => {
+                                    const normalized = type.toLowerCase();
+                                    // Handle special cases
+                                    if (normalized === 'wifi') return 'wifi';
+                                    if (normalized === 'tas') return 'tas';
+                                    if (normalized === 'cctv') return 'cctv';
+                                    if (normalized.includes('switch')) return 'switches';
+                                    if (normalized.includes('server')) return 'servers';
+                                    return normalized;
+                                };
+                                
+                                const categoryFilter = normalizeCategory(device.type);
+                                const handleClick = () => {
+                                    router.visit(`/monitor/devices?category=${categoryFilter}`);
+                                };
+                                
+                                return (
+                                    <button
+                                        key={idx}
+                                        type="button"
+                                        onClick={handleClick}
+                                        className="group relative overflow-hidden rounded-xl border border-slate-200/50 bg-white p-4 text-left transition-all hover:scale-105 hover:shadow-lg dark:border-slate-700/50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 w-full cursor-pointer"
+                                    >
+                                        <div className={`absolute inset-0 bg-gradient-to-br ${device.color.replace('bg-', 'from-')}/10 to-transparent opacity-0 transition-opacity group-hover:opacity-100 pointer-events-none`} />
+                                        <div className="relative">
+                                            <div className="mb-3 flex items-center justify-between">
+                                                <span className="text-lg font-bold text-slate-900 dark:text-white">
+                                                    {device.count}
+                                                </span>
+                                                <div className={`rounded-lg ${device.color} p-2`}>
+                                                    {(() => {
+                                                        const Icon = getDeviceCategoryIcon(device.type);
+                                                        return <Icon className="size-4 text-white" />;
+                                                    })()}
+                                                </div>
+                                            </div>
+                                            <h3 className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                                {device.type}
+                                            </h3>
+                                            <div className="mb-2 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                                                <span>of total</span>
+                                                <span className="font-bold">{device.percentage}%</span>
+                                            </div>
+                                            <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                                                <div 
+                                                    className={`h-full rounded-full ${device.color} transition-all duration-500`}
+                                                    style={{ width: `${device.percentage}%` }}
+                                                />
+                                            </div>
+                                            <div className="mt-2 h-0 overflow-hidden transition-all duration-300 ease-out group-hover:h-5">
+                                                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-75 text-xs font-medium text-slate-600 dark:text-slate-400">
+                                                    Click to view →
+                                                </div>
                                             </div>
                                         </div>
-                                        <h3 className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                                            {device.type}
-                                        </h3>
-                                        <div className="mb-2 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                                            <span>of total</span>
-                                            <span className="font-bold">{device.percentage}%</span>
-                                        </div>
-                                        <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
-                                            <div 
-                                                className={`h-full rounded-full ${device.color} transition-all duration-500`}
-                                                style={{ width: `${device.percentage}%` }}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
+                                    </button>
+                                );
+                            })}
                         </div>
                     ) : (
                         <div className="text-center py-8 text-slate-500 dark:text-slate-400">
@@ -240,7 +283,7 @@ export default function Dashboard() {
                                 {t('dashboard.locationStatus')}
                             </h2>
                             <p className="text-sm text-slate-600 dark:text-slate-400">
-                                Devices by location • Click to view on map
+                                Devices by location • Click to view devices
                             </p>
                         </div>
                     </div>
@@ -250,17 +293,13 @@ export default function Dashboard() {
                             {locationStats.map((location, idx) => (
                                 <button
                                     key={idx}
+                                    type="button"
                                     onClick={() => {
-                                        router.visit('/monitor/maps', {
-                                            data: {
-                                                location: location.location,
-                                                focusLocation: true,
-                                            }
-                                        });
+                                        router.visit(`/monitor/devices?location=${encodeURIComponent(location.location)}`);
                                     }}
-                                    className="group relative overflow-hidden rounded-xl border border-slate-200/50 bg-white p-4 text-left transition-all hover:scale-105 hover:shadow-lg hover:border-blue-300 dark:border-slate-700/50 dark:bg-slate-900 dark:hover:border-blue-600 cursor-pointer"
+                                    className="group relative overflow-hidden rounded-xl border border-slate-200/50 bg-white p-4 text-left transition-all hover:scale-105 hover:shadow-lg hover:border-blue-300 dark:border-slate-700/50 dark:bg-slate-900 dark:hover:border-blue-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                                 >
-                                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 opacity-0 transition-opacity group-hover:opacity-100" />
+                                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 opacity-0 transition-opacity group-hover:opacity-100 pointer-events-none" />
                                     <div className="relative">
                                         <div className="mb-3 flex items-start justify-between">
                                             <div className="flex items-center gap-2">
@@ -303,9 +342,11 @@ export default function Dashboard() {
                                             />
                                         </div>
 
-                                        {/* Hover indicator */}
-                                        <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs text-blue-600 dark:text-blue-400 font-medium">
-                                            Click to view on map →
+                                        {/* Hover indicator with expanding animation */}
+                                        <div className="mt-2 h-0 overflow-hidden transition-all duration-300 ease-out group-hover:h-5">
+                                            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-75 text-xs font-medium text-blue-600 dark:text-blue-400">
+                                                Click to view →
+                                            </div>
                                         </div>
                                     </div>
                                 </button>

@@ -1,0 +1,5 @@
+# Increase PHP memory limit for better performance with large datasets
+php_value memory_limit 256M
+php_value max_execution_time 300
+php_value max_input_time 300
+
